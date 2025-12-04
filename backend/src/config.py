@@ -10,14 +10,20 @@ class Settings(BaseSettings):
     port: int = 8000
 
     # Paths
-    base_dir: Path = Path(__file__).resolve().parent.parent.parent.parent
+    base_dir: Path = Path(__file__).parent.parent.parent.resolve()
     media_root: Path = base_dir / "media"
     results_dir: Path = media_root / "results"
 
     # Redis & Celery
     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    celery_broker_url: str = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-    celery_result_backend: str = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+    celery_broker_url: str = os.getenv(
+        "CELERY_BROKER_URL",
+        "redis://localhost:6379/0",
+    )
+    celery_result_backend: str = os.getenv(
+        "CELERY_RESULT_BACKEND",
+        "redis://localhost:6379/0",
+    )
 
     # ML Models
     whisper_model_path: str = os.getenv("WHISPER_MODEL_PATH", "base")
