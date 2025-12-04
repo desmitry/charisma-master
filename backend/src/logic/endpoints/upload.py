@@ -1,19 +1,19 @@
 import shutil
 import uuid
-import os
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from src.app.backend.config import settings
-from src.app.backend.logic.tasks import process_video_pipeline
-from src.core.models.schemas import UploadResponse, PersonaEnum
+
+from src.config import settings
+from src.logic.tasks import process_video_pipeline
+from src.models.schemas import UploadResponse, PersonaEnum
 
 router = APIRouter()
 
 
 @router.post("/process", response_model=UploadResponse)
 async def process_video(
-        file: UploadFile = File(None),
-        video_url: str = Form(None),
-        persona: PersonaEnum = Form(None)
+    file: UploadFile = File(None),
+    video_url: str = Form(None),
+    persona: PersonaEnum = Form(None),
 ):
     task_id = str(uuid.uuid4())
 
@@ -34,8 +34,7 @@ async def process_video(
 
     process_video_pipeline.apply_async(
         args=[task_id, final_path, persona.value if persona else None],
-        task_id=task_id
+        task_id=task_id,
     )
 
     return UploadResponse(task_id=task_id, status="queued")
-

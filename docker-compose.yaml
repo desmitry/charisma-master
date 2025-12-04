@@ -1,0 +1,28 @@
+services:
+  redis:
+    image: redis:8.4.0
+    container_name: redis
+    command:
+      - redis-server
+    restart: always
+    
+  celery:
+    image: ghrc.io/desmitry/charisma-master-backend:latest
+    container_name: celery
+    command: ["uv", "run", "celery", "-A", "src.celery_app", "worker", "--loglevel=info", "--pool=solo"]
+    restart: always
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+
+  backend:
+    image: ghrc.io/desmitry/charisma-master-backend:latest
+    container_name: backend
+    command: ["uv", "run", "--no-dev", "uvicorn", "src.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+    restart: always
+    ports:
+      - 127.0.0.1:8000:8000
+    depends_on:
+      - celery
