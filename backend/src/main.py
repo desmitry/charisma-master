@@ -1,11 +1,19 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from src.app.backend.config import settings
-from src.app.backend.logic.endpoints import upload, status, analysis
 
-app = FastAPI(title="Speech ANALysis", version="1.0.0")
+from src.config import settings
+from src.logic.endpoints import upload, status, analysis
 
-app.mount("/media", StaticFiles(directory=str(settings.media_root)), name="media")
+app = FastAPI(
+    title="Speech ANALysis",
+    version="1.0.0",
+)
+
+app.mount(
+    "/media",
+    StaticFiles(directory=str(settings.media_root)),
+    name="media",
+)
 
 app.include_router(upload.router, prefix="/api/v1", tags=["Processing"])
 app.include_router(status.router, prefix="/api/v1", tags=["Status"])

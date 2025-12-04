@@ -1,10 +1,11 @@
 from celery import Celery
-from src.app.backend.config import settings
+
+from src.config import settings
 
 celery_app = Celery(
     "speech_ANALysis",
     broker=settings.celery_broker_url,
-    backend=settings.celery_result_backend
+    backend=settings.celery_result_backend,
 )
 
 celery_app.conf.update(
@@ -13,5 +14,5 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-    imports=["src.app.backend.logic.tasks"]
+    imports=["src.logic.tasks"],
 )
