@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from celery import shared_task, current_task
+from celery import shared_task  # current_task
 from pathlib import Path
 
 from src.config import settings

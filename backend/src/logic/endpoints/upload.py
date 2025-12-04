@@ -1,6 +1,5 @@
 import shutil
 import uuid
-import os
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 
 from src.config import settings
