@@ -1,14 +1,14 @@
 import asyncio
 import json
 import logging
-from celery import shared_task  # current_task
 from pathlib import Path
 
-from src.config import settings
-from src.logic.ml_engine import MLEngine
-from src.logic.llm_client import LLMClient
-from src.logic.pdf_generator import generate_pdf_report
-from src.models.schemas import ProcessingStage
+from celery import shared_task  # current_task
+
+from app.config import settings
+from app.logic.llm_client import LLMClient
+from app.logic.ml_engine import MLEngine
+from app.models.schemas import ProcessingStage
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +25,7 @@ def save_json_result(task_id: str, data: dict):
 
 
 @shared_task(bind=True)
-def process_video_pipeline(
-    self, task_id: str, video_path: str, persona: str = None
-):
+def process_video_pipeline(self, task_id: str, video_path: str, persona: str = None):
     try:
         self.update_state(
             state="PROCESSING",
@@ -105,9 +103,6 @@ def process_video_pipeline(
             "persona_feedback": analysis.get("persona_feedback", ""),
             "slide_text_density": vision.get("slide_density", 0),
         }
-
-        pdf_path = settings.results_dir / f"{task_id}.pdf"
-        generate_pdf_report(result_data, str(pdf_path))
 
         save_json_result(task_id, result_data)
 

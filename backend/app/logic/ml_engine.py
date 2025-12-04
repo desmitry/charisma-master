@@ -1,13 +1,14 @@
-import subprocess
 import logging
-import cv2
-import numpy as np
-import librosa
-from faster_whisper import WhisperModel
+import subprocess
 from typing import List, Dict
 
-from src.config import settings
-from src.models.schemas import TranscriptSegment, TranscriptWord
+import cv2
+import librosa
+import numpy as np
+from faster_whisper import WhisperModel
+
+from app.config import settings
+from app.models.schemas import TranscriptSegment, TranscriptWord
 
 logger = logging.getLogger(__name__)
 
@@ -117,9 +118,7 @@ class MLEngine:
             t_start = t
             t_end = t + window_sec
 
-            count = sum(
-                1 for w in words if w.start >= t_start and w.end < t_end
-            )
+            count = sum(1 for w in words if w.start >= t_start and w.end < t_end)
             wpm = (count / window_sec) * 60
 
             zone = "green"
@@ -130,9 +129,7 @@ class MLEngine:
             elif wpm > 140 or wpm < 100:
                 zone = "yellow"
 
-            points.append(
-                {"time": float(t), "wpm": float(round(wpm, 1)), "zone": zone}
-            )
+            points.append({"time": float(t), "wpm": float(round(wpm, 1)), "zone": zone})
 
         return points
 
@@ -194,9 +191,7 @@ class MLEngine:
                         break
 
             edges = cv2.Canny(gray, 100, 200)
-            slide_density_accum += np.sum(edges) / (
-                frame.shape[0] * frame.shape[1]
-            )
+            slide_density_accum += np.sum(edges) / (frame.shape[0] * frame.shape[1])
 
         cap.release()
 

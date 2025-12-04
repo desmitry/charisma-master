@@ -1,12 +1,27 @@
+from app.logic.endpoints import upload, status, analysis
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.cors import CORSMiddleware
 
-from src.config import settings
-from src.logic.endpoints import upload, status, analysis
+from app.config import settings
+
+# origins = [
+#     "http://our.domain", "http://localhost"
+# ]
+
+origins = ["*"]
 
 app = FastAPI(
-    title="Speech ANALysis",
+    title="Speech Analysis",
     version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.mount(

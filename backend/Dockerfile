@@ -1,23 +1,48 @@
-FROM ghcr.io/astral-sh/uv:0.9.8-trixie-slim
+# Use bookworm-slim because of opencv-python
+FROM ghcr.io/astral-sh/uv:0.9.8-python3.13-bookworm-slim AS builder
 
-# Settings for UV
-ENV UV_COMPILE_BYTECODE=1
 ENV UV_TOOL_BIN_DIR=/usr/local/bin
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
 
-# Copy base project files
-COPY . /backend
+WORKDIR /app
 
-# Set working dir
-WORKDIR /backend
+COPY pyproject.toml uv.lock ./
 
-# Run UV commands
-RUN uv sync --locked --no-install-project --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-dev
 
-# Add uv installed tools to path
-ENV PATH="/urfu-daddy/.venv/bin:$PATH"
+COPY . .
 
-# Add 
-RUN apt update -y && apt upgrade -y && apt install libgl1 libglib2.0-0 -y
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
-# Clear entrypoint
+FROM python:3.13-slim-bookworm AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt update -y && \
+    apt upgrade -y && \
+    apt install -y \
+    libgl1 \
+    libglib2.0-0 && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
+COPY --from=builder --chown=appuser:appuser /app /app
+RUN mkdir /app/media
+RUN chown appuser:appuser /app/media
+RUN mkdir /app/media/results
+RUN chown appuser:appuser /app/media/results
+
+USER appuser
+
 ENTRYPOINT []
