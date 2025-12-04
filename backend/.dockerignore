@@ -1,4 +1,3 @@
-## Like .gitignore
 # Virtual environment
 .venv/
 venv/
@@ -7,6 +6,7 @@ venv/
 __pycache__/
 *.py[cod]
 *$py.class
+.DS_Store
 
 # Secrets / env
 *.env

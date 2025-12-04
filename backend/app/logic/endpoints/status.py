@@ -1,8 +1,8 @@
-from fastapi import APIRouter
 from celery.result import AsyncResult
+from fastapi import APIRouter
 
-from src.models.schemas import TaskStatusResponse, ProcessingState
-from src.celery_app import celery_app
+from app.celery_app import celery_app
+from app.models.schemas import TaskStatusResponse, ProcessingState
 
 router = APIRouter()
 

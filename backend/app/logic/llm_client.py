@@ -1,6 +1,6 @@
 import openai
 
-from src.config import settings
+from app.config import settings
 
 
 class LLMClient:
@@ -14,13 +14,9 @@ class LLMClient:
     async def analyze_speech(self, full_text: str, persona: str = None) -> dict:
         persona_prompt = ""
         if persona == "strict_critic":
-            persona_prompt = (
-                "Ты строгий критик. Укажи на все недостатки жестко."
-            )
+            persona_prompt = "Ты строгий критик. Укажи на все недостатки жестко."
         elif persona == "kind_mentor":
-            persona_prompt = (
-                "Ты добрый наставник. Поддержи и дай мягкие советы."
-            )
+            persona_prompt = "Ты добрый наставник. Поддержи и дай мягкие советы."
         elif persona == "steve_jobs_style":
             persona_prompt = "Ты Стив Джобс. Оцени выступление с точки зрения минимализма, страсти и подачи."
         else:

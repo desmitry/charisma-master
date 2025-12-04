@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+
 from pydantic_settings import BaseSettings
 
 
@@ -10,7 +11,7 @@ class Settings(BaseSettings):
     port: int = 8000
 
     # Paths
-    base_dir: Path = Path(__file__).parent.parent.parent.resolve()
+    base_dir: Path = Path(__file__).parent.parent.parent.resolve() / "app"
     media_root: Path = base_dir / "media"
     results_dir: Path = media_root / "results"
 
@@ -36,7 +37,7 @@ class Settings(BaseSettings):
     llm_model_name: str = os.getenv("LLM_MODEL_NAME", "gpt-3.5-turbo")
 
     class Config:
-        env_file = ".env"
+        env_file = "configs/.env"
 
 
 settings = Settings()
