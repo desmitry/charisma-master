@@ -1,6 +1,6 @@
 version = 1
 revision = 3
-requires-python = "==3.13.9"
+requires-python = "==3.13.*"
 resolution-markers = [
     "sys_platform == 'darwin'",
     "platform_machine == 'aarch64' and sys_platform == 'linux'",
@@ -39,15 +39,14 @@ wheels = [
 
 [[package]]
 name = "anyio"
-version = "4.11.0"
+version = "4.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "idna" },
-    { name = "sniffio" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c6/78/7d432127c41b50bccba979505f272c16cbcadcc33645d5fa3a738110ae75/anyio-4.11.0.tar.gz", hash = "sha256:82a8d0b81e318cc5ce71a5f1f8b5c4e63619620b63141ef8c995fa0db95a57c4", size = 219094, upload-time = "2025-09-23T09:19:12.58Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/16/ce/8a777047513153587e5434fd752e89334ac33e379aa3497db860eeb60377/anyio-4.12.0.tar.gz", hash = "sha256:73c693b567b0c55130c104d0b43a9baf3aa6a31fc6110116509f27bf75e21ec0", size = 228266, upload-time = "2025-11-28T23:37:38.911Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/15/b3/9b1a8074496371342ec1e796a96f99c82c945a339cd81a8e73de28b4cf9e/anyio-4.11.0-py3-none-any.whl", hash = "sha256:0287e96f4d26d4149305414d4e3bc32f0dcd0862365a4bddea19d7a1ec38c4fc", size = 109097, upload-time = "2025-09-23T09:19:10.601Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/9c/36c5c37947ebfb8c7f22e0eb6e4d188ee2d53aa3880f3f2744fb894f0cb1/anyio-4.12.0-py3-none-any.whl", hash = "sha256:dad2376a628f98eeca4881fc56cd06affd18f659b17a747d3ff0307ced94b1bb", size = 113362, upload-time = "2025-11-28T23:36:57.897Z" },
 ]
 
 [[package]]
@@ -213,7 +212,6 @@ name = "charisma-master"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "black" },
     { name = "celery" },
     { name = "fastapi" },
     { name = "faster-whisper" },
@@ -229,11 +227,15 @@ dependencies = [
     { name = "uvicorn", extra = ["standard"] },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "black" },
+]
+
 [package.metadata]
 requires-dist = [
-    { name = "black", specifier = ">=25.11.0" },
     { name = "celery", specifier = ">=5.6.0" },
-    { name = "fastapi", specifier = "==0.122.0" },
+    { name = "fastapi", specifier = ">=0.123.7" },
     { name = "faster-whisper", specifier = ">=1.2.1" },
     { name = "librosa", specifier = ">=0.11.0" },
     { name = "numpy", specifier = ">=2.3.5" },
@@ -244,8 +246,11 @@ requires-dist = [
     { name = "redis", specifier = ">=7.1.0" },
     { name = "reportlab", specifier = ">=4.4.5" },
     { name = "requests", specifier = ">=2.32.5" },
-    { name = "uvicorn", extras = ["standard"], specifier = "==0.38.0" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.38.0" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "black", specifier = ">=25.11.0" }]
 
 [[package]]
 name = "charset-normalizer"
@@ -388,7 +393,7 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.122.0"
+version = "0.123.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -396,9 +401,9 @@ dependencies = [
     { name = "starlette" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b2/de/3ee97a4f6ffef1fb70bf20561e4f88531633bb5045dc6cebc0f8471f764d/fastapi-0.122.0.tar.gz", hash = "sha256:cd9b5352031f93773228af8b4c443eedc2ac2aa74b27780387b853c3726fb94b", size = 346436, upload-time = "2025-11-24T19:17:47.95Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/75/d2/dba013654cb7a72c99c0fe8856b3598f1289a281d972ce91b62df937a315/fastapi-0.123.7.tar.gz", hash = "sha256:d401701383afcf59bd859ead4fadd9e5aab5f783884d6a3ebe296012fdd53ab2", size = 353537, upload-time = "2025-12-04T08:29:35.277Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7a/93/aa8072af4ff37b795f6bbf43dcaf61115f40f49935c7dbb180c9afc3f421/fastapi-0.122.0-py3-none-any.whl", hash = "sha256:a456e8915dfc6c8914a50d9651133bd47ec96d331c5b44600baa635538a30d67", size = 110671, upload-time = "2025-11-24T19:17:45.96Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/5a/837bf2c49320272de3e0162c37cdd465cc6a938820a90166a6900a8c34d9/fastapi-0.123.7-py3-none-any.whl", hash = "sha256:31116d87ce36b66c3e853f8c0ba7c3e4b57c148abb0e72547e25257526cd2cc5", size = 111539, upload-time = "2025-12-04T08:29:33.093Z" },
 ]
 
 [[package]]

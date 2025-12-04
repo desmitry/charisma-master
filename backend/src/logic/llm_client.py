@@ -1,22 +1,26 @@
 import openai
-from src.app.backend.config import settings
+
+from src.config import settings
 
 
 class LLMClient:
     def __init__(self):
         # TODO: Убедиться, что в окружении задан LLM_API_KEY
         self.client = openai.AsyncOpenAI(
-            base_url=settings.llm_api_base,
-            api_key=settings.llm_api_key
+            base_url=settings.llm_api_base, api_key=settings.llm_api_key
         )
         self.model = settings.llm_model_name
 
     async def analyze_speech(self, full_text: str, persona: str = None) -> dict:
         persona_prompt = ""
         if persona == "strict_critic":
-            persona_prompt = "Ты строгий критик. Укажи на все недостатки жестко."
+            persona_prompt = (
+                "Ты строгий критик. Укажи на все недостатки жестко."
+            )
         elif persona == "kind_mentor":
-            persona_prompt = "Ты добрый наставник. Поддержи и дай мягкие советы."
+            persona_prompt = (
+                "Ты добрый наставник. Поддержи и дай мягкие советы."
+            )
         elif persona == "steve_jobs_style":
             persona_prompt = "Ты Стив Джобс. Оцени выступление с точки зрения минимализма, страсти и подачи."
         else:
@@ -38,11 +42,12 @@ class LLMClient:
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": full_text[:3500]}
+                    {"role": "user", "content": full_text[:3500]},
                 ],
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
             )
             import json
+
             return json.loads(response.choices[0].message.content)
         except Exception as e:
             # TODO: Добавить нормальное логирование ошибки
@@ -51,5 +56,5 @@ class LLMClient:
                 "structure": "Анализ недоступен.",
                 "mistakes": "Ошибка подключения к AI.",
                 "ideal_text": "Ошибка генерации.",
-                "persona_feedback": f"Ошибка: {str(e)}"
+                "persona_feedback": f"Ошибка: {str(e)}",
             }
