@@ -3,12 +3,11 @@ import json
 import logging
 from pathlib import Path
 
-from celery import shared_task  # current_task
-
 from app.config import settings
 from app.logic.llm_client import LLMClient
 from app.logic.ml_engine import MLEngine
 from app.models.schemas import ProcessingStage
+from celery import shared_task  # current_task
 
 logger = logging.getLogger(__name__)
 
@@ -65,9 +64,7 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
         llm_client = LLMClient()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        analysis = loop.run_until_complete(
-            llm_client.analyze_speech(full_text, persona)
-        )
+        analysis = loop.run_until_complete(llm_client.analyze_speech(full_text, persona))
         loop.close()
 
         total_words = len(words) if words else 1
