@@ -27,6 +27,7 @@ dev = [
 ]
 
 [tool.ruff]
+src = ["app"]
 target-version = "py313"
 line-length = 100
 indent-width = 4
@@ -39,16 +40,12 @@ exclude = [
     ".ruff_cache/",
 ]
 
-
 [tool.ruff.lint]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 select = ["E", "F", "N", "I", "C90", "T", "S"]
 ignore = []
 fixable = ["ALL"]
 unfixable = []
-
-[tool.ruff.lint.per-file-ignores]
-"scripts/**/*.py" = ["T201"]
 
 [tool.ruff.format]
 quote-style = "double"
