@@ -1,5 +1,4 @@
 import openai
-
 from app.config import settings
 
 
