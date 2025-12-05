@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     port: int = 8000
 
     # Paths
-    base_dir: Path = Path(__file__).parent.parent.parent.resolve() / "app"
+    base_dir: Path = Path(__file__).parent.parent.resolve() / "app"
     media_root: Path = base_dir / "media"
     results_dir: Path = media_root / "results"
 

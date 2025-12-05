@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
-WORKDIR /app
+WORKDIR /backend
 
 COPY pyproject.toml uv.lock ./
 
@@ -22,9 +22,9 @@ FROM python:3.13-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/backend/.venv/bin:$PATH"
 
-WORKDIR /app
+WORKDIR /backend
 
 RUN --mount=type=cache,target=/var/cache/apt \
     apt update -y && \
@@ -36,12 +36,12 @@ RUN --mount=type=cache,target=/var/cache/apt \
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
-COPY --from=builder --chown=appuser:appuser /app /app
-RUN mkdir /app/media
-RUN chown appuser:appuser /app/media
-RUN mkdir /app/media/results
-RUN chown appuser:appuser /app/media/results
+COPY --from=builder --chown=appuser:appuser /backend/.venv /backend/.venv
+COPY --from=builder --chown=appuser:appuser /backend /backend
+RUN mkdir /backend/app/media
+RUN mkdir /backend/app/media/results
+
+RUN chown -R appuser:appuser /backend/app
 
 USER appuser
 
