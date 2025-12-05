@@ -15,7 +15,8 @@ async def get_analysis(task_id: str):
 
     if not file_path.exists():
         raise HTTPException(
-            status_code=404, detail="Analysis not found or still processing"
+            status_code=404,
+            detail="Analysis not found or still processing",
         )
 
     with open(file_path, "r", encoding="utf-8") as f:
@@ -28,7 +29,10 @@ async def get_analysis(task_id: str):
 async def get_pdf(task_id: str):
     file_path = settings.results_dir / f"{task_id}.pdf"
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="PDF not found")
+        raise HTTPException(
+            status_code=404,
+            detail="PDF not found",
+        )
 
     return FileResponse(
         file_path,

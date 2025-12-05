@@ -1,9 +1,9 @@
-from app.logic.endpoints import upload, status, analysis
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.logic.endpoints import analysis, status, upload
 
 # origins = [
 #     "http://our.domain", "http://localhost"

@@ -1,6 +1,6 @@
 import logging
 import subprocess
-from typing import List, Dict
+from typing import Dict, List
 
 import cv2
 import librosa
@@ -61,7 +61,7 @@ class MLEngine:
             "1",
             output_path,
         ]
-        subprocess.run(
+        subprocess.run(  # noqa: S603
             command,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -71,18 +71,14 @@ class MLEngine:
     @staticmethod
     def transcribe(audio_path: str) -> List[TranscriptSegment]:
         model = MLEngine.get_whisper_model()
-        segments_gen, _ = model.transcribe(
-            audio_path, language="ru", word_timestamps=True
-        )
+        segments_gen, _ = model.transcribe(audio_path, language="ru", word_timestamps=True)
 
         segments = []
         for seg in segments_gen:
             words = []
             if seg.words:
                 for w in seg.words:
-                    clean_word = (
-                        w.word.strip().lower().replace(",", "").replace(".", "")
-                    )
+                    clean_word = w.word.strip().lower().replace(",", "").replace(".", "")
                     is_filler = clean_word in MLEngine.FILLER_WORDS
                     words.append(
                         TranscriptWord(
@@ -94,16 +90,12 @@ class MLEngine:
                     )
 
             segments.append(
-                TranscriptSegment(
-                    start=seg.start, end=seg.end, text=seg.text, words=words
-                )
+                TranscriptSegment(start=seg.start, end=seg.end, text=seg.text, words=words)
             )
         return segments
 
     @staticmethod
-    def calculate_tempo(
-        transcript: List[TranscriptSegment], window_sec=5.0
-    ) -> List[dict]:
+    def calculate_tempo(transcript: List[TranscriptSegment], window_sec=5.0) -> List[dict]:
         words = []
         for seg in transcript:
             words.extend(seg.words)
@@ -160,9 +152,7 @@ class MLEngine:
         face_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
         )
-        eye_cascade = cv2.CascadeClassifier(
-            cv2.data.haarcascades + "haarcascade_eye.xml"
-        )
+        eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
 
         total_frames = 0
         frames_with_eyes = 0

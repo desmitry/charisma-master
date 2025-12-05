@@ -1,11 +1,11 @@
 import shutil
 import uuid
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.config import settings
 from app.logic.tasks import process_video_pipeline
-from app.models.schemas import UploadResponse, PersonaEnum
+from app.models.schemas import PersonaEnum, UploadResponse
 
 router = APIRouter()
 
