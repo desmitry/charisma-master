@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     llm_model_name: str = os.getenv("LLM_MODEL_NAME", "gpt-3.5-turbo")
 
     class Config:
-        env_file = "configs/.env"
+        env_file = ".env"
 
 
 settings = Settings()

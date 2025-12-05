@@ -12,7 +12,7 @@
 
 ```cd backend```
 
-```docker build -t ghrc.io/desmitry/charisma-master-backend:latest -f Dockerfile .```
+```docker build -t ghcr.io/desmitry/charisma-master-backend:latest -f Dockerfile .```
 
 ```cd ..```
 
