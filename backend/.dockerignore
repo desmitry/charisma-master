@@ -1,0 +1,40 @@
+# Virtual environment
+.venv/
+venv/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+
+# Secrets / env
+*.env
+
+# Translations
+*.mo
+*.pot
+
+# Logs
+logs/
+*.log
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Ruff formatter
+.ruff_cache/
+
+## Additional stuff.
+# Git
+.git
+.gitignore
+LICENSE
+*.md
+
+# Docker
+docker/
+.dockerignore
+
+# Nix stuff
+flake.*
