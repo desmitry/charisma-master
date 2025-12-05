@@ -1,12 +1,8 @@
 "use client";
 
-import { GL } from "./gl";
-
 export function Hero() {
   return (
     <section className="snap-section relative flex min-h-svh w-full items-center justify-center">
-      <GL />
-
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-4 text-center text-white sm:px-6">
         <h1 className="text-[2.5rem] font-bold leading-tight sm:text-5xl md:text-6xl lg:text-7xl">
           Улучшай свою речь <br />

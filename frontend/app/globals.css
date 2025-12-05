@@ -50,8 +50,43 @@ html::-webkit-scrollbar {
   display: none;
 }
 
+/* Lenis Scroll */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+/* End Lenis Scroll */
+
 .snap-section {
   min-height: 100svh;
+}
+
+@keyframes dashReveal {
+  from {
+    stroke-dashoffset: 600;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.dash-animate {
+  animation: dashReveal 1.2s ease-out forwards;
 }
 
 #webgl {

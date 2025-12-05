@@ -10,12 +10,12 @@ type EcoModeContextType = {
 const EcoModeContext = createContext<EcoModeContextType | null>(null);
 
 export function EcoModeProvider({ children }: { children: ReactNode }) {
-  const [isEcoMode, setIsEcoMode] = useState(false);
+  const [isEcoMode, setIsEcoMode] = useState(true);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("eco_mode") === "true") {
-      setIsEcoMode(true);
+    if (params.get("eco_mode") === "false") {
+      setIsEcoMode(false);
     }
   }, []);
 
