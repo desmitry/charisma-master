@@ -11,6 +11,8 @@ services:
     container_name: celery
     command: [ "celery", "-A", "app.celery_app", "worker", "--loglevel=info", "--pool=solo" ]
     restart: always
+    env_file:
+      - ./backend/.env
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -22,6 +24,8 @@ services:
     container_name: backend
     command: [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000" ]
     restart: always
+    env_file:
+      - ./backend/.env
     ports:
       - 127.0.0.1:8000:8000
     depends_on:
