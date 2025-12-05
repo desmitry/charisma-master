@@ -19,7 +19,7 @@
     "leva": "latest",
     "lucide-react": "^0.454.0",
     "maath": "latest",
-    "next": "15.2.4",
+    "next": "^15.5.7",
     "next-themes": "latest",
     "react": "^19",
     "react-dom": "^19",
