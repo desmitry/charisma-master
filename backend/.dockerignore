@@ -10,6 +10,8 @@ __pycache__/
 
 # Secrets / env
 *.env
+.env
+.env.*
 
 # Translations
 *.mo
