@@ -30,3 +30,18 @@ services:
       - 127.0.0.1:8000:8000
     depends_on:
       - celery
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    command: [ "npm", "start" ]
+    restart: always
+    ports:
+      - 127.0.0.1:3000:3000
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    depends_on:
+      - backend
