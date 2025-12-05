@@ -32,9 +32,7 @@ services:
       - celery
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ghcr.io/desmitry/charisma-master-frontend:latest
     container_name: frontend
     command: [ "npm", "start" ]
     restart: always
