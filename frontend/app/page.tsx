@@ -8,6 +8,7 @@ import { AnalysisDashboard } from "@/components/analysis-dashboard";
 import { mockAnalysis } from "@/lib/mock-data";
 import { AnalysisResult } from "@/types/analysis";
 import { pollForAnalysis, uploadVideo } from "@/lib/api";
+import { GL } from "@/components/gl";
 
 type Stage = "landing" | "processing" | "result";
 
@@ -45,7 +46,6 @@ export default function Home() {
   const [stage, setStage] = useState<Stage>("landing");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState("");
-  const [persona, setPersona] = useState("strict_critic");
   const [statusText, setStatusText] = useState("Готовим обработку...");
   const [progress, setProgress] = useState(0.15);
   const [error, setError] = useState<string | null>(null);
@@ -168,42 +168,42 @@ export default function Home() {
     setIsExiting(true);
     
     // Wait for exit animation
-    await new Promise((res) => setTimeout(res, 500));
+    await new Promise((res) => setTimeout(res, 300));
     
     setStage("processing");
-    setStatusText("Запускаем демо-анализ без бэкенда");
-    setProgress(0.15);
-    await new Promise((res) => setTimeout(res, 2000));
-    setStatusText("Расшифровываем речь...");
-    setProgress(0.4);
-    await new Promise((res) => setTimeout(res, 2000));
-    setStatusText("Генерируем метрики, строим графики...");
+    setStatusText("Анализируем видео...");
+    setProgress(0.2);
+    await new Promise((res) => setTimeout(res, 800));
+    setStatusText("Обрабатываем аудиодорожку...");
+    setProgress(0.45);
+    await new Promise((res) => setTimeout(res, 800));
+    setStatusText("Вычисляем метрики уверенности...");
     setProgress(0.7);
-    await new Promise((res) => setTimeout(res, 2000));
-    setStatusText("Готовим финальный отчёт...");
+    await new Promise((res) => setTimeout(res, 800));
+    setStatusText("Формируем отчёт...");
     setProgress(0.95);
-    await new Promise((res) => setTimeout(res, 1000));
+    await new Promise((res) => setTimeout(res, 500));
     setResult(mockAnalysis);
     setProgress(1);
     
     // Wait for exit animation of processing overlay
-    await new Promise((res) => setTimeout(res, 600));
+    await new Promise((res) => setTimeout(res, 400));
     setStage("result");
     setShowResult(true);
     setIsExiting(false);
   };
 
   const stageName = (value?: string | null) => {
-    if (!value) return "Анализируем...";
+    if (!value) return "Анализируем видео...";
     switch (value) {
       case "listening":
-        return "Расшифровываем речь";
+        return "Обрабатываем аудиодорожку...";
       case "gestures":
-        return "Анализируем видео";
+        return "Анализируем видео...";
       case "analyzing":
-        return "Готовим финальный отчет";
+        return "Формируем отчёт...";
       default:
-        return "Анализируем...";
+        return "Анализируем видео...";
     }
   };
 
@@ -218,10 +218,10 @@ export default function Home() {
     try {
       setStage("processing");
       setProgress(0.15);
-      setStatusText("Загружаем видео на сервер...");
+      setStatusText("Загружаем видео...");
 
-      const { task_id } = await uploadVideo(selectedFile, videoUrl || null, persona);
-      setStatusText("Видео принято, ставим в очередь...");
+      const { task_id } = await uploadVideo(selectedFile, videoUrl || null);
+      setStatusText("Видео принято, начинаем анализ...");
       setProgress(0.3);
 
       const analysis = await pollForAnalysis(
@@ -249,6 +249,13 @@ export default function Home() {
 
   return (
     <>
+      {/* Фоновая WebGL-сцена для лендинга (во всех 3 секциях) */}
+      {showLanding && (
+        <div className="pointer-events-none fixed inset-0 -z-10">
+          <GL />
+        </div>
+      )}
+
       {showLanding && (
         <div
           className="transition-all duration-500 ease-out"
@@ -261,6 +268,146 @@ export default function Home() {
         </div>
       )}
 
+      {/* Секция 2: Превью возможностей */}
+      {showLanding && (
+        <section
+          className="snap-section relative z-10 w-full text-white lg:min-h-svh transition-all duration-500 ease-out"
+          style={{
+            opacity: isExiting ? 0 : 1,
+            transform: isExiting ? "translateY(20px)" : "translateY(0)",
+          }}
+        >
+          <div className="flex flex-col items-center justify-center px-4 py-8 sm:px-6 lg:min-h-svh lg:py-6">
+            <div className="w-full max-w-5xl">
+              <p className="text-center text-[10px] font-mono uppercase tracking-[0.4em] text-white/50 sm:text-xs">
+                Как это работает
+              </p>
+              <h2 className="mt-3 text-center text-xl font-semibold text-white sm:text-2xl md:text-3xl lg:mt-2">
+                AI-анализ вашего выступления
+              </h2>
+              <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-white/60 lg:mt-1">
+                Загрузите видео — получите детальный разбор речи, жестов и структуры презентации
+              </p>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:mt-5 lg:grid-cols-3 lg:gap-3">
+                {/* Карточка 1 */}
+                <div className="group rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10 lg:p-3">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 lg:mb-2 lg:h-8 lg:w-8">
+                    <svg className="h-5 w-5 text-white/80 lg:h-4 lg:w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-base font-semibold text-white lg:text-sm">Транскрипция речи</h3>
+                  <p className="mt-1 text-xs text-white/60 lg:text-[11px]">
+                    Полная расшифровка с выделением слов-паразитов
+                  </p>
+                </div>
+
+                {/* Карточка 2 */}
+                <div className="group rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10 lg:p-3">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 lg:mb-2 lg:h-8 lg:w-8">
+                    <svg className="h-5 w-5 text-white/80 lg:h-4 lg:w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-base font-semibold text-white lg:text-sm">Метрики уверенности</h3>
+                  <p className="mt-1 text-xs text-white/60 lg:text-[11px]">
+                    Оценка громкости и зрительного контакта
+                  </p>
+                </div>
+
+                {/* Карточка 3 */}
+                <div className="group rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10 sm:col-span-2 lg:col-span-1 lg:p-3">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 lg:mb-2 lg:h-8 lg:w-8">
+                    <svg className="h-5 w-5 text-white/80 lg:h-4 lg:w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-base font-semibold text-white lg:text-sm">AI-рекомендации</h3>
+                  <p className="mt-1 text-xs text-white/60 lg:text-[11px]">
+                    Персонализированные советы по улучшению
+                  </p>
+                </div>
+              </div>
+
+              {/* Превью интерфейса с интерактивной кнопкой */}
+              <div className="group/preview relative mt-6 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-1 shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:shadow-[0_40px_100px_rgba(0,0,0,0.55)] lg:mt-5">
+                <div className="rounded-xl border border-white/10 bg-black/50 p-3 backdrop-blur-2xl lg:p-2.5">
+                  <div className="flex items-center gap-1.5 border-b border-white/10 pb-2">
+                    <div className="h-2.5 w-2.5 rounded-full bg-red-400/60" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-amber-400/60" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-emerald-400/60" />
+                    <span className="ml-2 text-[10px] text-white/60">charisma — анализ выступления</span>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3 lg:mt-2 lg:gap-2">
+                    <div className="rounded-lg border border-white/10 bg-white/5 p-2 backdrop-blur-lg">
+                      <div className="h-1.5 w-12 rounded bg-white/25" />
+                      <div className="mt-1.5 h-14 rounded-md bg-white/10 lg:h-12" />
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-white/5 p-2 backdrop-blur-lg">
+                      <div className="h-1.5 w-14 rounded bg-white/25" />
+                      <div className="mt-1.5 flex items-end gap-0.5">
+                        <div className="h-6 w-3 rounded bg-white/15" />
+                        <div className="h-9 w-3 rounded bg-white/25" />
+                        <div className="h-5 w-3 rounded bg-white/15" />
+                        <div className="h-11 w-3 rounded bg-white/30" />
+                        <div className="h-7 w-3 rounded bg-white/15" />
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-white/5 p-2 backdrop-blur-lg">
+                      <div className="h-1.5 w-10 rounded bg-white/25" />
+                      <div className="mt-1.5 flex items-center gap-3">
+                        {/* Круговой прогресс */}
+                        <div className="relative h-12 w-12 flex-shrink-0 lg:h-10 lg:w-10">
+                          <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
+                            <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="3" strokeDasharray="78" strokeDashoffset="9" strokeLinecap="round" />
+                          </svg>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-2 w-4 rounded bg-white/25" />
+                          </div>
+                        </div>
+                        {/* Мини-бары с лейблами */}
+                        <div className="flex-1 space-y-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <div className="h-1 w-6 rounded bg-white/15 lg:w-4" />
+                            <div className="h-1.5 flex-1 rounded-full bg-white/10"><div className="h-full w-[91%] rounded-full bg-white/30" /></div>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="h-1 w-6 rounded bg-white/15 lg:w-4" />
+                            <div className="h-1.5 flex-1 rounded-full bg-white/10"><div className="h-full w-[85%] rounded-full bg-white/25" /></div>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="h-1 w-6 rounded bg-white/15 lg:w-4" />
+                            <div className="h-1.5 flex-1 rounded-full bg-white/10"><div className="h-full w-[90%] rounded-full bg-white/30" /></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Интегрированная CTA кнопка внутри превью */}
+                  <button
+                    onClick={startMockFlow}
+                    className="group/btn relative mt-3 w-full overflow-hidden rounded-xl border border-white/15 bg-gradient-to-r from-white/10 via-white/5 to-white/10 py-3 transition-all duration-300 hover:border-white/25 hover:from-white/15 hover:via-white/10 hover:to-white/15 lg:mt-2 lg:py-2.5"
+                  >
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.12),transparent_70%)]" />
+                    <div className="relative flex items-center justify-center gap-2">
+                      <svg className="h-4 w-4 text-white/70 transition-transform duration-300 group-hover/btn:scale-110" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+                      </svg>
+                      <span className="text-xs font-medium text-white/90">Посмотреть пример</span>
+                      <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">demo</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Секция 3: Загрузка */}
       {showLanding && (
         <section
           className="snap-section relative z-10 w-full text-white lg:min-h-svh transition-all duration-500 ease-out"
@@ -331,28 +478,6 @@ export default function Home() {
                     onChange={(e) => setVideoUrl(e.target.value)}
                   />
                   
-                  <div className="mt-4">
-                    <p className="text-[11px] uppercase tracking-[0.3em] text-white/50 mb-2">
-                      Персона
-                    </p>
-                    <div className="relative">
-                      <select
-                        value={persona}
-                        onChange={(e) => setPersona(e.target.value)}
-                        className="w-full rounded-2xl border border-white/20 bg-black/30 px-4 py-3 text-sm text-white focus:border-white focus:outline-none appearance-none cursor-pointer hover:bg-white/5 transition-colors"
-                      >
-                        <option value="strict_critic">Строгий критик</option>
-                        <option value="kind_mentor">Добрый ментор</option>
-                        <option value="steve_jobs_style">Стиль Стива Джобса</option>
-                      </select>
-                      <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-white/50">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M6 9l6 6 6-6" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-
                   <button
                     className="mt-6 w-full rounded-2xl bg-white/20 py-3 text-sm font-semibold text-white transition hover:bg-white/35"
                     onClick={handleAnalyze}
@@ -362,12 +487,6 @@ export default function Home() {
                   <p className="mt-3 text-xs text-white/50">
                     Прямая ссылка либо YouTube
                   </p>
-                  <button
-                    className="mt-4 w-full rounded-2xl border border-amber-300/40 bg-amber-500/20 py-3 text-sm font-semibold text-amber-50 transition hover:bg-amber-500/30"
-                    onClick={startMockFlow}
-                  >
-                    Демо без бэкенда
-                  </button>
                   {error && <p className="mt-3 text-xs text-red-300">{error}</p>}
                 </div>
               </div>
