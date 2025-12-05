@@ -1,8 +1,7 @@
+from app.celery_app import celery_app
+from app.models.schemas import ProcessingState, TaskStatusResponse
 from celery.result import AsyncResult
 from fastapi import APIRouter
-
-from app.celery_app import celery_app
-from app.models.schemas import TaskStatusResponse, ProcessingState
 
 router = APIRouter()
 
