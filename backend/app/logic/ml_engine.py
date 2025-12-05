@@ -5,10 +5,9 @@ from typing import Dict, List
 import cv2
 import librosa
 import numpy as np
-from faster_whisper import WhisperModel
-
 from app.config import settings
 from app.models.schemas import TranscriptSegment, TranscriptWord
+from faster_whisper import WhisperModel
 
 logger = logging.getLogger(__name__)
 
