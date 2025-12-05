@@ -65,9 +65,7 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
         llm_client = LLMClient()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        analysis = loop.run_until_complete(
-            llm_client.analyze_speech(full_text, persona)
-        )
+        analysis = loop.run_until_complete(llm_client.analyze_speech(full_text, persona))
         loop.close()
 
         total_words = len(words) if words else 1
