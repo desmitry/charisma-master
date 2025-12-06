@@ -50,7 +50,6 @@ html::-webkit-scrollbar {
   display: none;
 }
 
-/* Lenis Scroll */
 html.lenis, html.lenis body {
   height: auto;
 }
@@ -70,7 +69,6 @@ html.lenis, html.lenis body {
 .lenis.lenis-scrolling iframe {
   pointer-events: none;
 }
-/* End Lenis Scroll */
 
 .snap-section {
   min-height: 100svh;
@@ -111,5 +109,69 @@ html.lenis, html.lenis body {
 
   #webgl {
     height: 100svh;
+  }
+}
+
+.eco-bg {
+  background: linear-gradient(135deg, #000 0%, #0a0a0a 50%, #050505 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.eco-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(255,255,255,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(255,255,255,0.02) 0%, transparent 50%);
+  animation: eco-glow 8s ease-in-out infinite alternate;
+}
+
+.eco-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.15) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,0.12) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50% 30%, rgba(255,255,255,0.1) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.08) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.12) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 15% 85%, rgba(255,255,255,0.1) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 45% 15%, rgba(255,255,255,0.08) 0%, transparent 100%),
+    radial-gradient(1px 1px at 75% 55%, rgba(255,255,255,0.12) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 45%, rgba(255,255,255,0.1) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 25%, rgba(255,255,255,0.08) 0%, transparent 100%),
+    radial-gradient(1px 1px at 5% 65%, rgba(255,255,255,0.1) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 65% 5%, rgba(255,255,255,0.12) 0%, transparent 100%),
+    radial-gradient(1px 1px at 35% 95%, rgba(255,255,255,0.08) 0%, transparent 100%),
+    radial-gradient(1px 1px at 95% 75%, rgba(255,255,255,0.1) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 45%, rgba(255,255,255,0.06) 0%, transparent 100%);
+  animation: eco-stars 12s linear infinite;
+}
+
+@keyframes eco-glow {
+  0% {
+    opacity: 0.6;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.05) translateY(-2%);
+  }
+}
+
+@keyframes eco-stars {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-5px) rotate(0.5deg);
+    opacity: 0.8;
   }
 }

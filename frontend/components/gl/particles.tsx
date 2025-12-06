@@ -307,7 +307,6 @@ export function Particles({
     const simWaveIntensity =
       simulationMaterial.uniforms.uWaveIntensity.value as number[];
 
-    // Массивы в шейдере ограничены максимум 8 элементами
     const maxShaderWaves = Math.min(waveLimit, simWaveOrigins.length);
     for (let idx = 0; idx < maxShaderWaves; idx++) {
       const wave = waves.current[idx];
@@ -317,7 +316,6 @@ export function Particles({
       simWaveActive[idx] = wave.active ? 1 : 0;
       simWaveIntensity[idx] = wave.intensity;
     }
-    // Очищаем только элементы в пределах размера массива
     for (let idx = maxShaderWaves; idx < simWaveActive.length; idx++) {
       if (simWaveActive[idx]) simWaveActive[idx] = 0;
     }
@@ -350,7 +348,6 @@ export function Particles({
     const pointWaveIntensity =
       dofPointsMaterial.uniforms.uWaveIntensity.value as number[];
 
-    // Массивы в шейдере ограничены максимум 8 элементами
     const maxShaderWavesPoint = Math.min(waveLimit, pointWaveOrigins.length);
     for (let idx = 0; idx < maxShaderWavesPoint; idx++) {
       const wave = waves.current[idx];
@@ -360,7 +357,6 @@ export function Particles({
       pointWaveActive[idx] = wave.active ? 1 : 0;
       pointWaveIntensity[idx] = wave.intensity;
     }
-    // Очищаем только элементы в пределах размера массива
     for (let idx = maxShaderWavesPoint; idx < pointWaveActive.length; idx++) {
       if (pointWaveActive[idx]) pointWaveActive[idx] = 0;
     }

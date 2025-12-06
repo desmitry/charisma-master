@@ -76,6 +76,7 @@ export function getPdfUrl(taskId: string): string {
 export function resolveVideoUrl(videoPath: string): string {
   if (!videoPath) return "";
   if (videoPath.startsWith("http")) return videoPath;
+  if (videoPath.startsWith("/") && !videoPath.startsWith("/media/")) return videoPath;
   return `${API_BASE_URL}${videoPath}`;
 }
 

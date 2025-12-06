@@ -5,7 +5,6 @@ import { Hero } from "@/components/hero";
 import { Leva } from "leva";
 import { ProcessingOverlay } from "@/components/processing-overlay";
 import { AnalysisDashboard } from "@/components/analysis-dashboard";
-import { mockAnalysis } from "@/lib/mock-data";
 import { AnalysisResult } from "@/types/analysis";
 import { pollForAnalysis, uploadVideo } from "@/lib/api";
 import { GL } from "@/components/gl";
@@ -163,11 +162,22 @@ export default function Home() {
     }
   };
 
+  const loadMockResponse = async (): Promise<AnalysisResult> => {
+    const res = await fetch("/mock-response.json");
+    if (!res.ok) throw new Error("mock fetch failed");
+    const data = (await res.json()) as AnalysisResult;
+    let videoPath = data.video_path;
+    if (videoPath && !videoPath.startsWith("http")) {
+      const filename = videoPath.split(/[/\\]/).pop() || "";
+      videoPath = `/${filename}`;
+    }
+    return { ...data, video_path: videoPath || data.video_path };
+  };
+
   const startMockFlow = async () => {
     setIsMockMode(true);
     setIsExiting(true);
     
-    // Wait for exit animation
     await new Promise((res) => setTimeout(res, 300));
     
     setStage("processing");
@@ -183,10 +193,10 @@ export default function Home() {
     setStatusText("Формируем отчёт...");
     setProgress(0.95);
     await new Promise((res) => setTimeout(res, 500));
-    setResult(mockAnalysis);
+    const mock = await loadMockResponse();
+    setResult(mock);
     setProgress(1);
     
-    // Wait for exit animation of processing overlay
     await new Promise((res) => setTimeout(res, 400));
     setStage("result");
     setShowResult(true);
@@ -249,7 +259,6 @@ export default function Home() {
 
   return (
     <>
-      {/* Фоновая WebGL-сцена для лендинга (во всех 3 секциях) */}
       {showLanding && (
         <div className="pointer-events-none fixed inset-0 -z-10">
           <GL />
@@ -268,7 +277,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Секция 2: Превью возможностей */}
       {showLanding && (
         <section
           className="snap-section relative z-10 w-full text-white lg:min-h-svh transition-all duration-500 ease-out"
@@ -290,7 +298,6 @@ export default function Home() {
               </p>
 
               <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:mt-5 lg:grid-cols-3 lg:gap-3">
-                {/* Карточка 1 */}
                 <div className="group rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10 lg:p-3">
                   <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 lg:mb-2 lg:h-8 lg:w-8">
                     <svg className="h-5 w-5 text-white/80 lg:h-4 lg:w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -303,7 +310,6 @@ export default function Home() {
                   </p>
                 </div>
 
-                {/* Карточка 2 */}
                 <div className="group rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10 lg:p-3">
                   <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 lg:mb-2 lg:h-8 lg:w-8">
                     <svg className="h-5 w-5 text-white/80 lg:h-4 lg:w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -316,7 +322,6 @@ export default function Home() {
                   </p>
                 </div>
 
-                {/* Карточка 3 */}
                 <div className="group rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10 sm:col-span-2 lg:col-span-1 lg:p-3">
                   <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 lg:mb-2 lg:h-8 lg:w-8">
                     <svg className="h-5 w-5 text-white/80 lg:h-4 lg:w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -330,7 +335,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Превью интерфейса с интерактивной кнопкой */}
               <div className="group/preview relative mt-6 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-1 shadow-[0_30px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-all duration-500 hover:border-white/20 hover:shadow-[0_40px_100px_rgba(0,0,0,0.55)] lg:mt-5">
                 <div className="rounded-xl border border-white/10 bg-black/50 p-3 backdrop-blur-2xl lg:p-2.5">
                   <div className="flex items-center gap-1.5 border-b border-white/10 pb-2">
@@ -357,7 +361,6 @@ export default function Home() {
                     <div className="rounded-lg border border-white/10 bg-white/5 p-2 backdrop-blur-lg">
                       <div className="h-1.5 w-10 rounded bg-white/25" />
                       <div className="mt-1.5 flex items-center gap-3">
-                        {/* Круговой прогресс */}
                         <div className="relative h-12 w-12 flex-shrink-0 lg:h-10 lg:w-10">
                           <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
                             <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
@@ -367,7 +370,6 @@ export default function Home() {
                             <div className="h-2 w-4 rounded bg-white/25" />
                           </div>
                         </div>
-                        {/* Мини-бары с лейблами */}
                         <div className="flex-1 space-y-1.5">
                           <div className="flex items-center gap-1.5">
                             <div className="h-1 w-6 rounded bg-white/15 lg:w-4" />
@@ -386,7 +388,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Интегрированная CTA кнопка внутри превью */}
                   <button
                     onClick={startMockFlow}
                     className="group/btn relative mt-3 w-full overflow-hidden rounded-xl border border-white/15 bg-gradient-to-r from-white/10 via-white/5 to-white/10 py-3 transition-all duration-300 hover:border-white/25 hover:from-white/15 hover:via-white/10 hover:to-white/15 lg:mt-2 lg:py-2.5"
@@ -407,7 +408,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* Секция 3: Загрузка */}
       {showLanding && (
         <section
           className="snap-section relative z-10 w-full text-white lg:min-h-svh transition-all duration-500 ease-out"
@@ -425,7 +425,7 @@ export default function Home() {
                 Анализируй. Учись. Защищайся.
               </h2>
               <p className="mt-4 text-center text-sm text-white/70 sm:text-base">
-                Перетащи или выбери видео, либо вставь ссылку. Можно сразу запустить демо без бэкенда.
+                Перетащи или выбери видео, либо вставь ссылку.
               </p>
 
               <div className="mt-10 grid gap-6 md:grid-cols-2">

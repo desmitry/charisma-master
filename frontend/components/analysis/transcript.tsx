@@ -12,36 +12,39 @@ export function Transcript({
   currentTime: number;
   onSeek: (time: number) => void;
 }) {
+  const eps = 0.02;
   return (
-    <div className="space-y-3">
+    <div className="space-y-0.5">
       {segments.map((segment, idx) => (
         <div
           key={`${segment.start}-${idx}`}
-          className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-7 text-white/80"
+          className="rounded-xl border border-white/10 bg-[#0f1016] p-4 text-sm leading-[1.35] text-white/80 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
         >
-          <div className="flex items-center gap-3 text-xs text-white/50">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-white/45">
             <span>{segment.start.toFixed(1)}s</span>
             <div className="h-px flex-1 bg-white/10" />
           </div>
-          <div className="mt-3 flex flex-wrap gap-1">
+          <div className="mt-1.5 text-[14px] leading-[1.4] whitespace-normal break-words">
             {segment.words.map((word, wIdx) => {
+              const display = word.text.trim();
+              if (!display) return null;
               const isActive =
-                currentTime >= word.start && currentTime <= word.end;
+                currentTime + eps >= word.start && currentTime < word.end - eps;
               return (
-                <button
-                  key={`${word.text}-${wIdx}-${word.start}`}
+                <span
+                  key={`${display}-${wIdx}-${word.start}`}
                   onClick={() => onSeek(word.start)}
                   className={cn(
-                    "rounded-full px-2.5 py-1 text-sm transition",
-                    "hover:-translate-y-0.5 hover:bg-white/15",
+                    "cursor-pointer rounded px-[2px] py-[1px] transition-all duration-150",
                     word.is_filler
-                      ? "text-rose-300"
-                      : "text-white/80",
-                    isActive && "bg-white/15 text-white shadow-[0_10px_40px_rgba(255,255,255,0.08)]"
+                      ? "text-rose-200 bg-rose-500/10 hover:bg-rose-400/20"
+                      : "text-white/75 hover:bg-white/10",
+                    isActive && "bg-white/15 text-white shadow-[0_8px_30px_rgba(255,255,255,0.08)]",
+                    "hover:-translate-y-[1px]"
                   )}
                 >
-                  {word.text}
-                </button>
+                  {display}{" "}
+                </span>
               );
             })}
           </div>
