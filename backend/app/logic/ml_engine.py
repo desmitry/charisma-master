@@ -5,6 +5,7 @@ from typing import Dict, List
 import cv2
 import librosa
 import numpy as np
+import mediapipe as mp
 from app.config import settings
 from app.models.schemas import TranscriptSegment, TranscriptWord
 from faster_whisper import WhisperModel
@@ -31,17 +32,28 @@ class MLEngine:
         "собственно",
         "вообще",
         "походу",
+        "реально",
+        "знаете",
+        "так",
+        "скажем"
     }
+
+    @classmethod
+    def load_model(cls):
+        if cls._whisper_model is None:
+            logger.info(f"Загрузка модели ({settings.whisper_compute_type}) на {settings.whisper_device}...")
+            cls._whisper_model = WhisperModel(
+                settings.whisper_model_path,
+                device=settings.whisper_device,
+                compute_type=settings.whisper_compute_type
+            )
+            logger.info("Модель загружена")
+        return cls._whisper_model
 
     @classmethod
     def get_whisper_model(cls):
         if cls._whisper_model is None:
-            logger.info(f"Модель: {settings.whisper_model_path}")
-            cls._whisper_model = WhisperModel(
-                settings.whisper_model_path,
-                device=settings.whisper_device,
-                compute_type=settings.whisper_compute_type,
-            )
+            return cls.load_model()
         return cls._whisper_model
 
     @staticmethod
@@ -113,86 +125,118 @@ class MLEngine:
             wpm = (count / window_sec) * 60
 
             zone = "green"
-            if wpm < 80:
-                zone = "red"
-            elif wpm > 160:
+            if wpm < 80 or wpm > 160:
                 zone = "red"
             elif wpm > 140 or wpm < 100:
                 zone = "yellow"
 
             points.append({"time": float(t), "wpm": float(round(wpm, 1)), "zone": zone})
-
         return points
 
     @staticmethod
     def analyze_audio_features(audio_path: str) -> Dict[str, float]:
         try:
             y, sr = librosa.load(audio_path, sr=None)
+
             rms = librosa.feature.rms(y=y)[0]
+            mean_rms = np.mean(rms)
 
-            volume_std = np.std(rms)
-            mean_volume = np.mean(rms)
+            volume_score = min(mean_rms * 1000, 100)
 
-            volume_score = min(mean_volume * 1000, 100)
+            f0, voiced_flag, voiced_probs = librosa.pyin(
+                y, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'), sr=sr, frame_length=2048
+            )
+
+            valid_f0 = f0[~np.isnan(f0)]
+            if len(valid_f0) > 0:
+                pitch_std = np.std(valid_f0)
+                tone_score = min((pitch_std / 40) * 100, 100)
+            else:
+                tone_score = 0.0
+
             return {
-                "volume_std": float(volume_std),
                 "volume_score": float(volume_score),
+                "tone_score": float(tone_score),
+                "pitch_std": float(pitch_std if len(valid_f0) > 0 else 0)
             }
         except Exception as e:
-            logger.error(f"Аудио завершилось с ошибкой: {e}")
-            return {"volume_std": 0.0, "volume_score": 50.0}
+            logger.error(f"Audio analysis failed: {e}")
+            return {"volume_score": 50.0, "tone_score": 50.0}
 
     @staticmethod
     def analyze_video_features(video_path: str) -> Dict[str, float]:
+        mp_holistic = mp.solutions.holistic
+
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
-            return {"gaze_score": 0.0, "slide_density": 0.0}
-
-        face_cascade = cv2.CascadeClassifier(
-            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        )
-        eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
+            return {"gaze_score": 0.0, "gesture_score": 0.0, "slide_density": 0.0}
 
         total_frames = 0
-        frames_with_eyes = 0
-        frames_with_faces = 0
-        slide_density_accum = 0.0
+        looking_at_camera_frames = 0
 
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
+        prev_wrist_y = {'left': None, 'right': None}
+        movement_accum = 0.0
 
-            total_frames += 1
-            if total_frames % 10 != 0:
-                continue
+        with mp_holistic.Holistic(
+                min_detection_confidence=0.5,
+                min_tracking_confidence=0.5,
+                model_complexity=1  # 0=Lite, 1=Full, 2=Heavy
+        ) as holistic:
 
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
 
-            faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-            if len(faces) > 0:
-                frames_with_faces += 1
-                for x, y, w, h in faces:
-                    roi_gray = gray[y : y + h, x : x + w]
-                    eyes = eye_cascade.detectMultiScale(roi_gray)
-                    if len(eyes) >= 1:
-                        frames_with_eyes += 1
-                        break
+                total_frames += 1
+                if total_frames % 5 != 0:
+                    continue
 
-            edges = cv2.Canny(gray, 100, 200)
-            slide_density_accum += np.sum(edges) / (frame.shape[0] * frame.shape[1])
+                image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                results = holistic.process(image)
+
+                if results.face_landmarks:
+                    face = results.face_landmarks.landmark
+                    nose_tip = face[1]
+                    left_cheek = face[234]
+                    right_cheek = face[454]
+
+                    face_center_x = (left_cheek.x + right_cheek.x) / 2
+                    diff = abs(nose_tip.x - face_center_x)
+
+                    if diff < 0.06:
+                        looking_at_camera_frames += 1
+
+                if results.pose_landmarks:
+                    pose = results.pose_landmarks.landmark
+                    left_wrist = pose[mp_holistic.PoseLandmark.LEFT_WRIST]
+                    right_wrist = pose[mp_holistic.PoseLandmark.RIGHT_WRIST]
+
+                    current_left_y = left_wrist.y
+                    current_right_y = right_wrist.y
+
+                    if prev_wrist_y['left'] is not None:
+                        delta = abs(current_left_y - prev_wrist_y['left']) + \
+                                abs(current_right_y - prev_wrist_y['right'])
+
+                        if delta > 0.01:
+                            movement_accum += delta
+
+                    prev_wrist_y['left'] = current_left_y
+                    prev_wrist_y['right'] = current_right_y
 
         cap.release()
 
-        gaze_score = 0.0
-        if frames_with_faces > 0:
-            gaze_score = (frames_with_eyes / frames_with_faces) * 100
+        processed_frames = total_frames / 5
+        if processed_frames == 0:
+            return {"gaze_score": 0.0, "gesture_score": 0.0}
 
-        avg_density = 0.0
-        if total_frames > 0:
-            avg_density = (slide_density_accum / (total_frames / 10)) * 100
+        gaze_score = (looking_at_camera_frames / processed_frames) * 100
 
+        avg_movement_per_frame = movement_accum / processed_frames
+        gesture_score = min(avg_movement_per_frame * 1000, 100)
         return {
             "gaze_score": min(max(gaze_score, 0), 100),
-            "slide_density": avg_density,
+            "gesture_score": min(max(gesture_score, 0), 100),
+            "raw_movement": avg_movement_per_frame
         }

@@ -18,6 +18,7 @@ dependencies = [
     "reportlab>=4.4.5",
     "requests>=2.32.5",
     "uvicorn[standard]>=0.38.0",
+    "mediapipe=0.10.14"
 ]
 
 [dependency-groups]
