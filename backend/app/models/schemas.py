@@ -1,6 +1,5 @@
 from enum import Enum
 from typing import List, Optional
-
 from pydantic import BaseModel
 
 
@@ -47,6 +46,8 @@ class ConfidenceComponents(BaseModel):
     volume_score: float
     filler_score: float
     gaze_score: float
+    gesture_score: float
+    tone_score: float
 
 
 class ConfidenceIndex(BaseModel):
@@ -67,6 +68,7 @@ class AnalysisResult(BaseModel):
     ideal_text: str
     persona_feedback: Optional[str] = None
     slide_text_density: float = 0.0
+    raw_metrics: Optional[dict] = None
 
 
 class TaskStatusResponse(BaseModel):
