@@ -1,4 +1,5 @@
-import { Perf } from "r3f-perf";
+import { useCallback, useState } from "react";
+import * as THREE from "three";
 import { Effects } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { useControls } from "leva";
@@ -8,6 +9,30 @@ import { useEcoMode } from "@/lib/eco-mode-context";
 
 export const GL = () => {
   const { isEcoMode } = useEcoMode();
+  const [contextLost, setContextLost] = useState(false);
+
+  const handleCreated = useCallback(({ gl }: { gl: THREE.WebGLRenderer }) => {
+    const canvas = gl.domElement;
+    
+    const handleContextLost = (event: Event) => {
+      event.preventDefault();
+      setContextLost(true);
+      console.warn("WebGL context lost, attempting recovery...");
+    };
+    
+    const handleContextRestored = () => {
+      setContextLost(false);
+      console.log("WebGL context restored");
+    };
+    
+    canvas.addEventListener("webglcontextlost", handleContextLost);
+    canvas.addEventListener("webglcontextrestored", handleContextRestored);
+    
+    return () => {
+      canvas.removeEventListener("webglcontextlost", handleContextLost);
+      canvas.removeEventListener("webglcontextrestored", handleContextRestored);
+    };
+  }, []);
   const {
     speed,
     focus,
@@ -45,6 +70,14 @@ export const GL = () => {
   });
   const effectiveSize = isEcoMode ? Math.min(size, 256) : size;
 
+  if (contextLost) {
+    return (
+      <div id="webgl">
+        <div className="eco-bg w-full h-full" />
+      </div>
+    );
+  }
+
   return (
     <div id="webgl">
       <Canvas
@@ -61,6 +94,7 @@ export const GL = () => {
           powerPreference: isEcoMode ? "low-power" : "high-performance",
           antialias: false,
         }}
+        onCreated={handleCreated}
       >
         <color attach="background" args={["#000"]} />
         <Particles
