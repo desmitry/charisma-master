@@ -1,5 +1,5 @@
 # Use bookworm-slim because of opencv-python
-FROM ghcr.io/astral-sh/uv:0.9.8-python3.13-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:0.9.8-python3.11-bookworm-slim AS builder
 
 ENV UV_TOOL_BIN_DIR=/usr/local/bin
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -18,7 +18,7 @@ COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-FROM python:3.13-slim-bookworm AS runtime
+FROM python:3.11-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -34,7 +34,7 @@ RUN --mount=type=cache,target=/var/cache/apt \
     libglib2.0-0 && \
     rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
 COPY --from=builder --chown=appuser:appuser /backend/.venv /backend/.venv
 COPY --from=builder --chown=appuser:appuser /backend /backend
