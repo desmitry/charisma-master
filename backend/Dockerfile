@@ -10,19 +10,14 @@ WORKDIR /backend
 
 COPY pyproject.toml uv.lock ./
 
-# Mount cache for faster subsequent builds
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project --no-dev
 
 COPY . .
 
-# Sync the project itself
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-# ---------------------------------------
-# Runtime Stage
-# ---------------------------------------
 FROM python:3.11-slim-bookworm AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -31,27 +26,22 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /backend
 
-# FIX 1: Fixed apt "Exit Code 100"
-# - Switched 'apt' to 'apt-get' (better for scripts)
-# - Removed 'apt upgrade' (causes the crash/bloat)
-# - Added '--no-install-recommends' (saves space)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt update -y && \
+    apt upgrade -y && \
+    apt install -y \
     libgl1 \
     libglib2.0-0 && \
     rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
-# FIX 2: Optimized COPY
-# You were copying .venv and then overwriting it by copying /backend (which contains .venv)
-# This single command copies everything (source + venv) with correct permissions at once.
+COPY --from=builder --chown=appuser:appuser /backend/.venv /backend/.venv
 COPY --from=builder --chown=appuser:appuser /backend /backend
+RUN mkdir /backend/app/media
+RUN mkdir /backend/app/media/results
 
-# Create media directories and ensure permissions
-# logic: We only need to chown the new folders, /backend is already owned by appuser from the COPY
-RUN mkdir -p /backend/app/media/results && \
-    chown -R appuser:appuser /backend/app/media
+RUN chown -R appuser:appuser /backend/app
 
 USER appuser
 

@@ -1,4 +1,4 @@
-### Build:
+### Development without Docker:
 * Backend
 
 ```cd backend```
@@ -20,18 +20,8 @@
 ```npm run dev```
 
 
-### With Docker:
+### Deploy with Docker Compose:
 
-```cd backend```
+```./scripts/build.sh```
 
-```docker build -t ghcr.io/desmitry/charisma-master-backend:latest -f Dockerfile .```
-
-```cd ..```
-
-```cd frontend```
-
-```docker build -t ghcr.io/desmitry/charisma-master-frontend:latest -f Dockerfile .```
-
-```cd ..```
-
-```docker compose up -d```
+```docker compose up```
