@@ -7,10 +7,11 @@ from app.config import settings
 from app.logic.llm_client import LLMClient
 from app.logic.ml_engine import MLEngine
 from app.models.schemas import ProcessingStage
-from celery import shared_task # current_task
+from celery import shared_task  # current_task
 from celery.signals import worker_process_init
 
 logger = logging.getLogger(__name__)
+
 
 @worker_process_init.connect
 def init_worker(**kwargs):
@@ -19,6 +20,7 @@ def init_worker(**kwargs):
         MLEngine.load_model()
     except Exception as e:
         logger.error(f"Загрузка не удалась: {e}")
+
 
 def save_json_result(task_id: str, data: dict):
     file_path = settings.results_dir / f"{task_id}.json"
@@ -34,7 +36,9 @@ def save_json_result(task_id: str, data: dict):
 @shared_task(bind=True)
 def process_video_pipeline(self, task_id: str, video_path: str, persona: str = None):
     try:
-        self.update_state(state='PROCESSING', meta={'stage': ProcessingStage.listening, 'progress': 0.1})
+        self.update_state(
+            state="PROCESSING", meta={"stage": ProcessingStage.listening, "progress": 0.1}
+        )
         audio_path = str(Path(video_path).with_suffix(".wav"))
 
         MLEngine.extract_audio(video_path, audio_path)
@@ -50,10 +54,10 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
                     filler_count += 1
     except Exception as e:
         logger.critical(f"Ошибка при вырезании аудиодорожки: {e}")
-        self.update_state(state='FAILURE', meta={'error': str(e)})
+        self.update_state(state="FAILURE", meta={"error": str(e)})
         raise e
 
-    self.update_state(state='PROCESSING', meta={'stage': ProcessingStage.gestures, 'progress': 0.4})
+    self.update_state(state="PROCESSING", meta={"stage": ProcessingStage.gestures, "progress": 0.4})
 
     vision_metrics = {"gaze_score": 0.0, "gesture_score": 0.0}
     audio_metrics = {"volume_score": 50.0, "tone_score": 0.0}
@@ -70,16 +74,19 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
     except Exception as e:
         logger.warning(f"Звук сломался: {e}")
 
-    self.update_state(state='PROCESSING', meta={'stage': ProcessingStage.analyzing, 'progress': 0.7})
+    self.update_state(
+        state="PROCESSING", meta={"stage": ProcessingStage.analyzing, "progress": 0.7}
+    )
     tempo_data = MLEngine.calculate_tempo(transcript_segments)
 
     context_for_llm = f"""
     Текст выступления: {full_text}
 
     Технические метрики:
-    - Жестикуляция: {vision_metrics.get('gesture_score', 0):.1f}/100 (если < 20 - человек стоит столбом, если > 80 - машет руками)
-    - Зрительный контакт: {vision_metrics.get('gaze_score', 0):.1f}/100
-    - Живость голоса (тон): {audio_metrics.get('tone_score', 0):.1f}/100 (если < 30 - монотонно)
+    - Жестикуляция: {vision_metrics.get("gesture_score", 0):.1f}/100 
+    (если < 20 - человек стоит столбом, если > 80 - машет руками)
+    - Зрительный контакт: {vision_metrics.get("gaze_score", 0):.1f}/100
+    - Живость голоса (тон): {audio_metrics.get("tone_score", 0):.1f}/100 (если < 30 - монотонно)
     """
 
     llm_result = {}
@@ -95,19 +102,21 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
     total_words = len(words) if words else 1
     filler_ratio = filler_count / total_words
 
-    conf_gaze = vision_metrics.get('gaze_score', 0)
-    conf_gesture = vision_metrics.get('gesture_score', 0)
-    conf_tone = audio_metrics.get('tone_score', 0)
-    conf_volume = audio_metrics.get('volume_score', 50)
+    conf_gaze = vision_metrics.get("gaze_score", 0)
+    conf_gesture = vision_metrics.get("gesture_score", 0)
+    conf_tone = audio_metrics.get("tone_score", 0)
+    conf_volume = audio_metrics.get("volume_score", 50)
     conf_filler = max(0, 100 - (filler_ratio * 1000))
 
     # Формула уверенности (можно тюнить веса)
     # Gaze: 20%, Gesture: 15%, Tone: 25%, Filler: 25%, Volume: 15%
-    total_conf = (conf_gaze * 0.20) + \
-                 (conf_gesture * 0.15) + \
-                 (conf_tone * 0.25) + \
-                 (conf_filler * 0.25) + \
-                 (conf_volume * 0.15)
+    total_conf = (
+        (conf_gaze * 0.20)
+        + (conf_gesture * 0.15)
+        + (conf_tone * 0.25)
+        + (conf_filler * 0.25)
+        + (conf_volume * 0.15)
+    )
 
     result_data = {
         "task_id": task_id,
@@ -122,15 +131,15 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
                 "filler_score": round(conf_filler, 1),
                 "gaze_score": round(conf_gaze, 1),
                 "gesture_score": round(conf_gesture, 1),
-                "tone_score": round(conf_tone, 1)
-            }
+                "tone_score": round(conf_tone, 1),
+            },
         },
         "summary": llm_result.get("summary", "N/A"),
         "structure": llm_result.get("structure", "N/A"),
         "mistakes": llm_result.get("mistakes", "N/A"),
         "ideal_text": llm_result.get("ideal_text", "N/A"),
         "persona_feedback": llm_result.get("persona_feedback", "N/A"),
-        "raw_metrics": {**vision_metrics, **audio_metrics}
+        "raw_metrics": {**vision_metrics, **audio_metrics},
     }
 
     save_json_result(task_id, result_data)
