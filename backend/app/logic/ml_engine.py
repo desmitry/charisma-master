@@ -4,8 +4,8 @@ from typing import Dict, List
 
 import cv2
 import librosa
-import numpy as np
 import mediapipe as mp
+import numpy as np
 from app.config import settings
 from app.models.schemas import TranscriptSegment, TranscriptWord
 from faster_whisper import WhisperModel
@@ -35,17 +35,19 @@ class MLEngine:
         "реально",
         "знаете",
         "так",
-        "скажем"
+        "скажем",
     }
 
     @classmethod
     def load_model(cls):
         if cls._whisper_model is None:
-            logger.info(f"Загрузка модели ({settings.whisper_compute_type}) на {settings.whisper_device}...")
+            logger.info(
+                f"Загрузка модели ({settings.whisper_compute_type}) на {settings.whisper_device}..."
+            )
             cls._whisper_model = WhisperModel(
                 settings.whisper_model_path,
                 device=settings.whisper_device,
-                compute_type=settings.whisper_compute_type
+                compute_type=settings.whisper_compute_type,
             )
             logger.info("Модель загружена")
         return cls._whisper_model
@@ -144,7 +146,11 @@ class MLEngine:
             volume_score = min(mean_rms * 1000, 100)
 
             f0, voiced_flag, voiced_probs = librosa.pyin(
-                y, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'), sr=sr, frame_length=2048
+                y,
+                fmin=librosa.note_to_hz("C2"),
+                fmax=librosa.note_to_hz("C7"),
+                sr=sr,
+                frame_length=2048,
             )
 
             valid_f0 = f0[~np.isnan(f0)]
@@ -157,14 +163,14 @@ class MLEngine:
             return {
                 "volume_score": float(volume_score),
                 "tone_score": float(tone_score),
-                "pitch_std": float(pitch_std if len(valid_f0) > 0 else 0)
+                "pitch_std": float(pitch_std if len(valid_f0) > 0 else 0),
             }
         except Exception as e:
             logger.error(f"Audio analysis failed: {e}")
             return {"volume_score": 50.0, "tone_score": 50.0}
 
     @staticmethod
-    def analyze_video_features(video_path: str) -> Dict[str, float]:
+    def analyze_video_features(video_path: str) -> Dict[str, float]:  # noqa: C901
         mp_holistic = mp.solutions.holistic
 
         cap = cv2.VideoCapture(video_path)
@@ -174,15 +180,14 @@ class MLEngine:
         total_frames = 0
         looking_at_camera_frames = 0
 
-        prev_wrist_y = {'left': None, 'right': None}
+        prev_wrist_y = {"left": None, "right": None}
         movement_accum = 0.0
 
         with mp_holistic.Holistic(
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5,
-                model_complexity=1  # 0=Lite, 1=Full, 2=Heavy
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5,
+            model_complexity=1,  # 0=Lite, 1=Full, 2=Heavy
         ) as holistic:
-
             while True:
                 ret, frame = cap.read()
                 if not ret:
@@ -215,15 +220,16 @@ class MLEngine:
                     current_left_y = left_wrist.y
                     current_right_y = right_wrist.y
 
-                    if prev_wrist_y['left'] is not None:
-                        delta = abs(current_left_y - prev_wrist_y['left']) + \
-                                abs(current_right_y - prev_wrist_y['right'])
+                    if prev_wrist_y["left"] is not None:
+                        delta = abs(current_left_y - prev_wrist_y["left"]) + abs(
+                            current_right_y - prev_wrist_y["right"]
+                        )
 
                         if delta > 0.01:
                             movement_accum += delta
 
-                    prev_wrist_y['left'] = current_left_y
-                    prev_wrist_y['right'] = current_right_y
+                    prev_wrist_y["left"] = current_left_y
+                    prev_wrist_y["right"] = current_right_y
 
         cap.release()
 
@@ -238,5 +244,5 @@ class MLEngine:
         return {
             "gaze_score": min(max(gaze_score, 0), 100),
             "gesture_score": min(max(gesture_score, 0), 100),
-            "raw_movement": avg_movement_per_frame
+            "raw_movement": avg_movement_per_frame,
         }
