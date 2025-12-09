@@ -30,7 +30,7 @@ dev = [
 
 [tool.ruff]
 src = ["app"]
-target-version = "py313"
+target-version = "py311"
 line-length = 100
 indent-width = 4
 exclude = [
