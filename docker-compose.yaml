@@ -43,6 +43,6 @@ services:
       - 127.0.0.1:3030:3000
     environment:
       - NODE_ENV=production
-      - PORT=3030
+      - PORT=3000
     depends_on:
       - backend
