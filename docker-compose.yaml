@@ -26,6 +26,9 @@ services:
     restart: always
     env_file:
       - ./backend/.env
+    environment:
+      - ENVIRONMENT=production
+      - ORIGIN_URL=http://localhost:3030
     ports:
       - 127.0.0.1:8000:8000
     depends_on:
@@ -37,9 +40,9 @@ services:
     command: [ "npm", "start" ]
     restart: always
     ports:
-      - 127.0.0.1:3000:3000
+      - 127.0.0.1:3030:3000
     environment:
       - NODE_ENV=production
-      - PORT=3000
+      - PORT=3030
     depends_on:
       - backend

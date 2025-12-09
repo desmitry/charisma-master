@@ -1,14 +1,21 @@
+import os
+
 from app.config import settings
 from app.logic.endpoints import analysis, status, upload
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
-# origins = [
-#     "http://our.domain", "http://localhost"
-# ]
+# Configure CORS origins based on environment
+environment = os.getenv("ENVIRONMENT", "development")
 
-origins = ["*"]
+if environment == "production":
+    origins = [os.getenv("ORIGIN_URL")]
+else:
+    origins = ["*"]
+
+if os.getenv("LLM_API_KEY") is None:
+    raise Exception("You need to specify LLM_API_KEY")
 
 app = FastAPI(
     title="Speech Analysis",

@@ -31,6 +31,7 @@ RUN --mount=type=cache,target=/var/cache/apt \
     apt upgrade -y && \
     apt install -y \
     libgl1 \
+    ffmpeg \
     libglib2.0-0 && \
     rm -rf /var/lib/apt/lists/*
 
