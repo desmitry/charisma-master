@@ -1,4 +1,4 @@
-### Development without Docker:
+### Development without Docker Compose итд:
 * Backend
 
 ```cd backend```
@@ -7,9 +7,9 @@
 
 ```docker run -d -p 6379:6379 redis```
 
-```celery -A src.celery_app worker --loglevel=info --pool=solo```
+```celery -A app.celery_app worker --loglevel=info --pool=solo```
 
-```uvicorn src.main:app --reload --host 0.0.0.0 --port 8000```
+```uvicorn app.main:app --reload --host 0.0.0.0 --port 8000```
 
 * Frontend:
 
