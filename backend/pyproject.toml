@@ -18,6 +18,7 @@ dependencies = [
     "redis>=7.1.0",
     "reportlab>=4.4.5",
     "requests>=2.32.5",
+    "rutube-downloader>=0.0.8",
     "uvicorn[standard]>=0.38.0",
 ]
 
@@ -29,7 +30,7 @@ dev = [
 
 [tool.ruff]
 src = ["app"]
-target-version = "py313"
+target-version = "py311"
 line-length = 100
 indent-width = 4
 exclude = [
