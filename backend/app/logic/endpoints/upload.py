@@ -30,14 +30,12 @@ async def process_video(
             # 720p or higher, raises `IndexError`
             res = [int(i) for i in rt.available_resolutions if int(i) >= 720][0]
             video = rt.get_by_resolution(res)
-            # Can never be `None`
-            assert video is not None
+            if video is None:
+                raise HTTPException(status_code=500, detail="Scraper broke")
             video.download(destination=settings.media_root)
             final_path = str(settings.media_root / f"{task_id}.mp4")
         except IndexError:
             raise HTTPException(status_code=400, detail="No supported resolution")
-        except AssertionError:
-            raise HTTPException(status_code=500, detail="Something went horribly wrong")
         except Exception as e: # rutube-downloader raises `Exception`
             raise HTTPException(status_code=500, detail=str(e))
     else:
