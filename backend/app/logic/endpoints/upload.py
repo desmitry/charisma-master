@@ -36,7 +36,7 @@ async def process_video(
             final_path = str(settings.media_root / f"{task_id}.mp4")
         except IndexError:
             raise HTTPException(status_code=400, detail="No supported resolution")
-        except Exception as e: # rutube-downloader raises `Exception`
+        except Exception as e:  # rutube-downloader raises `Exception`
             raise HTTPException(status_code=500, detail=str(e))
     else:
         raise HTTPException(status_code=400, detail="Файл или ссылка на видео")
