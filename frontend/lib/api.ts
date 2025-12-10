@@ -1,7 +1,9 @@
 import { AnalysisResult, TaskStatusResponse } from "@/types/analysis";
 
+// Use proxy route in production (Docker), or direct URL in development
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || 
+  (typeof window !== "undefined" ? "/api/proxy" : "http://localhost:8000");
 
 async function checkResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {

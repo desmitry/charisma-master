@@ -37,7 +37,7 @@ export function Transcript({
                   className={cn(
                     "cursor-pointer rounded px-[2px] py-[1px] transition-all duration-150",
                     word.is_filler
-                      ? "text-rose-200 bg-rose-500/10 hover:bg-rose-400/20"
+                      ? "text-rose-300 bg-rose-500/18 hover:bg-rose-500/28"
                       : "text-white/75 hover:bg-white/10",
                     isActive && "bg-white/15 text-white shadow-[0_8px_30px_rgba(255,255,255,0.08)]",
                     "hover:-translate-y-[1px]"
