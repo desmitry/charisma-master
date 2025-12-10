@@ -8,6 +8,7 @@ import { AnalysisDashboard } from "@/components/analysis-dashboard";
 import { AnalysisResult } from "@/types/analysis";
 import { pollForAnalysis, uploadVideo } from "@/lib/api";
 import { GL } from "@/components/gl";
+import { cn } from "@/lib/utils";
 
 type Stage = "landing" | "processing" | "result";
 
@@ -45,6 +46,11 @@ export default function Home() {
   const [stage, setStage] = useState<Stage>("landing");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState("");
+  const [selectedPersona, setSelectedPersona] = useState<string>("");
+  const [isPersonaOpen, setIsPersonaOpen] = useState(false);
+  const [personaOpenUp, setPersonaOpenUp] = useState(false);
+  const personaRef = useRef<HTMLDivElement>(null);
+  const personaButtonRef = useRef<HTMLButtonElement>(null);
   const [statusText, setStatusText] = useState("Готовим обработку...");
   const [progress, setProgress] = useState(0.15);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +58,22 @@ export default function Home() {
   const [isMockMode, setIsMockMode] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [showResult, setShowResult] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (personaRef.current && !personaRef.current.contains(event.target as Node)) {
+        setIsPersonaOpen(false);
+      }
+    };
+
+    if (isPersonaOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isPersonaOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -230,7 +252,7 @@ export default function Home() {
       setProgress(0.15);
       setStatusText("Загружаем видео...");
 
-      const { task_id } = await uploadVideo(selectedFile, videoUrl || null);
+      const { task_id } = await uploadVideo(selectedFile, videoUrl || null, selectedPersona || undefined);
       setStatusText("Видео принято, начинаем анализ...");
       setProgress(0.3);
 
@@ -450,13 +472,13 @@ export default function Home() {
                     Перетащи файл сюда
                   </p>
                   <p className="mt-2 text-sm text-white/65">
-                    Любые форматы. Длительность до ~5 минут
+                    Формат MP4. Длительность до ~5 минут
                   </p>
                   <input
                     id="video-upload"
                     type="file"
                     className="hidden"
-                    accept="video/*"
+                    accept="video/mp4,.mp4"
                     onChange={handleFileChange}
                   />
                   {selectedFile && (
@@ -472,7 +494,7 @@ export default function Home() {
                   </p>
                   <input
                     type="text"
-                    placeholder="https://youtu.be/..."
+                    placeholder="https://rutube.ru/video/... или https://vk.com/video..."
                     className="mt-3 w-full rounded-2xl border border-white/20 bg-black/30 px-4 py-3 text-sm text-white placeholder:text-white/50 focus:border-white focus:outline-none"
                     value={videoUrl}
                     onChange={(e) => setVideoUrl(e.target.value)}
@@ -485,10 +507,111 @@ export default function Home() {
                     Анализируй
                   </button>
                   <p className="mt-3 text-xs text-white/50">
-                    Прямая ссылка либо YouTube
+                    Прямая ссылка, Rutube или ВК видео
                   </p>
                   {error && <p className="mt-3 text-xs text-red-300">{error}</p>}
                 </div>
+              </div>
+
+              <div className="mt-6 rounded-3xl border border-white/15 bg-white/5 px-6 py-6">
+                <p className="text-[11px] uppercase tracking-[0.3em] text-white/50 mb-4">
+                  Роль оценщика
+                </p>
+                <div ref={personaRef} className="relative">
+                  <button
+                    ref={personaButtonRef}
+                    type="button"
+                    onClick={() => {
+                      if (!isPersonaOpen && personaButtonRef.current) {
+                        const rect = personaButtonRef.current.getBoundingClientRect();
+                        const spaceBelow = window.innerHeight - rect.bottom;
+                        const spaceAbove = rect.top;
+                        const dropdownHeight = 200; // примерная высота dropdown
+                        setPersonaOpenUp(spaceBelow < dropdownHeight && spaceAbove > spaceBelow);
+                      }
+                      setIsPersonaOpen(!isPersonaOpen);
+                    }}
+                    className={cn(
+                      "w-full rounded-2xl border px-4 py-3 text-left text-sm text-white transition-all duration-200 flex items-center justify-between",
+                      isPersonaOpen
+                        ? "border-white/40 bg-white/10"
+                        : "border-white/20 bg-black/30 hover:border-white/30 hover:bg-black/40"
+                    )}
+                  >
+                    <span className={selectedPersona ? "" : "text-white/50"}>
+                      {selectedPersona === "strict_critic" ? "Строгий критик" :
+                       selectedPersona === "kind_mentor" ? "Добрый наставник" :
+                       selectedPersona === "steve_jobs_style" ? "Стив Джобс" :
+                       "Не выбрано"}
+                    </span>
+                    <svg
+                      className={cn(
+                        "w-4 h-4 text-white/60 transition-transform duration-300 ease-in-out",
+                        isPersonaOpen ? "rotate-180" : "rotate-0"
+                      )}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  <div
+                    className={cn(
+                      "absolute z-50 w-full rounded-2xl border border-white/20 bg-black/40 backdrop-blur-xl overflow-hidden transition-all duration-300",
+                      personaOpenUp ? "bottom-full mb-2" : "top-full mt-2",
+                      isPersonaOpen
+                        ? "opacity-100 translate-y-0 pointer-events-auto"
+                        : personaOpenUp
+                        ? "opacity-0 translate-y-2 pointer-events-none"
+                        : "opacity-0 -translate-y-2 pointer-events-none"
+                    )}
+                    style={{
+                      maxHeight: isPersonaOpen ? "300px" : "0px",
+                      transition: "opacity 300ms cubic-bezier(0.4, 0, 0.2, 1), transform 300ms cubic-bezier(0.4, 0, 0.2, 1), max-height 300ms cubic-bezier(0.4, 0, 0.2, 1)"
+                    }}
+                  >
+                    <div className="py-1">
+                      {[
+                        { value: "", label: "Не выбрано", desc: "" },
+                        { value: "strict_critic", label: "Строгий критик", desc: "Жесткая оценка недостатков" },
+                        { value: "kind_mentor", label: "Добрый наставник", desc: "Мягкие советы и поддержка" },
+                        { value: "steve_jobs_style", label: "Стив Джобс", desc: "Минимализм и страсть" }
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setSelectedPersona(option.value);
+                            setIsPersonaOpen(false);
+                          }}
+                          className={cn(
+                            "w-full px-4 py-3 text-left text-sm transition-all duration-150",
+                            selectedPersona === option.value
+                              ? "bg-white/10 text-white"
+                              : "text-white/70 hover:bg-white/5 hover:text-white"
+                          )}
+                        >
+                          <div className="font-medium">{option.label}</div>
+                          {option.desc && (
+                            <div className="text-xs text-white/50 mt-0.5">{option.desc}</div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {selectedPersona && (
+                  <p className="mt-3 text-xs text-white/50">
+                    {
+                      selectedPersona === "strict_critic" ? "Жесткая оценка недостатков" :
+                      selectedPersona === "kind_mentor" ? "Мягкие советы и поддержка" :
+                      "Минимализм и страсть"
+                    }
+                  </p>
+                )}
               </div>
             </div>
           </div>

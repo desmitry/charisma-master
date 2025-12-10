@@ -51,6 +51,14 @@ const IconClock = () => (
     <path d="M12 7v6l4 2" />
   </svg>
 );
+const IconHand = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <path d="M18 11v-1a2 2 0 0 0-2-2h-1" />
+    <path d="M14 10V9a2 2 0 0 0-2-2h-1" />
+    <path d="M10 9.5V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v7" />
+    <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-1a8 8 0 0 1-8-8 2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-3z" />
+  </svg>
+);
 
 export function AnalysisDashboard({ result, onBack }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -252,10 +260,19 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             />
             <GlassStat
               icon={<IconClock />}
-              label="Сегментов"
+              label="Аудиофрагментов"
               value={result.transcript.length}
               suffix="шт"
               delay={500}
+              mounted={mounted}
+              ecoMode={isEcoMode}
+            />
+            <GlassStat
+              icon={<IconHand />}
+              label="Жестикуляция"
+              value={result.confidence_index.components.gesture_score || 0}
+              suffix="/100"
+              delay={600}
               mounted={mounted}
               ecoMode={isEcoMode}
             />
@@ -309,7 +326,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                               className={cn(
                                 "cursor-pointer rounded px-[2px] py-0.5 transition-all duration-150",
                                 word.is_filler
-                                  ? "text-rose-200 bg-rose-500/10 hover:bg-rose-400/20"
+                                  ? "text-rose-300 bg-rose-500/18 hover:bg-rose-500/28"
                                   : "text-white/75 hover:bg-white/10",
                                 isActive && "bg-white/15 text-white shadow-[0_8px_30px_rgba(255,255,255,0.08)]",
                                 "hover:-translate-y-[1px]"
