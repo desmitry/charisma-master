@@ -4,16 +4,26 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || 
   (typeof window !== "undefined" ? "/api/proxy" : "http://localhost:8000");
 
+class ExpectedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ExpectedError";
+    Object.setPrototypeOf(this, ExpectedError.prototype);
+  }
+}
+
 async function checkResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     const errorMessage = text || response.statusText || "Ошибка сервера";
     
     if (response.status === 502 || response.status === 503) {
-      throw new Error("Сервер недоступен. Проверьте, запущен ли backend.");
+      console.warn("[API] Backend unavailable:", response.status);
+      throw new ExpectedError("Сервер недоступен. Проверьте, запущен ли backend.");
     }
     if (response.status === 413) {
-      throw new Error("Файл слишком большой. Максимальный размер: 200MB.");
+      console.warn("[API] File too large:", response.status);
+      throw new ExpectedError("Файл слишком большой. Максимальный размер: 200MB.");
     }
     
     throw new Error(errorMessage);

@@ -280,11 +280,14 @@ export default function Home() {
         }
         task_id = uploadResult.task_id;
       } catch (uploadErr) {
-        console.error("[Page] Upload error:", uploadErr);
         const uploadError = uploadErr instanceof Error ? uploadErr.message : "Ошибка загрузки";
         if (uploadError.includes("Сервер недоступен") || uploadError.includes("502") || uploadError.includes("503")) {
-          throw new Error("Сервер недоступен. Проверьте, запущен ли backend.");
+          console.warn("[Page] Backend unavailable during upload - this is expected when backend is not running");
+          const expectedError = new Error("Сервер недоступен. Проверьте, запущен ли backend.");
+          expectedError.name = "ExpectedError";
+          throw expectedError;
         }
+        console.error("[Page] Upload error:", uploadErr);
         throw new Error("Не удалось загрузить видео. Проверьте подключение к серверу.");
       }
       
@@ -316,17 +319,26 @@ export default function Home() {
       setStage("result");
       setShowResult(true);
     } catch (err) {
-      console.error("[Page] Error during analysis:", err);
       const errorMessage = err instanceof Error ? err.message : "Не удалось связаться с бэкендом";
       const isBackendError = errorMessage.includes("бэкенд") || 
                              errorMessage.includes("Failed") || 
                              errorMessage.includes("Сервер недоступен") ||
                              errorMessage.includes("502") ||
                              errorMessage.includes("503");
+      const isExpectedError = err instanceof Error && err.name === "ExpectedError";
       
-      setError(isBackendError
+      if (isExpectedError || isBackendError) {
+        console.warn("[Page] Expected error (backend unavailable):", errorMessage);
+      } else {
+        console.error("[Page] Unexpected error during analysis:", err);
+      }
+      
+      const finalErrorMessage = isBackendError
         ? "Не удалось связаться с бэкендом. Можно запустить демо-режим."
-        : errorMessage);
+        : errorMessage;
+      
+      console.log("[Page] Setting error message:", finalErrorMessage);
+      setError(finalErrorMessage);
       
       setIsExiting(false);
       setIsUploading(false);
@@ -335,6 +347,8 @@ export default function Home() {
       setStage("landing");
       setIsMockMode(false);
       setShowResult(false);
+      
+      console.log("[Page] Error handled, returned to landing page");
     }
   };
 
