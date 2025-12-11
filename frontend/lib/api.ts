@@ -7,7 +7,16 @@ const API_BASE_URL =
 async function checkResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(text || response.statusText);
+    const errorMessage = text || response.statusText || "Ошибка сервера";
+    
+    if (response.status === 502 || response.status === 503) {
+      throw new Error("Сервер недоступен. Проверьте, запущен ли backend.");
+    }
+    if (response.status === 413) {
+      throw new Error("Файл слишком большой. Максимальный размер: 200MB.");
+    }
+    
+    throw new Error(errorMessage);
   }
   return response.json() as Promise<T>;
 }

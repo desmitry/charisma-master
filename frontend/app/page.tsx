@@ -58,6 +58,7 @@ export default function Home() {
   const [isMockMode, setIsMockMode] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -197,11 +198,19 @@ export default function Home() {
   };
 
   const startMockFlow = async () => {
+    console.log("[Page] 🎭 startMockFlow called", {
+      timestamp: new Date().toISOString()
+    });
     setIsMockMode(true);
+    console.log("[Page] Setting isExiting = true (mock)");
     setIsExiting(true);
+    console.log("[Page] Setting isUploading = true (mock)");
+    setIsUploading(true);
     
+    console.log("[Page] Waiting 300ms before setting stage to processing (mock)");
     await new Promise((res) => setTimeout(res, 300));
     
+    console.log("[Page] Setting stage = 'processing' (mock)");
     setStage("processing");
     setStatusText("Анализируем видео...");
     setProgress(0.2);
@@ -223,6 +232,7 @@ export default function Home() {
     setStage("result");
     setShowResult(true);
     setIsExiting(false);
+    setIsUploading(false);
   };
 
   const stageName = (value?: string | null) => {
@@ -240,21 +250,49 @@ export default function Home() {
   };
 
   const handleAnalyze = async () => {
+    console.log("[Page] 🚀 handleAnalyze called", {
+      timestamp: new Date().toISOString(),
+      hasFile: !!selectedFile,
+      hasUrl: !!videoUrl,
+      isMockMode
+    });
     setError(null);
     setIsMockMode(false);
+    console.log("[Page] Setting isUploading = true");
+    setIsUploading(true);
 
     if (isMockMode || (!selectedFile && !videoUrl)) {
+      console.log("[Page] Starting mock flow");
       return startMockFlow();
     }
 
     try {
+      console.log("[Page] Setting isExiting = true");
+      setIsExiting(true);
+      
+      let task_id: string;
+      try {
+        setProgress(0.1);
+        setStatusText("Загружаем видео...");
+        const uploadResult = await uploadVideo(selectedFile, videoUrl || null, selectedPersona || undefined);
+        if (!uploadResult?.task_id) {
+          throw new Error("Не получен task_id от сервера");
+        }
+        task_id = uploadResult.task_id;
+      } catch (uploadErr) {
+        console.error("[Page] Upload error:", uploadErr);
+        const uploadError = uploadErr instanceof Error ? uploadErr.message : "Ошибка загрузки";
+        if (uploadError.includes("Сервер недоступен") || uploadError.includes("502") || uploadError.includes("503")) {
+          throw new Error("Сервер недоступен. Проверьте, запущен ли backend.");
+        }
+        throw new Error("Не удалось загрузить видео. Проверьте подключение к серверу.");
+      }
+      
+      console.log("[Page] Upload successful, setting stage to processing");
+      await new Promise(resolve => setTimeout(resolve, 100));
       setStage("processing");
-      setProgress(0.15);
-      setStatusText("Загружаем видео...");
-
-      const { task_id } = await uploadVideo(selectedFile, videoUrl || null, selectedPersona || undefined);
-      setStatusText("Видео принято, начинаем анализ...");
       setProgress(0.3);
+      setStatusText("Видео принято, начинаем анализ...");
 
       const analysis = await pollForAnalysis(
         task_id,
@@ -266,11 +304,26 @@ export default function Home() {
         90_000
       );
 
+      if (!analysis) {
+        throw new Error("Анализ не получен");
+      }
+
       setResult(analysis);
       setStage("result");
       setProgress(1);
+      setIsUploading(false);
+      setIsExiting(false);
     } catch (err) {
-      setError("Не удалось связаться с бэкендом. Можно запустить демо-режим.");
+      console.error("[Page] Error during analysis:", err);
+      const errorMessage = err instanceof Error ? err.message : "Не удалось связаться с бэкендом";
+      setError(errorMessage.includes("бэкенд") || errorMessage.includes("Failed") || errorMessage.includes("Сервер недоступен")
+        ? "Не удалось связаться с бэкендом. Можно запустить демо-режим."
+        : errorMessage);
+      
+      setIsExiting(false);
+      setIsUploading(false);
+      setProgress(0.15);
+      setStatusText("Готовим обработку...");
       setStage("landing");
       setIsMockMode(false);
     }
@@ -278,10 +331,36 @@ export default function Home() {
 
   const showLanding = stage === "landing";
   const showProcessing = stage === "processing";
+  const shouldShowGL = showLanding && !showProcessing && !isUploading && !isExiting;
+
+  useEffect(() => {
+    console.log("[Page] State changed:", {
+      stage,
+      showLanding,
+      showProcessing,
+      isUploading,
+      isExiting,
+      shouldShowGL,
+      timestamp: new Date().toISOString()
+    });
+  }, [stage, showLanding, showProcessing, isUploading, isExiting, shouldShowGL]);
+
+  useEffect(() => {
+    if (shouldShowGL) {
+      console.log("[Page] ✅ Rendering GL component");
+    } else {
+      console.log("[Page] ❌ NOT rendering GL component", {
+        showLanding,
+        showProcessing,
+        isUploading,
+        isExiting
+      });
+    }
+  }, [shouldShowGL, showLanding, showProcessing, isUploading, isExiting]);
 
   return (
     <>
-      {showLanding && stage !== "processing" && (
+      {shouldShowGL && (
         <div className="pointer-events-none fixed inset-0 -z-10">
           <GL />
         </div>
@@ -618,7 +697,7 @@ export default function Home() {
         </section>
       )}
 
-      {showProcessing && (
+      {showProcessing && !error && (
         <ProcessingOverlay progress={progress} statusText={statusText} />
       )}
 
@@ -638,6 +717,7 @@ export default function Home() {
                 setStage("landing");
                 setResult(null);
                 setProgress(0.15);
+                setIsUploading(false);
                 setStatusText("Готовим обработку...");
                 setIsMockMode(false);
               }, 400);
