@@ -24,7 +24,7 @@ app.add_middleware(
 )
 
 app.mount(
-    "/media",
+    "/backend/app/media",
     StaticFiles(directory=str(settings.media_root)),
     name="media",
 )
