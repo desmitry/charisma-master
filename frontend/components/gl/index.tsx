@@ -10,6 +10,7 @@ import { useEcoMode } from "@/lib/eco-mode-context";
 export const GL = () => {
   const { isEcoMode } = useEcoMode();
   const [contextLost, setContextLost] = useState(false);
+  const [key, setKey] = useState(0);
 
   const handleCreated = useCallback(({ gl }: { gl: THREE.WebGLRenderer }) => {
     const canvas = gl.domElement;
@@ -22,6 +23,7 @@ export const GL = () => {
     
     const handleContextRestored = () => {
       setContextLost(false);
+      setKey(prev => prev + 1);
       console.log("WebGL context restored");
     };
     
@@ -79,7 +81,7 @@ export const GL = () => {
   }
 
   return (
-    <div id="webgl">
+    <div id="webgl" key={key}>
       <Canvas
         camera={{
           position: [
@@ -93,6 +95,8 @@ export const GL = () => {
         gl={{ 
           powerPreference: isEcoMode ? "low-power" : "high-performance",
           antialias: false,
+          preserveDrawingBuffer: false,
+          failIfMajorPerformanceCaveat: false,
         }}
         onCreated={handleCreated}
       >
