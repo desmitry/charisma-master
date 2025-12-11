@@ -1,6 +1,5 @@
 import { AnalysisResult, TaskStatusResponse } from "@/types/analysis";
 
-// Use proxy route in production (Docker), or direct URL in development
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || 
   (typeof window !== "undefined" ? "/api/proxy" : "http://localhost:8000");
@@ -29,7 +28,11 @@ export async function uploadVideo(
     formData.append("persona", persona);
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/process`, {
+  const uploadUrl = typeof window !== "undefined" 
+    ? "/api/upload" 
+    : `${process.env.BACKEND_URL || "http://localhost:8000"}/api/v1/process`;
+
+  const response = await fetch(uploadUrl, {
     method: "POST",
     body: formData,
   });
