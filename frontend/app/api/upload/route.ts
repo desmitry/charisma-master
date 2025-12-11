@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: headers,
       body: request.body as any,
-      duplex: 'half',
     });
 
     const data = await response.text();

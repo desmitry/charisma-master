@@ -51,6 +51,7 @@ async function proxyRequest(
   try {
     const contentType = request.headers.get("content-type") || "";
     const isFormData = contentType.includes("multipart/form-data");
+    const isMediaRequest = path.includes("/media/");
 
     const options: RequestInit = {
       method,
@@ -70,7 +71,6 @@ async function proxyRequest(
         
         if (request.body) {
           options.body = request.body as any;
-          options.duplex = 'half';
         } else {
           const formData = await request.formData();
           options.body = formData;
@@ -84,7 +84,6 @@ async function proxyRequest(
         
         if (request.body) {
           options.body = request.body as any;
-          options.duplex = 'half';
         } else {
           const body = await request.text();
           if (body) {
@@ -97,13 +96,35 @@ async function proxyRequest(
     }
 
     const response = await fetch(backendUrl, options);
+    
+    const responseContentType = response.headers.get("content-type") || "";
+    const isMediaResponse = isMediaRequest || 
+      responseContentType.startsWith("video/") || 
+      responseContentType.startsWith("audio/") ||
+      responseContentType.startsWith("image/");
+
+    if (isMediaResponse) {
+      const arrayBuffer = await response.arrayBuffer();
+      
+      const responseHeaders: HeadersInit = {};
+      response.headers.forEach((value, key) => {
+        responseHeaders[key] = value;
+      });
+
+      return new NextResponse(arrayBuffer, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: responseHeaders,
+      });
+    }
+
     const data = await response.text();
 
     return new NextResponse(data, {
       status: response.status,
       statusText: response.statusText,
       headers: {
-        "Content-Type": response.headers.get("content-type") || "application/json",
+        "Content-Type": responseContentType || "application/json",
       },
     });
   } catch (error) {
