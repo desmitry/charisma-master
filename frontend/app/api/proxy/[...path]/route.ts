@@ -70,6 +70,7 @@ async function proxyRequest(
         
         if (request.body) {
           options.body = request.body as any;
+          options.duplex = 'half';
         } else {
           const formData = await request.formData();
           options.body = formData;
@@ -83,6 +84,7 @@ async function proxyRequest(
         
         if (request.body) {
           options.body = request.body as any;
+          options.duplex = 'half';
         } else {
           const body = await request.text();
           if (body) {
