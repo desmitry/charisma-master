@@ -13,11 +13,10 @@ services:
     restart: always
     env_file:
       - ./backend/.env
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       - redis
+    volumes:
+      - media-data:/backend/app/media
 
   backend:
     image: ghcr.io/desmitry/charisma-master-backend:latest
@@ -26,10 +25,15 @@ services:
     restart: always
     env_file:
       - ./backend/.env
+    environment:
+      - ENVIRONMENT=production
+      - ORIGIN_URL=http://localhost:3030
     ports:
       - 127.0.0.1:8000:8000
     depends_on:
       - celery
+    volumes:
+      - media-data:/backend/app/media
 
   frontend:
     image: ghcr.io/desmitry/charisma-master-frontend:latest
@@ -37,9 +41,13 @@ services:
     command: [ "npm", "start" ]
     restart: always
     ports:
-      - 127.0.0.1:3000:3000
+      - 127.0.0.1:3030:3000
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - BACKEND_URL=http://backend:8000
     depends_on:
       - backend
+
+volumes:
+  media-data:

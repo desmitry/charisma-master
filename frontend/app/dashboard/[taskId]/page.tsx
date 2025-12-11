@@ -20,7 +20,6 @@ export default function DashboardPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    // Разрешаем скролл на странице дашборда
     const originalOverflow = document.body.style.overflow;
     const originalTouch = document.body.style.touchAction;
     document.body.style.overflow = "auto";

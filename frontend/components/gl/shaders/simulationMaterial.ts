@@ -53,26 +53,20 @@ export class SimulationMaterial extends THREE.ShaderMaterial {
       ${periodicNoiseGLSL}
 
       void main() {
-        // Get the original particle position
         vec3 originalPos = texture2D(positions, vUv).rgb;
         
-        // Use continuous time that naturally loops through sine/cosine periodicity
         float continuousTime = uTime * uTimeScale * (6.28318530718 / uLoopPeriod);
         
-        // Scale position for noise input
         vec3 noiseInput = originalPos * uNoiseScale;
         
-        // Generate periodic displacement for each axis using different phase offsets
         float displacementX = periodicNoise(noiseInput + vec3(0.0, 0.0, 0.0), continuousTime);
-        float displacementY = periodicNoise(noiseInput + vec3(50.0, 0.0, 0.0), continuousTime + 2.094); // +120°
-        float displacementZ = periodicNoise(noiseInput + vec3(0.0, 50.0, 0.0), continuousTime + 4.188); // +240°
+        float displacementY = periodicNoise(noiseInput + vec3(50.0, 0.0, 0.0), continuousTime + 2.094);
+        float displacementZ = periodicNoise(noiseInput + vec3(0.0, 50.0, 0.0), continuousTime + 4.188);
         
-        // Apply distortion to original position
         float scrollBoost = mix(0.85, 1.35, uScrollAmount);
         vec3 distortion = vec3(displacementX, displacementY, displacementZ) * uNoiseIntensity * scrollBoost;
         vec3 finalPos = originalPos + distortion;
         
-        // Global scroll reaction (helical bending)
         float scrollWave = sin((originalPos.x + originalPos.z) * 1.5 + uScrollAmount * 10.0);
         float scrollTwistX = cos(originalPos.z * 1.2 + uScrollAmount * 8.0);
         float scrollTwistZ = sin(originalPos.x * 1.2 + uScrollAmount * 8.0);
@@ -80,31 +74,26 @@ export class SimulationMaterial extends THREE.ShaderMaterial {
         finalPos.x += scrollTwistX * 0.12 * uScrollAmount;
         finalPos.z += scrollTwistZ * 0.12 * uScrollAmount;
         
-        // === Mouse interaction: gravity/push effect ===
         vec2 particleXZ = finalPos.xz;
         vec2 mouseXZ = uMousePosition;
         float distToMouse = length(particleXZ - mouseXZ);
         
-        // Radius of influence (smaller, tighter interaction)
         float mouseRadius = 1.2;
         
-        // Base depression effect (cursor has "mass" - pushes down)
         float influence = 1.0 - smoothstep(0.0, mouseRadius, distToMouse);
-        influence = influence * influence * influence; // Cubic falloff for softer edges
+        influence = influence * influence * influence;
         
-        // Push particles DOWN (negative Y) based on proximity
         float depressionStrength = 0.6;
         float mouseEffect = influence * depressionStrength * uMouseActive;
         
         finalPos.y -= mouseEffect;
         
-        // Traveling waves launched by clicks (radial)
         for (int i = 0; i < MAX_WAVES; i++) {
           if (uWaveActive[i] <= 0.0) {
             continue;
           }
           vec2 waveOrigin = uWaveOrigins[i];
-          float maxRadius = min(uPlaneScale * 0.4, 4.0); // ~20% of field
+          float maxRadius = min(uPlaneScale * 0.4, 4.0);
           float waveRadius = uWaveProgress[i] * maxRadius;
           float ringWidth = maxRadius * 0.18 + 0.12;
           float dist = length(particleXZ - waveOrigin);

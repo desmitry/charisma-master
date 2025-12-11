@@ -12,7 +12,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "charisma",
   description: "Investment strategies that outperform the market",
-    generator: 'v0.app'
+  generator: "v0.app",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
