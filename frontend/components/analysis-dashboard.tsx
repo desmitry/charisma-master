@@ -9,6 +9,7 @@ import { useEcoMode } from "@/lib/eco-mode-context";
 import { cn } from "@/lib/utils";
 import { SmoothScroll } from "./smooth-scroll";
 import { TempoChart } from "./analysis/tempo-chart";
+import { ComingSoonNotification } from "./coming-soon-notification";
 
 type Props = {
   result: AnalysisResult;
@@ -75,6 +76,8 @@ export function AnalysisDashboard({ result, onBack }: Props) {
     originRect: DOMRect | null;
   }>({ open: false, phase: "closed", originRect: null });
 
+  const [showComingSoon, setShowComingSoon] = useState(false);
+
   const openTempoModal = useCallback(() => {
     if (!tempoChartRef.current) return;
     const rect = tempoChartRef.current.getBoundingClientRect();
@@ -98,12 +101,16 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   }, [result.video_path]);
 
   useEffect(() => {
-    if (!tempoModal.open) return;
+    if (!tempoModal.open) {
+      return;
+    }
+    
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeTempoModal();
     };
     document.addEventListener("keydown", handleEscape);
     document.body.style.overflow = "hidden";
+    
     return () => {
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "";
@@ -146,7 +153,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
 
   return (
     <div className="relative z-10 min-h-screen bg-[#050505] text-white overflow-hidden">
-      {!isEcoMode && <SmoothScroll />}
+      <SmoothScroll />
       {!isEcoMode ? (
         <div className="pointer-events-none fixed inset-0 blur-3xl opacity-20">
           <div className="absolute -left-20 top-10 h-80 w-80 rounded-full bg-white/15" />
@@ -179,7 +186,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             <StatBadge label="Уверенность" value={`${result.confidence_index.total.toFixed(0)}`} accent />
             
             <button
-              onClick={() => window.open(getPdfUrl(result.task_id), "_blank")}
+              onClick={() => setShowComingSoon(true)}
               className="hidden rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium transition hover:bg-white/15 sm:block sm:px-4 sm:py-2"
             >
               PDF Отчет
@@ -405,6 +412,8 @@ export function AnalysisDashboard({ result, onBack }: Props) {
         </div>
       </main>
       {globalStyles}
+
+      <ComingSoonNotification isOpen={showComingSoon} onClose={() => setShowComingSoon(false)} />
 
       {tempoModal.open && typeof document !== "undefined" && createPortal(
         <div

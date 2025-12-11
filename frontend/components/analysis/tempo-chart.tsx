@@ -26,20 +26,27 @@ export function TempoChart({ data, currentTime, onExpand, expanded, inModal }: P
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const [displayedWpm, setDisplayedWpm] = useState<number>(0);
   const targetWpmRef = useRef<number>(0);
+  const rafRef = useRef<number | null>(null);
+  const throttleTimerRef = useRef<number | null>(null);
+  const lastHoverPointRef = useRef<TempoPoint | null>(null);
   const { isEcoMode } = useEcoMode();
   
   useEffect(() => {
-    if (!hoverPoint) return;
-    targetWpmRef.current = Math.round(hoverPoint.point.wpm);
-  }, [hoverPoint]);
-  
-  useEffect(() => {
-    if (isEcoMode) {
-      setDisplayedWpm(Math.round(targetWpmRef.current));
+    if (!hoverPoint) {
+      targetWpmRef.current = 0;
       return;
     }
+    const newTarget = Math.round(hoverPoint.point.wpm);
+    targetWpmRef.current = newTarget;
+    
+    if (isEcoMode) {
+      setDisplayedWpm(newTarget);
+    }
+  }, [hoverPoint, isEcoMode]);
+  
+  useEffect(() => {
+    if (isEcoMode) return;
 
-    let raf: number | null = null;
     const animate = () => {
       setDisplayedWpm((prev) => {
         const target = targetWpmRef.current || 0;
@@ -47,23 +54,21 @@ export function TempoChart({ data, currentTime, onExpand, expanded, inModal }: P
         if (Math.abs(diff) < 0.5) {
           return target;
         }
-        raf = requestAnimationFrame(animate);
-        const step = diff * 0.2;
+        const step = diff * 0.15;
         return Math.round(prev + step);
       });
+      rafRef.current = requestAnimationFrame(animate);
     };
 
-    raf = requestAnimationFrame(animate);
+    rafRef.current = requestAnimationFrame(animate);
 
     return () => {
-      if (raf) cancelAnimationFrame(raf);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
-  }, [isEcoMode, hoverPoint]);
-
-  useEffect(() => {
-    if (!isEcoMode || !hoverPoint) return;
-    setDisplayedWpm(Math.round(hoverPoint.point.wpm));
-  }, [hoverPoint, isEcoMode]);
+  }, [isEcoMode]);
 
   const padding = { top: 20, right: 16, bottom: 28, left: 36 };
   const height = expanded ? 320 : 140;
@@ -165,30 +170,54 @@ export function TempoChart({ data, currentTime, onExpand, expanded, inModal }: P
 
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (!svgRef.current) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    setMousePos({ x: mouseX, y: mouseY });
-
-    let closest = null as (typeof points)[number] | null;
-    let minDist = Infinity;
-    for (const p of points) {
-      const dist = Math.abs(p.x - mouseX);
-      if (dist < minDist && dist < 30) {
-        minDist = dist;
-        closest = p;
-      }
-    }
     
-    if (closest) {
-      setHoverPoint({ x: closest.x, y: closest.y, point: closest });
-    } else {
-      setHoverPoint(null);
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+    
+    if (throttleTimerRef.current === null) {
+      throttleTimerRef.current = requestAnimationFrame(() => {
+        throttleTimerRef.current = null;
+        
+        if (!svgRef.current) return;
+        const rect = svgRef.current.getBoundingClientRect();
+        const mouseX = clientX - rect.left;
+        const mouseY = clientY - rect.top;
+
+        setMousePos({ x: mouseX, y: mouseY });
+
+        let closest = null as (typeof points)[number] | null;
+        let minDist = Infinity;
+        for (const p of points) {
+          const dist = Math.abs(p.x - mouseX);
+          if (dist < minDist && dist < 30) {
+            minDist = dist;
+            closest = p;
+          }
+        }
+        
+        if (closest) {
+          if (!lastHoverPointRef.current || 
+              lastHoverPointRef.current.time !== closest.time ||
+              lastHoverPointRef.current.wpm !== closest.wpm) {
+            lastHoverPointRef.current = closest;
+            setHoverPoint({ x: closest.x, y: closest.y, point: closest });
+          }
+        } else {
+          if (lastHoverPointRef.current !== null) {
+            lastHoverPointRef.current = null;
+            setHoverPoint(null);
+          }
+        }
+      });
     }
   }, [points]);
 
   const handleMouseLeave = useCallback(() => {
+    if (throttleTimerRef.current !== null) {
+      cancelAnimationFrame(throttleTimerRef.current);
+      throttleTimerRef.current = null;
+    }
+    lastHoverPointRef.current = null;
     setHoverPoint(null);
     setMousePos(null);
   }, []);

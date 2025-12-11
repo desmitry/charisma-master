@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://backend:8000";
 
+export const runtime = 'nodejs';
+export const maxDuration = 300;
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> | { path: string[] } }
@@ -53,22 +56,42 @@ async function proxyRequest(
       method,
     };
 
+    const headersToForward: HeadersInit = {};
+    request.headers.forEach((value, key) => {
+      const lowerKey = key.toLowerCase();
+      if (lowerKey !== 'host' && lowerKey !== 'content-length') {
+        headersToForward[key] = value;
+      }
+    });
+
     if (method !== "GET" && method !== "DELETE") {
       if (isFormData) {
-        // For FormData, pass it directly without setting Content-Type header
-        // The browser will set it with the correct boundary
-        const formData = await request.formData();
-        options.body = formData;
+        options.headers = headersToForward;
+        
+        if (request.body) {
+          options.body = request.body as any;
+        } else {
+          const formData = await request.formData();
+          options.body = formData;
+          delete (options.headers as any)['content-type'];
+        }
       } else {
-        const headers: HeadersInit = {
+        options.headers = {
+          ...headersToForward,
           "Content-Type": contentType || "application/json",
         };
-        options.headers = headers;
-        const body = await request.text();
-        if (body) {
-          options.body = body;
+        
+        if (request.body) {
+          options.body = request.body as any;
+        } else {
+          const body = await request.text();
+          if (body) {
+            options.body = body;
+          }
         }
       }
+    } else {
+      options.headers = headersToForward;
     }
 
     const response = await fetch(backendUrl, options);
