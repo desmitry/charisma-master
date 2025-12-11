@@ -109,9 +109,12 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
                  (conf_filler * 0.25) + \
                  (conf_volume * 0.15)
 
+    file_name = Path(video_path).name
+    relative_path = f"/media/{file_name}"
+
     result_data = {
         "task_id": task_id,
-        "video_path": video_path,
+        "video_path": relative_path,
         "transcript": transcript_segments,
         "tempo": tempo_data,
         "fillers_summary": {"count": filler_count, "ratio": round(filler_ratio, 4)},
