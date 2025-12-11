@@ -173,7 +173,8 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: "#000",
-        opacity: isVisible ? 1 : 0,
+        opacity: isVisible && !isExiting ? 1 : 0,
+        pointerEvents: isVisible && !isExiting ? "auto" : "none",
         transition: "opacity 0.5s ease-out",
       }}
     >
