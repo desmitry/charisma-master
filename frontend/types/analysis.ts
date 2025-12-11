@@ -25,6 +25,8 @@ export interface ConfidenceComponents {
   volume_score: number;
   filler_score: number;
   gaze_score: number;
+  gesture_score?: number;
+  tone_score?: number;
 }
 
 export interface ConfidenceIndex {
@@ -48,6 +50,14 @@ export interface AnalysisResult {
   ideal_text: string;
   persona_feedback?: string | null;
   slide_text_density: number;
+  raw_metrics?: {
+    gaze_score?: number;
+    gesture_score?: number;
+    raw_movement?: number;
+    volume_score?: number;
+    tone_score?: number;
+    pitch_std?: number;
+  };
 }
 
 export interface TaskStatusResponse {
