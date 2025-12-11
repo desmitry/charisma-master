@@ -91,6 +91,8 @@ export function resolveVideoUrl(videoPath: string): string {
   if (!videoPath) return "";
   if (videoPath.startsWith("http")) return videoPath;
   if (videoPath.startsWith("/") && !videoPath.startsWith("/media/")) return videoPath;
-  return `${API_BASE_URL}${videoPath}`;
+  const url = `${API_BASE_URL}${videoPath}`;
+  console.log("[API] Resolved video URL:", { videoPath, url });
+  return url;
 }
 

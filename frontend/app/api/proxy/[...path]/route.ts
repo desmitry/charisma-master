@@ -104,18 +104,25 @@ async function proxyRequest(
       responseContentType.startsWith("image/");
 
     if (isMediaResponse) {
-      const arrayBuffer = await response.arrayBuffer();
-      
       const responseHeaders: HeadersInit = {};
       response.headers.forEach((value, key) => {
         responseHeaders[key] = value;
       });
 
-      return new NextResponse(arrayBuffer, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: responseHeaders,
-      });
+      if (response.body) {
+        return new NextResponse(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: responseHeaders,
+        });
+      } else {
+        const arrayBuffer = await response.arrayBuffer();
+        return new NextResponse(arrayBuffer, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: responseHeaders,
+        });
+      }
     }
 
     const data = await response.text();

@@ -67,7 +67,11 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   const [currentTime, setCurrentTime] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<"transcript" | "insights">("transcript");
-  const [videoSrc, setVideoSrc] = useState(() => resolveVideoUrl(result.video_path));
+  const [videoSrc, setVideoSrc] = useState(() => {
+    const url = resolveVideoUrl(result.video_path);
+    console.log("[AnalysisDashboard] Initial video URL:", { videoPath: result.video_path, url });
+    return url;
+  });
   const { isEcoMode } = useEcoMode();
   
   const [tempoModal, setTempoModal] = useState<{
@@ -97,7 +101,13 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   }, []);
 
   useEffect(() => {
-    setVideoSrc(resolveVideoUrl(result.video_path));
+    const url = resolveVideoUrl(result.video_path);
+    console.log("[AnalysisDashboard] Video URL updated:", { 
+      videoPath: result.video_path, 
+      url,
+      timestamp: new Date().toISOString()
+    });
+    setVideoSrc(url);
   }, [result.video_path]);
 
   useEffect(() => {
@@ -230,7 +240,14 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                 isEcoMode ? "bg-black" : "bg-black"
               )}
               onTimeUpdate={onTimeUpdate}
-              onError={() => {
+              onLoadedData={() => {
+                console.log("[Video] Video loaded successfully", { videoSrc });
+              }}
+              onCanPlay={() => {
+                console.log("[Video] Video can play", { videoSrc });
+              }}
+              onError={(e) => {
+                console.error("[Video] Video error:", e, { videoSrc });
                 if (videoSrc.includes("flower.mp4")) return;
                 setVideoSrc("https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4");
               }}

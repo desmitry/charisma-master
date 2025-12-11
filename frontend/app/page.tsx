@@ -309,23 +309,32 @@ export default function Home() {
       }
 
       setResult(analysis);
-      setStage("result");
       setProgress(1);
       setIsUploading(false);
       setIsExiting(false);
+      await new Promise((res) => setTimeout(res, 400));
+      setStage("result");
+      setShowResult(true);
     } catch (err) {
       console.error("[Page] Error during analysis:", err);
       const errorMessage = err instanceof Error ? err.message : "Не удалось связаться с бэкендом";
-      setError(errorMessage.includes("бэкенд") || errorMessage.includes("Failed") || errorMessage.includes("Сервер недоступен")
+      const isBackendError = errorMessage.includes("бэкенд") || 
+                             errorMessage.includes("Failed") || 
+                             errorMessage.includes("Сервер недоступен") ||
+                             errorMessage.includes("502") ||
+                             errorMessage.includes("503");
+      
+      setError(isBackendError
         ? "Не удалось связаться с бэкендом. Можно запустить демо-режим."
         : errorMessage);
       
       setIsExiting(false);
       setIsUploading(false);
-      setProgress(0.15);
-      setStatusText("Готовим обработку...");
+      setProgress(0);
+      setStatusText("");
       setStage("landing");
       setIsMockMode(false);
+      setShowResult(false);
     }
   };
 
@@ -341,9 +350,11 @@ export default function Home() {
       isUploading,
       isExiting,
       shouldShowGL,
+      hasResult: !!result,
+      showResult,
       timestamp: new Date().toISOString()
     });
-  }, [stage, showLanding, showProcessing, isUploading, isExiting, shouldShowGL]);
+  }, [stage, showLanding, showProcessing, isUploading, isExiting, shouldShowGL, result, showResult]);
 
   useEffect(() => {
     if (shouldShowGL) {
@@ -703,10 +714,11 @@ export default function Home() {
 
       {stage === "result" && result && (
         <div
-          className="transition-all duration-500 ease-out"
+          className="transition-all duration-500 ease-out relative"
           style={{
             opacity: showResult ? 1 : 0,
             transform: showResult ? "translateY(0)" : "translateY(20px)",
+            zIndex: 10,
           }}
         >
           <AnalysisDashboard
