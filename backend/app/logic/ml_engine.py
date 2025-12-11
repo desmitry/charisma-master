@@ -74,24 +74,32 @@ class MLEngine:
             "1",
             output_path,
         ]
-        subprocess.run(  # noqa: S603
-            command,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=True,
-        )
+        try:
+            subprocess.run(  # noqa: S603
+                command,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            logger.error(f"FFmpeg error: {e.stderr}")
+            raise
 
     @staticmethod
     def transcribe(audio_path: str) -> List[TranscriptSegment]:
         model = MLEngine.get_whisper_model()
-        segments_gen, _ = model.transcribe(audio_path, language="ru", word_timestamps=True)
+        segments_gen, _ = model.transcribe(
+            audio_path, language="ru", word_timestamps=True
+        )
 
         segments = []
         for seg in segments_gen:
             words = []
             if seg.words:
                 for w in seg.words:
-                    clean_word = w.word.strip().lower().replace(",", "").replace(".", "")
+                    clean_word = (
+                        w.word.strip().lower().replace(",", "").replace(".", "")
+                    )
                     is_filler = clean_word in MLEngine.FILLER_WORDS
                     words.append(
                         TranscriptWord(
@@ -103,12 +111,16 @@ class MLEngine:
                     )
 
             segments.append(
-                TranscriptSegment(start=seg.start, end=seg.end, text=seg.text, words=words)
+                TranscriptSegment(
+                    start=seg.start, end=seg.end, text=seg.text, words=words
+                )
             )
         return segments
 
     @staticmethod
-    def calculate_tempo(transcript: List[TranscriptSegment], window_sec=5.0) -> List[dict]:
+    def calculate_tempo(
+        transcript: List[TranscriptSegment], window_sec=5.0
+    ) -> List[dict]:
         words = []
         for seg in transcript:
             words.extend(seg.words)
@@ -123,7 +135,9 @@ class MLEngine:
             t_start = t
             t_end = t + window_sec
 
-            count = sum(1 for w in words if w.start >= t_start and w.end < t_end)
+            count = sum(
+                1 for w in words if w.start >= t_start and w.end < t_end
+            )
             wpm = (count / window_sec) * 60
 
             zone = "green"
@@ -132,7 +146,9 @@ class MLEngine:
             elif wpm > 140 or wpm < 100:
                 zone = "yellow"
 
-            points.append({"time": float(t), "wpm": float(round(wpm, 1)), "zone": zone})
+            points.append(
+                {"time": float(t), "wpm": float(round(wpm, 1)), "zone": zone}
+            )
         return points
 
     @staticmethod
@@ -170,12 +186,18 @@ class MLEngine:
             return {"volume_score": 50.0, "tone_score": 50.0}
 
     @staticmethod
-    def analyze_video_features(video_path: str) -> Dict[str, float]:  # noqa: C901
+    def analyze_video_features(
+        video_path: str,
+    ) -> Dict[str, float]:  # noqa: C901
         mp_holistic = mp.solutions.holistic
 
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
-            return {"gaze_score": 0.0, "gesture_score": 0.0, "slide_density": 0.0}
+            return {
+                "gaze_score": 0.0,
+                "gesture_score": 0.0,
+                "slide_density": 0.0,
+            }
 
         total_frames = 0
         looking_at_camera_frames = 0
@@ -221,9 +243,9 @@ class MLEngine:
                     current_right_y = right_wrist.y
 
                     if prev_wrist_y["left"] is not None:
-                        delta = abs(current_left_y - prev_wrist_y["left"]) + abs(
-                            current_right_y - prev_wrist_y["right"]
-                        )
+                        delta = abs(
+                            current_left_y - prev_wrist_y["left"]
+                        ) + abs(current_right_y - prev_wrist_y["right"])
 
                         if delta > 0.01:
                             movement_accum += delta
