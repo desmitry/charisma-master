@@ -9,6 +9,7 @@ import { AnalysisResult } from "@/types/analysis";
 import { pollForAnalysis, uploadVideo } from "@/lib/api";
 import { GL } from "@/components/gl";
 import { cn } from "@/lib/utils";
+import { ComingSoonNotification } from "@/components/coming-soon-notification";
 
 type Stage = "landing" | "processing" | "result";
 
@@ -47,6 +48,7 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState("");
   const [selectedPersona, setSelectedPersona] = useState<string>("");
+  const [isValidRuTubeUrl, setIsValidRuTubeUrl] = useState(false);
   const [isPersonaOpen, setIsPersonaOpen] = useState(false);
   const [personaOpenUp, setPersonaOpenUp] = useState(false);
   const personaRef = useRef<HTMLDivElement>(null);
@@ -59,6 +61,7 @@ export default function Home() {
   const [isExiting, setIsExiting] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [showVideoNotFound, setShowVideoNotFound] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -177,11 +180,39 @@ export default function Home() {
     };
   }, [isTouchDevice, stage]);
 
+  const validateRuTubeUrl = (url: string): boolean => {
+    if (!url.trim()) return false;
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname.toLowerCase();
+      return hostname.includes('rutube.ru') && urlObj.pathname.includes('/video/');
+    } catch {
+      return false;
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setSelectedFile(file || null);
     if (file) {
       setError(null);
+      setVideoUrl("");
+      setIsValidRuTubeUrl(false);
+    }
+  };
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    setVideoUrl(url);
+    const isValid = validateRuTubeUrl(url);
+    setIsValidRuTubeUrl(isValid);
+    if (url && !isValid) {
+      setError(null);
+    } else {
+      setError(null);
+    }
+    if (url && isValid) {
+      setSelectedFile(null);
     }
   };
 
@@ -261,6 +292,12 @@ export default function Home() {
     console.log("[Page] Setting isUploading = true");
     setIsUploading(true);
 
+    if (!selectedFile && videoUrl && !isValidRuTubeUrl) {
+      setError("Введите корректную ссылку на RuTube видео");
+      setIsUploading(false);
+      return;
+    }
+
     if (isMockMode || (!selectedFile && !videoUrl)) {
       console.log("[Page] Starting mock flow");
       return startMockFlow();
@@ -318,13 +355,17 @@ export default function Home() {
       await new Promise((res) => setTimeout(res, 400));
       setStage("result");
       setShowResult(true);
-    } catch (err) {
+      } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Не удалось связаться с бэкендом";
       const isBackendError = errorMessage.includes("бэкенд") || 
                              errorMessage.includes("Failed") || 
                              errorMessage.includes("Сервер недоступен") ||
                              errorMessage.includes("502") ||
                              errorMessage.includes("503");
+      const isVideoNotFound = errorMessage.toLowerCase().includes("не существует") || 
+                              errorMessage.toLowerCase().includes("видео не существует") ||
+                              errorMessage.toLowerCase().includes("video does not exist") ||
+                              errorMessage.toLowerCase().includes("400");
       const isExpectedError = err instanceof Error && err.name === "ExpectedError";
       
       if (isExpectedError || isBackendError) {
@@ -333,9 +374,13 @@ export default function Home() {
         console.error("[Page] Unexpected error during analysis:", err);
       }
       
-      const finalErrorMessage = isBackendError
-        ? "Не удалось связаться с бэкендом. Можно запустить демо-режим."
-        : errorMessage;
+      let finalErrorMessage = errorMessage;
+      if (isBackendError) {
+        finalErrorMessage = "Не удалось связаться с бэкендом. Можно запустить демо-режим.";
+      } else if (isVideoNotFound) {
+        setShowVideoNotFound(true);
+        finalErrorMessage = "";
+      }
       
       console.log("[Page] Setting error message:", finalErrorMessage);
       setError(finalErrorMessage);
@@ -598,20 +643,26 @@ export default function Home() {
                   </p>
                   <input
                     type="text"
-                    placeholder="https://rutube.ru/video/... или https://vk.com/video..."
+                    placeholder="https://rutube.ru/video/..."
                     className="mt-3 w-full rounded-2xl border border-white/20 bg-black/30 px-4 py-3 text-sm text-white placeholder:text-white/50 focus:border-white focus:outline-none"
                     value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
+                    onChange={handleUrlChange}
                   />
                   
                   <button
-                    className="mt-6 w-full rounded-2xl bg-white/20 py-3 text-sm font-semibold text-white transition hover:bg-white/35"
+                    className={cn(
+                      "mt-6 w-full rounded-2xl py-3 text-sm font-semibold text-white transition",
+                      (!selectedFile && (!videoUrl || !isValidRuTubeUrl))
+                        ? "bg-white/10 cursor-not-allowed opacity-50"
+                        : "bg-white/20 hover:bg-white/35"
+                    )}
                     onClick={handleAnalyze}
+                    disabled={!selectedFile && (!videoUrl || !isValidRuTubeUrl)}
                   >
                     Анализируй
                   </button>
                   <p className="mt-3 text-xs text-white/50">
-                    Прямая ссылка, Rutube или ВК видео
+                    Ссылка на RuTube видео
                   </p>
                   {error && <p className="mt-3 text-xs text-red-300">{error}</p>}
                 </div>
@@ -751,6 +802,30 @@ export default function Home() {
           />
         </div>
       )}
+
+      <ComingSoonNotification
+        isOpen={showVideoNotFound}
+        onClose={() => setShowVideoNotFound(false)}
+        title="Видео не существует"
+        message="Проверьте корректность ссылки на RuTube"
+        icon={
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-white/90"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        }
+      />
 
       <Leva hidden />
     </>
