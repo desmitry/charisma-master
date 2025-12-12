@@ -1,4 +1,5 @@
 import { AnalysisResult, TaskStatusResponse } from "@/types/analysis";
+import { uploadVideoAction } from "@/app/actions/upload";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || 
@@ -47,16 +48,16 @@ export async function uploadVideo(
     formData.append("persona", persona);
   }
 
-  const uploadUrl = typeof window !== "undefined" 
-    ? "/api/upload" 
-    : `${process.env.BACKEND_URL || "http://localhost:8000"}/api/v1/process`;
-
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    body: formData,
-  });
-
-  return checkResponse<{ task_id: string }>(response);
+  try {
+    return await uploadVideoAction(formData);
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message.includes("Сервер недоступен") || error.message.includes("File too large")) {
+        throw new ExpectedError(error.message);
+      }
+    }
+    throw error;
+  }
 }
 
 export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
@@ -105,4 +106,7 @@ export function resolveVideoUrl(videoPath: string): string {
   console.log("[API] Resolved video URL:", { videoPath, url });
   return url;
 }
+
+
+
 
