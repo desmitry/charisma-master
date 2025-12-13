@@ -16,7 +16,7 @@ class ExpectedError extends Error {
 async function checkResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    let errorMessage = text || response.statusText || "Ошибка сервера";
+    let errorMessage = text || response.statusText || "";
     
     try {
       const jsonData = JSON.parse(text);
@@ -28,17 +28,20 @@ async function checkResponse<T>(response: Response): Promise<T> {
     
     if (response.status === 502 || response.status === 503) {
       console.warn("[API] Backend unavailable:", response.status);
-      throw new ExpectedError("Сервер недоступен. Проверьте, запущен ли backend.");
+      const error = new ExpectedError(errorMessage || "Сервер недоступен. Проверьте, запущен ли backend.");
+      (error as any).statusCode = response.status;
+      throw error;
     }
     if (response.status === 413) {
       console.warn("[API] File too large:", response.status);
-      throw new ExpectedError("Файл слишком большой. Максимальный размер: 200MB.");
-    }
-    if (response.status === 400 || errorMessage.toLowerCase().includes("не существует") || errorMessage.toLowerCase().includes("video does not exist")) {
-      throw new Error("Видео не существует");
+      const error = new ExpectedError(errorMessage || "Файл слишком большой. Максимальный размер: 200MB.");
+      (error as any).statusCode = response.status;
+      throw error;
     }
     
-    throw new Error(errorMessage);
+    const error = new Error(errorMessage || "Ошибка сервера");
+    (error as any).statusCode = response.status;
+    throw error;
   }
   return response.json() as Promise<T>;
 }
@@ -68,7 +71,7 @@ export async function uploadVideo(
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
-      let errorMessage = text || response.statusText || "Upload failed";
+      let errorMessage = text || response.statusText || "";
       
       try {
         const jsonData = JSON.parse(text);
@@ -79,16 +82,19 @@ export async function uploadVideo(
       }
       
       if (response.status === 502 || response.status === 503) {
-        throw new ExpectedError("Сервер недоступен. Проверьте, запущен ли backend.");
+        const error = new ExpectedError(errorMessage || "Сервер недоступен. Проверьте, запущен ли backend.");
+        (error as any).statusCode = response.status;
+        throw error;
       }
       if (response.status === 413) {
-        throw new ExpectedError("Файл слишком большой. Максимальный размер: 200MB.");
-      }
-      if (response.status === 400 || errorMessage.toLowerCase().includes("не существует") || errorMessage.toLowerCase().includes("video does not exist")) {
-        throw new Error("Видео не существует");
+        const error = new ExpectedError(errorMessage || "Файл слишком большой. Максимальный размер: 200MB.");
+        (error as any).statusCode = response.status;
+        throw error;
       }
       
-      throw new Error(errorMessage);
+      const error = new Error(errorMessage || "Ошибка сервера");
+      (error as any).statusCode = response.status;
+      throw error;
     }
 
     return await response.json();

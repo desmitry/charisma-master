@@ -71,7 +71,7 @@ export function ComingSoonNotification({ isOpen, onClose, title = "Coming soon..
     ? createPortal(
         <div className="fixed top-0 left-0 right-0 z-[10000] flex justify-center pointer-events-none px-4 pt-4">
           <div
-            className="pointer-events-auto flex items-center gap-3 rounded-lg border border-white/15 bg-black/90 backdrop-blur-xl px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+            className="pointer-events-auto flex items-center gap-3 rounded-lg border border-white/15 bg-black/90 backdrop-blur-xl px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] max-w-md w-full"
             style={{
               transform: isVisible 
                 ? "translateY(0) scale(1)" 
@@ -86,7 +86,7 @@ export function ComingSoonNotification({ isOpen, onClose, title = "Coming soon..
               }, 500);
             }}
           >
-            <div className="flex items-center justify-center bg-white/10 p-1.5 rounded">
+            <div className="flex items-center justify-center bg-white/10 p-1.5 rounded flex-shrink-0">
               {icon || (
                 <svg
                   width="16"
@@ -104,9 +104,9 @@ export function ComingSoonNotification({ isOpen, onClose, title = "Coming soon..
                 </svg>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-1 min-w-0 flex-1">
               <span className="text-sm font-medium text-white">{title}</span>
-              <span className="text-xs text-white/50">{message}</span>
+              <span className="text-xs text-white/50 break-words leading-relaxed">{message}</span>
             </div>
           </div>
         </div>,
