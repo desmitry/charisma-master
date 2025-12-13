@@ -19,7 +19,7 @@ export async function uploadVideoAction(formData: FormData) {
 
     if (!response.ok) {
       const text = await response.text().catch(() => "");
-      let errorMessage = text || response.statusText || "Upload failed";
+      let errorMessage = text || response.statusText || "";
       
       try {
         const jsonData = JSON.parse(text);
@@ -31,17 +31,9 @@ export async function uploadVideoAction(formData: FormData) {
       
       console.error("[Server Action] Backend error:", response.status, errorMessage);
       
-      if (response.status === 502 || response.status === 503) {
-        throw new Error("Сервер недоступен. Проверьте, запущен ли backend.");
-      }
-      if (response.status === 413) {
-        throw new Error("Файл слишком большой. Максимальный размер: 200MB.");
-      }
-      if (response.status === 400 || errorMessage.toLowerCase().includes("не существует") || errorMessage.toLowerCase().includes("video does not exist")) {
-        throw new Error("Видео не существует");
-      }
-      
-      throw new Error(errorMessage);
+      const error = new Error(errorMessage || "Ошибка сервера");
+      (error as any).statusCode = response.status;
+      throw error;
     }
 
     const result = await response.json();

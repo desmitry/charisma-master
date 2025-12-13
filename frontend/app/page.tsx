@@ -61,7 +61,8 @@ export default function Home() {
   const [isExiting, setIsExiting] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [showVideoNotFound, setShowVideoNotFound] = useState(false);
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [serverErrorText, setServerErrorText] = useState("");
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -317,15 +318,8 @@ export default function Home() {
         }
         task_id = uploadResult.task_id;
       } catch (uploadErr) {
-        const uploadError = uploadErr instanceof Error ? uploadErr.message : "Ошибка загрузки";
-        if (uploadError.includes("Сервер недоступен") || uploadError.includes("502") || uploadError.includes("503")) {
-          console.warn("[Page] Backend unavailable during upload - this is expected when backend is not running");
-          const expectedError = new Error("Сервер недоступен. Проверьте, запущен ли backend.");
-          expectedError.name = "ExpectedError";
-          throw expectedError;
-        }
         console.error("[Page] Upload error:", uploadErr);
-        throw new Error("Не удалось загрузить видео. Проверьте подключение к серверу.");
+        throw uploadErr;
       }
       
       console.log("[Page] Upload successful, setting stage to processing");
@@ -356,34 +350,26 @@ export default function Home() {
       setStage("result");
       setShowResult(true);
       } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Не удалось связаться с бэкендом";
-      const isBackendError = errorMessage.includes("бэкенд") || 
-                             errorMessage.includes("Failed") || 
-                             errorMessage.includes("Сервер недоступен") ||
-                             errorMessage.includes("502") ||
-                             errorMessage.includes("503");
-      const isVideoNotFound = errorMessage.toLowerCase().includes("не существует") || 
-                              errorMessage.toLowerCase().includes("видео не существует") ||
-                              errorMessage.toLowerCase().includes("video does not exist") ||
-                              errorMessage.toLowerCase().includes("400");
+      const errorMessage = err instanceof Error ? err.message : "";
+      const statusCode = (err as any)?.statusCode;
+      
+      let displayError = errorMessage && errorMessage.trim() 
+        ? errorMessage 
+        : "Непредвиденная ошибка";
+      
       const isExpectedError = err instanceof Error && err.name === "ExpectedError";
       
-      if (isExpectedError || isBackendError) {
-        console.warn("[Page] Expected error (backend unavailable):", errorMessage);
+      if (isExpectedError) {
+        console.warn("[Page] Expected error:", errorMessage);
+        if (errorMessage.includes("Сервер недоступен") || errorMessage.includes("502") || errorMessage.includes("503")) {
+          displayError = "Сервер недоступен. Проверьте, запущен ли backend.";
+        }
       } else {
-        console.error("[Page] Unexpected error during analysis:", err);
+        console.error("[Page] Error during analysis:", err);
       }
       
-      let finalErrorMessage = errorMessage;
-      if (isBackendError) {
-        finalErrorMessage = "Не удалось связаться с бэкендом. Можно запустить демо-режим.";
-      } else if (isVideoNotFound) {
-        setShowVideoNotFound(true);
-        finalErrorMessage = "";
-      }
-      
-      console.log("[Page] Setting error message:", finalErrorMessage);
-      setError(finalErrorMessage);
+      setServerErrorText(displayError);
+      setShowErrorPopup(true);
       
       setIsExiting(false);
       setIsUploading(false);
@@ -392,6 +378,7 @@ export default function Home() {
       setStage("landing");
       setIsMockMode(false);
       setShowResult(false);
+      setError(null);
       
       console.log("[Page] Error handled, returned to landing page");
     }
@@ -804,10 +791,13 @@ export default function Home() {
       )}
 
       <ComingSoonNotification
-        isOpen={showVideoNotFound}
-        onClose={() => setShowVideoNotFound(false)}
-        title="Видео не существует"
-        message="Проверьте корректность ссылки на RuTube"
+        isOpen={showErrorPopup}
+        onClose={() => {
+          setShowErrorPopup(false);
+          setServerErrorText("");
+        }}
+        title="Ошибка"
+        message={serverErrorText || "Непредвиденная ошибка"}
         icon={
           <svg
             width="16"
