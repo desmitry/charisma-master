@@ -60,8 +60,42 @@ export async function uploadVideo(
   }
 
   try {
-    return await uploadVideoAction(formData);
+    // Use API route instead of Server Action to bypass body size limits
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      let errorMessage = text || response.statusText || "Upload failed";
+      
+      try {
+        const jsonData = JSON.parse(text);
+        if (jsonData.detail || jsonData.error || jsonData.message) {
+          errorMessage = jsonData.detail || jsonData.error || jsonData.message;
+        }
+      } catch {
+      }
+      
+      if (response.status === 502 || response.status === 503) {
+        throw new ExpectedError("Сервер недоступен. Проверьте, запущен ли backend.");
+      }
+      if (response.status === 413) {
+        throw new ExpectedError("Файл слишком большой. Максимальный размер: 200MB.");
+      }
+      if (response.status === 400 || errorMessage.toLowerCase().includes("не существует") || errorMessage.toLowerCase().includes("video does not exist")) {
+        throw new Error("Видео не существует");
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    return await response.json();
   } catch (error) {
+    if (error instanceof ExpectedError) {
+      throw error;
+    }
     if (error instanceof Error) {
       if (error.message.includes("Сервер недоступен") || error.message.includes("File too large")) {
         throw new ExpectedError(error.message);
