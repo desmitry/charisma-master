@@ -27,14 +27,15 @@ class Settings(BaseSettings):
     )
 
     # ML Models
+    whisper_provider: str = os.getenv("WHISPER_PROVIDER", "local")
     whisper_model_path: str = os.getenv("WHISPER_MODEL_PATH", "base")
     whisper_device: str = "cpu"
     whisper_compute_type: str = "int8"
 
     # LLM
     llm_api_base: str = os.getenv("LLM_API_BASE", "https://api.openai.com/v1")
-    llm_api_key: str = os.getenv("LLM_API_KEY", "sk-placeholder")
-    llm_model_name: str = os.getenv("LLM_MODEL_NAME", "gpt-3.5-turbo")
+    llm_api_key: str = os.getenv("LLM_API_KEY", "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")
+    llm_model_name: str = os.getenv("LLM_MODEL_NAME", "gpt-4o-mini")
 
     class Config:
         env_file = ".env"
