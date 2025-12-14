@@ -92,9 +92,6 @@ class MLEngine:
 
     @staticmethod
     def transcribe(audio_path: str) -> List[TranscriptSegment]:
-        """
-        Реализация пункта (6): Выбор модели Whisper
-        """
         segments_data = []
 
         if settings.whisper_provider == "openai":

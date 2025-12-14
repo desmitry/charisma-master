@@ -7,7 +7,7 @@ from app.config import settings
 from app.logic.llm_client import LLMClient
 from app.logic.ml_engine import MLEngine
 from app.models.schemas import ProcessingStage
-from celery import shared_task  # current_task
+from celery import shared_task
 from celery.signals import worker_process_init
 
 logger = logging.getLogger(__name__)
