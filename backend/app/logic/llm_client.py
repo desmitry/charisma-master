@@ -1,4 +1,5 @@
 import openai
+import json
 from app.config import settings
 
 
@@ -9,52 +10,57 @@ class LLMClient:
         )
         self.model = settings.llm_model_name
 
-    async def analyze_speech(self, full_text: str, persona: str = None) -> dict:
-        persona_prompt = ""
+    async def analyze_speech(self, transcript_text: str, slides_text: str, persona: str = None) -> dict:
+        persona_prompt = "Ты эксперт по публичным выступлениям."
         if persona == "strict_critic":
-            persona_prompt = "Ты строгий критик. Укажи на все недостатки жестко."
-        elif persona == "kind_mentor":
-            persona_prompt = "Ты добрый наставник. Поддержи и дай мягкие советы."
-        elif persona == "steve_jobs_style":
-            persona_prompt = (
-                "Ты Стив Джобс." + "Оцени выступление с точки зрения минимализма, страсти и подачи."
-            )
-        else:
-            persona_prompt = "Ты эксперт по публичным выступлениям."
+            persona_prompt = "Ты строгий критик. Жестко указывай на недостатки."
 
         system_prompt = f"""
         {persona_prompt}
-        Проанализируй текст выступления.
-        Учти, что текст является автоматической транскрипцией речи. 
-        В нем могут быть ошибки распознавания (опечатки, неверные окончания). 
-        Не критикуй спикера за орфографию или странные словоформы,
-        оценивай только смысл и структуру.
-        Верни результат строго в JSON формате с ключами:
-        - "summary": краткое содержание (2-3 предложения)
-        - "structure": описание структуры (Вступление, Основная часть, Вывод)
-        - "mistakes": основные ошибки (стилистика, логика, повторы)
-        - "ideal_text": перепиши текст, сделав его убедительным и чистым (первые 3-4 предложения)
-        - "persona_feedback": обратная связь именно в твоем стиле ({persona})
+
+        Тебе даны:
+        1. Текст выступления (транскрипция).
+        2. Текст, распознанный со слайдов презентации (OCR).
+
+        Твоя задача проанализировать это и вернуть JSON.
+
+        ЗАДАЧА 1: Найди "Динамические слова-паразиты" (Dynamic Fillers).
+        Это слова, которые спикер повторяет слишком часто, и которые можно удалить без потери смысла (например: "собственно", "как бы", "вот", "значит", или специфичные слова-паразиты спикера). Верни список из 3-5 таких слов.
+
+        ЗАДАЧА 2: Оцени слайды (если есть текст).
+        Если текста много, напиши, что слайды перегружены. Если текста мало/нет, оцени уместность.
+
+        Формат JSON ответа:
+        {{
+            "summary": "Краткое содержание (2-3 предложения)",
+            "structure": "Вступление, Основная часть, Вывод",
+            "mistakes": "Основные ошибки (стилистика, логика, повторы)",
+            "ideal_text": "Улучшенная версия небольшого фрагмента текста",
+            "persona_feedback": "Обратная связь в стиле персоны",
+            "dynamic_fillers": ["слово1", "слово2", "слово3"],
+            "slides_feedback": "Отзыв о слайдах (много текста, воды, или ок)"
+        }}
         """
+
+        user_content = f"ТРАНСКРИПЦИЯ:\n{transcript_text[:3000]}\n\nТЕКСТ СО СЛАЙДОВ:\n{slides_text[:1000]}"
 
         try:
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": full_text[:3500]},
+                    {"role": "user", "content": user_content},
                 ],
                 response_format={"type": "json_object"},
             )
-            import json
-
             return json.loads(response.choices[0].message.content)
         except Exception as e:
-            # TODO: Добавить нормальное логирование ошибки
             return {
-                "summary": "Не удалось сгенерировать саммари.",
-                "structure": "Анализ недоступен.",
-                "mistakes": "Ошибка подключения к AI.",
-                "ideal_text": "Ошибка генерации.",
-                "persona_feedback": f"Ошибка: {str(e)}",
+                "summary": "Ошибка анализа",
+                "structure": "-",
+                "mistakes": str(e),
+                "ideal_text": "-",
+                "persona_feedback": "Ошибка LLM",
+                "dynamic_fillers": [],
+                "slides_feedback": "Не удалось проанализировать"
             }
