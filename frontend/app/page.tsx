@@ -48,14 +48,21 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState("");
   const [selectedPersona, setSelectedPersona] = useState<string>("");
+  const [selectedLlmProvider, setSelectedLlmProvider] = useState<string>("gigachat");
   const [isValidRuTubeUrl, setIsValidRuTubeUrl] = useState(false);
   const [isPersonaOpen, setIsPersonaOpen] = useState(false);
   const [personaOpenUp, setPersonaOpenUp] = useState(false);
+  const [isProviderOpen, setIsProviderOpen] = useState(false);
+  const [providerOpenUp, setProviderOpenUp] = useState(false);
   const personaRef = useRef<HTMLDivElement>(null);
   const personaButtonRef = useRef<HTMLButtonElement>(null);
+  const providerRef = useRef<HTMLDivElement>(null);
+  const providerButtonRef = useRef<HTMLButtonElement>(null);
   const [statusText, setStatusText] = useState("Готовим обработку...");
   const [progress, setProgress] = useState(0.15);
   const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounterRef = useRef(0);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isMockMode, setIsMockMode] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -69,16 +76,19 @@ export default function Home() {
       if (personaRef.current && !personaRef.current.contains(event.target as Node)) {
         setIsPersonaOpen(false);
       }
+      if (providerRef.current && !providerRef.current.contains(event.target as Node)) {
+        setIsProviderOpen(false);
+      }
     };
 
-    if (isPersonaOpen) {
+    if (isPersonaOpen || isProviderOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isPersonaOpen]);
+  }, [isPersonaOpen, isProviderOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -202,6 +212,49 @@ export default function Home() {
     }
   };
 
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounterRef.current = 0;
+    
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type === "video/mp4" || file.name.endsWith(".mp4")) {
+        setSelectedFile(file);
+        setError(null);
+        setVideoUrl("");
+        setIsValidRuTubeUrl(false);
+      } else {
+        setError("Только файлы MP4");
+      }
+    }
+  };
+
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const url = e.target.value;
     setVideoUrl(url);
@@ -218,7 +271,7 @@ export default function Home() {
   };
 
   const loadMockResponse = async (): Promise<AnalysisResult> => {
-    const res = await fetch("/mock-response.json");
+    const res = await fetch("/response_1765796223493.json");
     if (!res.ok) throw new Error("mock fetch failed");
     const data = (await res.json()) as AnalysisResult;
     let videoPath = data.video_path;
@@ -312,7 +365,12 @@ export default function Home() {
       try {
         setProgress(0.1);
         setStatusText("Загружаем видео...");
-        const uploadResult = await uploadVideo(selectedFile, videoUrl || null, selectedPersona || undefined);
+        const uploadResult = await uploadVideo(
+          selectedFile, 
+          videoUrl || null, 
+          selectedPersona || undefined,
+          selectedLlmProvider || undefined
+        );
         if (!uploadResult?.task_id) {
           throw new Error("Не получен task_id от сервера");
         }
@@ -573,43 +631,94 @@ export default function Home() {
             opacity: isExiting ? 0 : 1,
             transform: isExiting ? "translateY(20px)" : "translateY(0)",
           }}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
         >
-          <div className="flex flex-col items-center justify-center px-4 py-16 sm:px-6 lg:min-h-svh">
-            <div className="w-full max-w-4xl rounded-[32px] border border-white/10 bg-black/35 px-6 py-12 shadow-[0_40px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:px-8 sm:py-14">
-              <p className="text-center text-[10px] font-mono uppercase tracking-[0.3em] text-white/60 sm:text-xs sm:tracking-[0.4em]">
-                Загрузка материалов
-              </p>
-              <h2 className="mt-6 text-center text-2xl font-semibold text-white sm:text-3xl md:text-4xl">
-                Анализируй. Учись. Защищайся.
-              </h2>
-              <p className="mt-4 text-center text-sm text-white/70 sm:text-base">
-                Перетащи или выбери видео, либо вставь ссылку.
-              </p>
+          {/* Drag Overlay */}
+          <div
+            className={cn(
+              "pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md transition-all duration-300",
+              isDragging ? "opacity-100" : "opacity-0"
+            )}
+          >
+            <div className={cn(
+              "flex flex-col items-center gap-4 rounded-3xl border-2 border-dashed border-white/50 bg-white/10 px-16 py-12 transition-all duration-300",
+              isDragging ? "scale-100" : "scale-90"
+            )}>
+              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/20">
+                <svg className="h-10 w-10 text-white" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+              </div>
+              <p className="text-xl font-semibold text-white">Отпусти для загрузки</p>
+              <p className="text-sm text-white/60">Формат MP4</p>
+            </div>
+          </div>
 
-              <div className="mt-10 grid gap-6 md:grid-cols-2">
+          <div className="flex flex-col items-center justify-center px-4 py-8 sm:px-6 lg:min-h-svh lg:py-4">
+            <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-md">
+              {/* Header */}
+              <div className="text-center mb-5">
+                <h2 className="text-xl font-semibold text-white sm:text-2xl">
+                  Загрузи видео для анализа
+                </h2>
+                <p className="mt-1 text-sm text-white/40">
+                  Перетащи файл или вставь ссылку
+                </p>
+              </div>
+
+              {/* Upload Area */}
+              <div className="grid gap-3 md:grid-cols-2">
                 <label
                   htmlFor="video-upload"
-                  className="flex cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed border-white/40 bg-white/5 px-6 py-10 text-center transition hover:border-white hover:bg-white/10"
+                  className={cn(
+                    "group relative flex cursor-pointer items-center gap-4 overflow-hidden rounded-xl border-2 border-dashed p-4 transition-all duration-300",
+                    selectedFile 
+                      ? "border-emerald-500/50 bg-emerald-500/10" 
+                      : "border-white/20 bg-white/[0.03] hover:border-white/40 hover:bg-white/[0.06]"
+                  )}
                 >
-                  <svg
-                    className="mb-4 h-10 w-10 text-white/70"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  <p className="text-lg font-semibold text-white">
-                    Перетащи файл сюда
-                  </p>
-                  <p className="mt-2 text-sm text-white/65">
-                    Формат MP4. Длительность до ~5 минут
-                  </p>
+                  <div className={cn(
+                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-all duration-300",
+                    selectedFile ? "bg-emerald-500/20" : "bg-white/10 group-hover:bg-white/15"
+                  )}>
+                    {selectedFile ? (
+                      <svg className="h-5 w-5 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5 text-white/50 transition-colors group-hover:text-white/70" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={cn(
+                      "text-sm font-medium",
+                      selectedFile ? "text-emerald-300" : "text-white/80"
+                    )}>
+                      {selectedFile ? "Файл выбран" : "Загрузить файл"}
+                    </p>
+                    <p className="text-xs text-white/40 truncate">
+                      {selectedFile ? selectedFile.name : "MP4, до 5 минут"}
+                    </p>
+                  </div>
+                  {selectedFile && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setSelectedFile(null);
+                      }}
+                      className="rounded-lg p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
                   <input
                     id="video-upload"
                     type="file"
@@ -617,48 +726,29 @@ export default function Home() {
                     accept="video/mp4,.mp4"
                     onChange={handleFileChange}
                   />
-                  {selectedFile && (
-                    <p className="mt-3 text-xs text-white/60">
-                      Выбран: {selectedFile.name}
-                    </p>
-                  )}
                 </label>
 
-                <div className="rounded-3xl border border-white/15 bg-white/5 px-6 py-8">
-                  <p className="text-[11px] uppercase tracking-[0.3em] text-white/50">
-                    Использовать ссылку
-                  </p>
+                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-sm transition-all focus-within:border-white/30 focus-within:bg-white/[0.05]">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/10">
+                    <svg className="h-5 w-5 text-white/50" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.193-9.193a4.5 4.5 0 016.364 6.364l-4.5 4.5a4.5 4.5 0 01-7.244-1.242" />
+                    </svg>
+                  </div>
                   <input
                     type="text"
-                    placeholder="https://rutube.ru/video/..."
-                    className="mt-3 w-full rounded-2xl border border-white/20 bg-black/30 px-4 py-3 text-sm text-white placeholder:text-white/50 focus:border-white focus:outline-none"
+                    placeholder="rutube.ru/video/..."
+                    className="flex-1 bg-transparent text-sm text-white placeholder:text-white/25 focus:outline-none"
                     value={videoUrl}
                     onChange={handleUrlChange}
                   />
-                  
-                  <button
-                    className={cn(
-                      "mt-6 w-full rounded-2xl py-3 text-sm font-semibold text-white transition",
-                      (!selectedFile && (!videoUrl || !isValidRuTubeUrl))
-                        ? "bg-white/10 cursor-not-allowed opacity-50"
-                        : "bg-white/20 hover:bg-white/35"
-                    )}
-                    onClick={handleAnalyze}
-                    disabled={!selectedFile && (!videoUrl || !isValidRuTubeUrl)}
-                  >
-                    Анализируй
-                  </button>
-                  <p className="mt-3 text-xs text-white/50">
-                    Ссылка на RuTube видео
-                  </p>
-                  {error && <p className="mt-3 text-xs text-red-300">{error}</p>}
                 </div>
               </div>
 
-              <div className="mt-6 rounded-3xl border border-white/15 bg-white/5 px-6 py-6">
-                <p className="text-[11px] uppercase tracking-[0.3em] text-white/50 mb-4">
-                  Роль оценщика
-                </p>
+              {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
+
+              {/* Settings Row */}
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                {/* Persona Dropdown */}
                 <div ref={personaRef} className="relative">
                   <button
                     ref={personaButtonRef}
@@ -667,93 +757,145 @@ export default function Home() {
                       if (!isPersonaOpen && personaButtonRef.current) {
                         const rect = personaButtonRef.current.getBoundingClientRect();
                         const spaceBelow = window.innerHeight - rect.bottom;
-                        const spaceAbove = rect.top;
-                        const dropdownHeight = 200; // примерная высота dropdown
-                        setPersonaOpenUp(spaceBelow < dropdownHeight && spaceAbove > spaceBelow);
+                        setPersonaOpenUp(spaceBelow < 200);
                       }
                       setIsPersonaOpen(!isPersonaOpen);
                     }}
                     className={cn(
-                      "w-full rounded-2xl border px-4 py-3 text-left text-sm text-white transition-all duration-200 flex items-center justify-between",
+                      "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm backdrop-blur-sm transition-all",
                       isPersonaOpen
-                        ? "border-white/40 bg-white/10"
-                        : "border-white/20 bg-black/30 hover:border-white/30 hover:bg-black/40"
+                        ? "border-white/30 bg-white/15"
+                        : "border-white/10 bg-white/[0.05] hover:border-white/20 hover:bg-white/10"
                     )}
                   >
-                    <span className={selectedPersona ? "" : "text-white/50"}>
-                      {selectedPersona === "strict_critic" ? "Строгий критик" :
-                       selectedPersona === "kind_mentor" ? "Добрый наставник" :
-                       selectedPersona === "steve_jobs_style" ? "Стив Джобс" :
-                       "Не выбрано"}
+                    <svg className="h-4 w-4 text-white/50" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0" />
+                    </svg>
+                    <span className="text-white/80">
+                      {selectedPersona === "strict_critic" ? "Критик" :
+                       selectedPersona === "kind_mentor" ? "Наставник" :
+                       selectedPersona === "steve_jobs_style" ? "Джобс" :
+                       "Роль"}
                     </span>
-                    <svg
-                      className={cn(
-                        "w-4 h-4 text-white/60 transition-transform duration-300 ease-in-out",
-                        isPersonaOpen ? "rotate-180" : "rotate-0"
-                      )}
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className={cn("h-3 w-3 text-white/40 transition-transform", isPersonaOpen && "rotate-180")} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
                   
                   <div
                     className={cn(
-                      "absolute z-50 w-full rounded-2xl border border-white/20 bg-black/40 backdrop-blur-xl overflow-hidden transition-all duration-300",
-                      personaOpenUp ? "bottom-full mb-2" : "top-full mt-2",
-                      isPersonaOpen
-                        ? "opacity-100 translate-y-0 pointer-events-auto"
-                        : personaOpenUp
-                        ? "opacity-0 translate-y-2 pointer-events-none"
-                        : "opacity-0 -translate-y-2 pointer-events-none"
+                      "absolute z-50 min-w-[200px] rounded-xl border border-white/15 bg-black/95 backdrop-blur-xl overflow-hidden shadow-xl transition-all duration-200",
+                      personaOpenUp ? "bottom-full mb-1" : "top-full mt-1",
+                      isPersonaOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
                     )}
-                    style={{
-                      maxHeight: isPersonaOpen ? "300px" : "0px",
-                      transition: "opacity 300ms cubic-bezier(0.4, 0, 0.2, 1), transform 300ms cubic-bezier(0.4, 0, 0.2, 1), max-height 300ms cubic-bezier(0.4, 0, 0.2, 1)"
-                    }}
                   >
-                    <div className="py-1">
-                      {[
-                        { value: "", label: "Не выбрано", desc: "" },
-                        { value: "strict_critic", label: "Строгий критик", desc: "Жесткая оценка недостатков" },
-                        { value: "kind_mentor", label: "Добрый наставник", desc: "Мягкие советы и поддержка" },
-                        { value: "steve_jobs_style", label: "Стив Джобс", desc: "Минимализм и страсть" }
-                      ].map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => {
-                            setSelectedPersona(option.value);
-                            setIsPersonaOpen(false);
-                          }}
-                          className={cn(
-                            "w-full px-4 py-3 text-left text-sm transition-all duration-150",
-                            selectedPersona === option.value
-                              ? "bg-white/10 text-white"
-                              : "text-white/70 hover:bg-white/5 hover:text-white"
-                          )}
-                        >
-                          <div className="font-medium">{option.label}</div>
-                          {option.desc && (
-                            <div className="text-xs text-white/50 mt-0.5">{option.desc}</div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
+                    {[
+                      { value: "", label: "Без роли" },
+                      { value: "strict_critic", label: "Строгий критик" },
+                      { value: "kind_mentor", label: "Добрый наставник" },
+                      { value: "steve_jobs_style", label: "Стив Джобс" }
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          setSelectedPersona(option.value);
+                          setIsPersonaOpen(false);
+                        }}
+                        className={cn(
+                          "w-full px-3 py-2.5 text-left text-sm transition-colors",
+                          selectedPersona === option.value
+                            ? "bg-white/10 text-white"
+                            : "text-white/60 hover:bg-white/5 hover:text-white"
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                {selectedPersona && (
-                  <p className="mt-3 text-xs text-white/50">
-                    {
-                      selectedPersona === "strict_critic" ? "Жесткая оценка недостатков" :
-                      selectedPersona === "kind_mentor" ? "Мягкие советы и поддержка" :
-                      "Минимализм и страсть"
-                    }
-                  </p>
-                )}
+
+                {/* Provider Dropdown */}
+                <div ref={providerRef} className="relative">
+                  <button
+                    ref={providerButtonRef}
+                    type="button"
+                    onClick={() => {
+                      if (!isProviderOpen && providerButtonRef.current) {
+                        const rect = providerButtonRef.current.getBoundingClientRect();
+                        const spaceBelow = window.innerHeight - rect.bottom;
+                        setProviderOpenUp(spaceBelow < 200);
+                      }
+                      setIsProviderOpen(!isProviderOpen);
+                    }}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm backdrop-blur-sm transition-all",
+                      isProviderOpen
+                        ? "border-white/30 bg-white/15"
+                        : "border-white/10 bg-white/[0.05] hover:border-white/20 hover:bg-white/10"
+                    )}
+                  >
+                    <img 
+                      src={`/icons/${selectedLlmProvider}.svg`} 
+                      alt={selectedLlmProvider}
+                      className="h-4 w-4"
+                    />
+                    <span className="text-white/80">
+                      {selectedLlmProvider === "gigachat" ? "GigaChat" : "OpenAI"}
+                    </span>
+                    <svg className={cn("h-3 w-3 text-white/40 transition-transform", isProviderOpen && "rotate-180")} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  <div
+                    className={cn(
+                      "absolute z-50 min-w-[180px] rounded-xl border border-white/15 bg-black/95 backdrop-blur-xl overflow-hidden shadow-xl transition-all duration-200",
+                      providerOpenUp ? "bottom-full mb-1" : "top-full mt-1",
+                      isProviderOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+                    )}
+                  >
+                    {[
+                      { value: "gigachat", label: "GigaChat" },
+                      { value: "openai", label: "OpenAI" }
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          setSelectedLlmProvider(option.value);
+                          setIsProviderOpen(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors",
+                          selectedLlmProvider === option.value
+                            ? "bg-white/10 text-white"
+                            : "text-white/60 hover:bg-white/5 hover:text-white"
+                        )}
+                      >
+                        <img src={`/icons/${option.value}.svg`} alt={option.label} className="h-4 w-4" />
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Spacer */}
+                <div className="flex-1" />
+
+                {/* Analyze Button */}
+                <button
+                  className={cn(
+                    "rounded-lg px-6 py-2.5 text-sm font-medium transition-all duration-300",
+                    (!selectedFile && (!videoUrl || !isValidRuTubeUrl))
+                      ? "bg-white/10 text-white/30 cursor-not-allowed"
+                      : "bg-white text-black shadow-lg shadow-white/20 hover:shadow-white/30 hover:scale-[1.02] active:scale-[0.98]"
+                  )}
+                  onClick={handleAnalyze}
+                  disabled={!selectedFile && (!videoUrl || !isValidRuTubeUrl)}
+                >
+                  Анализировать
+                </button>
               </div>
             </div>
           </div>
