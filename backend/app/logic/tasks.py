@@ -34,7 +34,8 @@ def save_json_result(task_id: str, data: dict):
 
 
 @shared_task(bind=True)
-def process_video_pipeline(self, task_id: str, video_path: str, persona: str = None):
+def process_video_pipeline(self, task_id: str, video_path: str, provider: str, model: str,
+                           persona: str = None):
     try:
         self.update_state(
             state="PROCESSING", meta={"stage": ProcessingStage.listening, "progress": 0.1}
@@ -94,7 +95,7 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
         llm_client = LLMClient()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        llm_result = loop.run_until_complete(llm_client.analyze_speech(context_for_llm, persona))
+        llm_result = loop.run_until_complete(llm_client.analyze_speech(context_for_llm, provider, model, persona))
         loop.close()
     except Exception as e:
         logger.error(f"LLM упал: {e}")
@@ -111,11 +112,11 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
     # Формула уверенности (можно тюнить веса)
     # Gaze: 20%, Gesture: 15%, Tone: 25%, Filler: 25%, Volume: 15%
     total_conf = (
-        (conf_gaze * 0.20)
-        + (conf_gesture * 0.15)
-        + (conf_tone * 0.25)
-        + (conf_filler * 0.25)
-        + (conf_volume * 0.15)
+            (conf_gaze * 0.20)
+            + (conf_gesture * 0.15)
+            + (conf_tone * 0.25)
+            + (conf_filler * 0.25)
+            + (conf_volume * 0.15)
     )
 
     file_name = Path(video_path).name
