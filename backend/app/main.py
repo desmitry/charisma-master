@@ -6,7 +6,6 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
-# Configure CORS origins based on environment
 environment = os.getenv("ENVIRONMENT", "development")
 
 if environment == "production":
@@ -14,8 +13,8 @@ if environment == "production":
 else:
     origins = ["*"]
 
-if os.getenv("LLM_API_KEY") is None:
-    raise Exception("You need to specify LLM_API_KEY")
+if not settings.llm_api_key or settings.llm_api_key.startswith("sk-proj-..."):
+    print("Warning: LLM_API_KEY is missing or looks like a placeholder!")
 
 app = FastAPI(
     title="Speech Analysis",
