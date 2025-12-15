@@ -6,7 +6,7 @@ from pathlib import Path
 from app.config import settings
 from app.logic.llm_client import LLMClient
 from app.logic.ml_engine import MLEngine
-from app.models.schemas import ProcessingStage
+from app.models.schemas import PersonaEnum, ProcessingStage
 from celery import shared_task  # current_task
 from celery.signals import worker_process_init
 
@@ -34,11 +34,18 @@ def save_json_result(task_id: str, data: dict):
 
 
 @shared_task(bind=True)
-def process_video_pipeline(self, task_id: str, video_path: str, provider: str, model: str,
-                           persona: str = None):
+def process_video_pipeline(
+    self,
+    task_id: str,
+    video_path: str,
+    provider: str,
+    model: str,
+    persona: PersonaEnum | None,
+):
     try:
         self.update_state(
-            state="PROCESSING", meta={"stage": ProcessingStage.listening, "progress": 0.1}
+            state="PROCESSING",
+            meta={"stage": ProcessingStage.listening, "progress": 0.1},
         )
         audio_path = str(Path(video_path).with_suffix(".wav"))
 
@@ -95,7 +102,9 @@ def process_video_pipeline(self, task_id: str, video_path: str, provider: str, m
         llm_client = LLMClient()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        llm_result = loop.run_until_complete(llm_client.analyze_speech(context_for_llm, provider, model, persona))
+        llm_result = loop.run_until_complete(
+            llm_client.analyze_speech(context_for_llm, provider, model, persona)
+        )
         loop.close()
     except Exception as e:
         logger.error(f"LLM упал: {e}")
@@ -112,11 +121,11 @@ def process_video_pipeline(self, task_id: str, video_path: str, provider: str, m
     # Формула уверенности (можно тюнить веса)
     # Gaze: 20%, Gesture: 15%, Tone: 25%, Filler: 25%, Volume: 15%
     total_conf = (
-            (conf_gaze * 0.20)
-            + (conf_gesture * 0.15)
-            + (conf_tone * 0.25)
-            + (conf_filler * 0.25)
-            + (conf_volume * 0.15)
+        (conf_gaze * 0.20)
+        + (conf_gesture * 0.15)
+        + (conf_tone * 0.25)
+        + (conf_filler * 0.25)
+        + (conf_volume * 0.15)
     )
 
     file_name = Path(video_path).name

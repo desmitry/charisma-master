@@ -42,7 +42,7 @@ async def process_video(
         raise HTTPException(status_code=400, detail="Файл или ссылка на видео")
 
     process_video_pipeline.apply_async(
-        args=[task_id, final_path, persona.value if persona else None],
+        args=[task_id, final_path, persona],
         task_id=task_id,
     )
 

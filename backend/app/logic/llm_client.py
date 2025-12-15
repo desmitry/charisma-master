@@ -1,11 +1,12 @@
 import json
 import logging
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 import openai
-from gigachat import GigaChat
-
+import prompts
 from app.config import settings
+from app.models.schemas import PersonaEnum
+from gigachat import GigaChat
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +19,7 @@ class LLMClient:
 
     def __init__(self):
         self.openai_client = openai.AsyncOpenAI(
-            base_url=settings.openai_api_base,
-            api_key=settings.openai_api_key
+            base_url=settings.openai_api_base, api_key=settings.openai_api_key
         )
 
         # Initialize GigaChat client if credentials are present
@@ -32,11 +32,11 @@ class LLMClient:
             )
 
     async def analyze_speech(
-            self,
-            full_text: str,
-            provider: str,
-            model: str,
-            persona: str = None
+        self,
+        full_text: str,
+        provider: str,
+        model: str,
+        persona: PersonaEnum | None = None,
     ) -> Dict[str, Any]:
         """
         Analyze the speech text using the specified provider and model.
@@ -44,11 +44,11 @@ class LLMClient:
         :param full_text: Transcript of the speech.
         :param persona: Persona identifier for the system prompt.
         :param provider: 'openai' or 'gigachat'. Defaults to settings if None.
-        :param model: Specific model name (e.g., 'gpt-4', 'GigaChat-Pro'). Defaults to settings if None.
+        :param model: Specific model name (e.g., 'gpt-4', 'GigaChat-Pro').
         """
 
-        persona_prompt = self._get_persona_prompt(persona)
-        system_prompt = self._build_system_prompt(persona_prompt, persona)
+        persona_prompt = prompts.get_persona_prompt(persona)
+        system_prompt = prompts.get_system_prompt(persona_prompt)
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -85,12 +85,7 @@ class LLMClient:
         if not self.gigachat_client:
             raise ValueError("GigaChat client is not initialized. Check credentials.")
 
-        response = await self.gigachat_client.achat(
-            payload={
-                "messages": messages,
-                "model": model
-            }
-        )
+        response = await self.gigachat_client.achat(payload={"messages": messages, "model": model})
         return response.choices[0].message.content
 
     @staticmethod
@@ -98,33 +93,3 @@ class LLMClient:
         """Clean and parse the JSON string returned by LLM."""
         cleaned = content.replace("```json", "").replace("```", "").strip()
         return json.loads(cleaned)
-
-    @staticmethod
-    def _build_system_prompt(persona_prompt: str) -> str:
-        return f"""
-        {persona_prompt}
-        Проанализируй текст выступления.
-        Учти, что текст является автоматической транскрипцией речи.
-        В нем могут быть ошибки распознавания (опечатки, неверные окончания).
-        Не критикуй спикера за орфографию или странные словоформы,
-        оценивай только смысл и структуру.
-
-        ВАЖНО: Верни результат СТРОГО в формате чистого JSON без лишнего текста и форматирования Markdown.
-        Ключи JSON:
-        - "summary": краткое содержание (2-3 предложения)
-        - "structure": описание структуры (Вступление, Основная часть, Вывод)
-        - "mistakes": основные ошибки (стилистика, логика, повторы)
-        - "ideal_text": перепиши текст, сделав его убедительным и чистым (первые 3-4 предложения)
-        - "persona_feedback": обратная связь именно в твоем стиле ({persona_prompt})
-        """
-
-    @staticmethod
-    def _get_persona_prompt(persona: Optional[str]) -> str:
-        if persona == "strict_critic":
-            return "Ты строгий критик. Укажи на все недостатки жестко."
-        elif persona == "kind_mentor":
-            return "Ты добрый наставник. Поддержи и дай мягкие советы."
-        elif persona == "steve_jobs_style":
-            return "Ты Стив Джобс. Оцени выступление с точки зрения минимализма, страсти и подачи."
-        else:
-            return "Ты эксперт по публичным выступлениям."
