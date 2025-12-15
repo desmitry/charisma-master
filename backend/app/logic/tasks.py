@@ -6,7 +6,7 @@ from pathlib import Path
 from app.config import settings
 from app.logic.llm_client import LLMClient
 from app.logic.ml_engine import MLEngine
-from app.models.schemas import ProcessingStage
+from app.models.schemas import PersonaEnum, ProcessingStage
 from celery import shared_task  # current_task
 from celery.signals import worker_process_init
 
@@ -34,10 +34,18 @@ def save_json_result(task_id: str, data: dict):
 
 
 @shared_task(bind=True)
-def process_video_pipeline(self, task_id: str, video_path: str, persona: str = None):
+def process_video_pipeline(
+    self,
+    task_id: str,
+    video_path: str,
+    analyze_provider: str,
+    analyze_model: str,
+    persona: PersonaEnum | None,
+):
     try:
         self.update_state(
-            state="PROCESSING", meta={"stage": ProcessingStage.listening, "progress": 0.1}
+            state="PROCESSING",
+            meta={"stage": ProcessingStage.listening, "progress": 0.1},
         )
         audio_path = str(Path(video_path).with_suffix(".wav"))
 
@@ -57,7 +65,10 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
         self.update_state(state="FAILURE", meta={"error": str(e)})
         raise e
 
-    self.update_state(state="PROCESSING", meta={"stage": ProcessingStage.gestures, "progress": 0.4})
+    self.update_state(
+        state="PROCESSING",
+        meta={"stage": ProcessingStage.gestures, "progress": 0.4},
+    )
 
     vision_metrics = {"gaze_score": 0.0, "gesture_score": 0.0}
     audio_metrics = {"volume_score": 50.0, "tone_score": 0.0}
@@ -75,7 +86,8 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
         logger.warning(f"Звук сломался: {e}")
 
     self.update_state(
-        state="PROCESSING", meta={"stage": ProcessingStage.analyzing, "progress": 0.7}
+        state="PROCESSING",
+        meta={"stage": ProcessingStage.analyzing, "progress": 0.7},
     )
     tempo_data = MLEngine.calculate_tempo(transcript_segments)
 
@@ -94,7 +106,9 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
         llm_client = LLMClient()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        llm_result = loop.run_until_complete(llm_client.analyze_speech(context_for_llm, persona))
+        llm_result = loop.run_until_complete(
+            llm_client.analyze_speech(context_for_llm, analyze_provider, analyze_model, persona)
+        )
         loop.close()
     except Exception as e:
         logger.error(f"LLM упал: {e}")
@@ -126,7 +140,10 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
         "video_path": relative_path,
         "transcript": transcript_segments,
         "tempo": tempo_data,
-        "fillers_summary": {"count": filler_count, "ratio": round(filler_ratio, 4)},
+        "fillers_summary": {
+            "count": filler_count,
+            "ratio": round(filler_ratio, 4),
+        },
         "confidence_index": {
             "total": round(total_conf, 1),
             "components": {
@@ -143,6 +160,8 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
         "ideal_text": llm_result.get("ideal_text", "N/A"),
         "persona_feedback": llm_result.get("persona_feedback", "N/A"),
         "raw_metrics": {**vision_metrics, **audio_metrics},
+        "analyze_provider": analyze_provider,
+        "analyze_model": analyze_model,
     }
 
     save_json_result(task_id, result_data)

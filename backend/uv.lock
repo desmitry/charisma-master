@@ -228,6 +228,7 @@ dependencies = [
     { name = "celery-types" },
     { name = "fastapi" },
     { name = "faster-whisper" },
+    { name = "gigachat" },
     { name = "librosa" },
     { name = "mediapipe" },
     { name = "numpy" },
@@ -254,6 +255,7 @@ requires-dist = [
     { name = "celery-types", specifier = "==0.23.0" },
     { name = "fastapi", specifier = ">=0.123.7" },
     { name = "faster-whisper", specifier = ">=1.2.1" },
+    { name = "gigachat", specifier = "==0.1.43" },
     { name = "librosa", specifier = ">=0.11.0" },
     { name = "mediapipe", specifier = ">=0.10.14" },
     { name = "numpy", specifier = ">=2.3.5" },
@@ -525,6 +527,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b6/27/954057b0d1f53f086f681755207dda6de6c660ce133c829158e8e8fe7895/fsspec-2025.12.0.tar.gz", hash = "sha256:c505de011584597b1060ff778bb664c1bc022e87921b0e4f10cc9c44f9635973", size = 309748, upload-time = "2025-12-03T15:23:42.687Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/c7/b64cae5dba3a1b138d7123ec36bb5ccd39d39939f18454407e5468f4763f/fsspec-2025.12.0-py3-none-any.whl", hash = "sha256:8bf1fe301b7d8acfa6e8571e3b1c3d158f909666642431cc78a1b7b4dbc5ec5b", size = 201422, upload-time = "2025-12-03T15:23:41.434Z" },
+]
+
+[[package]]
+name = "gigachat"
+version = "0.1.43"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b6/f7/e3356dfa881202633301f640ae1e087d522e8f8a4754af3e453da41e8429/gigachat-0.1.43.tar.gz", hash = "sha256:70c7f34d030d43826d1b80b935c9074e14770780bcf8204b316b39dd5ee69a98", size = 34170, upload-time = "2025-11-11T12:18:32.506Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d2/48/e6dec5d2a2616bb53cf85c8f531477e2643d804e88ba09bd34ad744625eb/gigachat-0.1.43-py3-none-any.whl", hash = "sha256:b5820cebf3f1056822dfc92ef9cca886bbb0e79e3d6b9882afa4e7bb93a71d88", size = 69884, upload-time = "2025-11-11T12:18:31.229Z" },
 ]
 
 [[package]]
