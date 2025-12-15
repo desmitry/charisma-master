@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"  # noqa: S104
     port: int = 8000
 
+    environment: str = os.getenv("ENVIRONMENT", "development")
+    backend_origin: str = os.getenv("BACKEND_ORIGIN_URL", "*")
+
     # Paths
     base_dir: Path = Path(__file__).parent.parent.resolve() / "app"
     media_root: Path = base_dir / "media"
@@ -39,6 +42,7 @@ class Settings(BaseSettings):
     gigachat_credentials: str | None = os.getenv("GIGACHAT_CREDENTIALS", None)
     gigachat_scope: str = "GIGACHAT_API_PERS"
     gigachat_verify_ssl: bool = False
+    gigachat_model_name: str = os.getenv("GIGACHAT_MODEL_NAME", "GigaChat-2")
 
     class Config:
         env_file = ".env"

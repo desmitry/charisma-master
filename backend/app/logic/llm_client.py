@@ -3,8 +3,8 @@ import logging
 from typing import Any, Dict, Optional
 
 import openai
-import prompts
 from app.config import settings
+from app.logic import prompts
 from app.models.schemas import PersonaEnum
 from gigachat import GigaChat
 
@@ -64,7 +64,10 @@ class LLMClient:
             return self._parse_json_response(content)
 
         except Exception as e:
-            logger.error(f"LLM Analysis Error ({provider}/{model}): {str(e)}", exc_info=True)
+            logger.error(
+                f"LLM Analysis Error ({provider}/{model}): {str(e)}",
+                exc_info=True,
+            )
             return {
                 "summary": "Не удалось сгенерировать саммари.",
                 "structure": "Анализ недоступен.",
