@@ -67,7 +67,6 @@ export async function uploadVideo(
   }
 
   try {
-    // Use API route instead of Server Action to bypass body size limits
     const response = await fetch("/api/upload", {
       method: "POST",
       body: formData,

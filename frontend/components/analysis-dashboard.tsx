@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { SmoothScroll } from "./smooth-scroll";
 import { TempoChart } from "./analysis/tempo-chart";
 import { ComingSoonNotification } from "./coming-soon-notification";
+import { PdfExportDropdown } from "./pdf-export-modal";
 
 type Props = {
   result: AnalysisResult;
@@ -81,6 +82,8 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   }>({ open: false, phase: "closed", originRect: null });
 
   const [showComingSoon, setShowComingSoon] = useState(false);
+  const [showPdfDropdown, setShowPdfDropdown] = useState(false);
+  const pdfButtonRef = useRef<HTMLButtonElement>(null);
 
   const openTempoModal = useCallback(() => {
     if (!tempoChartRef.current) return;
@@ -217,12 +220,21 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               </div>
             )}
 
-            <button
-              onClick={() => setShowComingSoon(true)}
-              className="hidden rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium transition hover:bg-white/15 sm:block sm:px-4 sm:py-2"
-            >
-              PDF Отчет
-            </button>
+            <div className="relative hidden sm:block">
+              <button
+                ref={pdfButtonRef}
+                onClick={() => setShowPdfDropdown(!showPdfDropdown)}
+                className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium transition hover:bg-white/15 sm:px-4 sm:py-2"
+              >
+                PDF Отчет
+              </button>
+              <PdfExportDropdown 
+                isOpen={showPdfDropdown} 
+                onClose={() => setShowPdfDropdown(false)} 
+                result={result}
+                buttonRef={pdfButtonRef}
+              />
+            </div>
 
             {onBack && (
               <button
