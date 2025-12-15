@@ -34,49 +34,56 @@ def save_json_result(task_id: str, data: dict):
 
 
 @shared_task(bind=True)
-def process_video_pipeline(self, task_id: str, video_path: str, persona: str = None):
+def process_video_pipeline(self, task_id: str, video_path: str, persona: str = None, model_type: str = "whisper_local"):
+    transcription_provider = "local"
+    llm_provider = "openai"
+
+    if model_type == "whisper_openai":
+        transcription_provider = "openai"
+        llm_provider = "openai"
+    elif model_type == "sber_gigachat":
+        transcription_provider = "sber"
+        llm_provider = "openai"
+
+    logger.info(f"Task {task_id} Model: {model_type} (ASR: {transcription_provider}, LLM: {llm_provider})")
+
     try:
-        # 1. Аудио и Транскрипция
+        # Аудио и Транскрипция
         self.update_state(state="PROCESSING", meta={"stage": ProcessingStage.listening, "progress": 0.1})
         audio_path = str(Path(video_path).with_suffix(".wav"))
 
         MLEngine.extract_audio(video_path, audio_path)
-        transcript_segments = MLEngine.transcribe(audio_path)
+        transcript_segments = MLEngine.transcribe(audio_path, provider=transcription_provider)
 
         full_text = " ".join([s.text for s in transcript_segments])
-
         long_pauses = MLEngine.get_long_pauses(transcript_segments, threshold=2.0)
 
     except Exception as e:
         logger.critical(f"Audio/Transcribe failed: {e}")
-        self.update_state(state="FAILURE", meta={"error": str(e)})
         raise e
 
-    # 2. Видео (Жесты + OCR)
+    # Видео (Жесты + OCR)
     self.update_state(state="PROCESSING", meta={"stage": ProcessingStage.gestures, "progress": 0.4})
-
-    cv_metrics = {"gaze_score": 0, "gesture_score": 0, "ocr_text": ""}
+    cv_metrics = {"gaze_score": 0, "gesture_score": 0, "ocr_text": "", "gesture_advice": "Нет данных",
+                  "gaze_label": "-", "gesture_label": "-"}
     try:
         cv_metrics = MLEngine.analyze_slides_and_video(video_path)
     except Exception as e:
         logger.warning(f"CV analysis failed: {e}")
 
-    # 3. Аудио (Тон + Громкость)
-    audio_metrics = {"volume_level": "Unknown", "tone_score": 0}
+    # Аудио
+    audio_metrics = {"volume_level": "Unknown", "tone_score": 0, "volume_score": 0, "tone_label": "-"}
     try:
         audio_metrics = MLEngine.analyze_audio_features(audio_path)
     except Exception as e:
         logger.warning(f"Audio features failed: {e}")
 
-    # 4. LLM
+    # LLM
     self.update_state(state="PROCESSING", meta={"stage": ProcessingStage.analyzing, "progress": 0.7})
-
-    # Расчет темпа
     tempo_data = MLEngine.calculate_tempo(transcript_segments)
-
     llm_result = {}
     try:
-        llm_client = LLMClient()
+        llm_client = LLMClient(provider=llm_provider)
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         llm_result = loop.run_until_complete(
@@ -86,20 +93,32 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
     except Exception as e:
         logger.error(f"LLM failed: {e}")
 
-    # 5. Итоги
+    # Итоги и Расчет баллов
     base_filler_count = sum(1 for s in transcript_segments for w in s.words if w.is_filler)
     total_words = len(full_text.split()) if full_text else 1
 
-    # Защита от деления на ноль
     filler_ratio = base_filler_count / total_words if total_words > 0 else 0
-    filler_score = max(0, 100 - (filler_ratio * 1000))
+    filler_score = max(0, 100 - (filler_ratio * 750))
 
     total_conf = (
-            (cv_metrics.get("gaze_score", 0) * 0.2) +
-            (cv_metrics.get("gesture_score", 0) * 0.2) +
-            (audio_metrics.get("tone_score", 0) * 0.2) +
-            (filler_score * 0.4)
+            (filler_score * 0.35) +
+            (audio_metrics.get("tone_score", 0) * 0.25) +
+            (audio_metrics.get("volume_score", 0) * 0.20) +
+            (cv_metrics.get("gaze_score", 0) * 0.10) +
+            (cv_metrics.get("gesture_score", 0) * 0.10)
     )
+    total_conf = min(total_conf, 100)
+
+    def r(val):
+        return int(round(val)) if isinstance(val, (int, float)) else 0
+
+    final_gaze = r(cv_metrics.get("gaze_score", 0))
+    final_gesture = r(cv_metrics.get("gesture_score", 0))
+    final_tone = r(audio_metrics.get("tone_score", 0))
+    final_volume = r(audio_metrics.get("volume_score", 0))
+    final_filler = r(filler_score)
+    final_total = r(total_conf)
+    final_density = r(cv_metrics.get("slide_density", 0))
 
     result_data = {
         "task_id": task_id,
@@ -114,19 +133,36 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
         "dynamic_fillers": llm_result.get("dynamic_fillers", []),
         "slide_analysis": {
             "has_slides": cv_metrics.get("has_slides", False),
-            "text_density_score": cv_metrics.get("slide_density", 0),
+            "text_density_score": final_density,
+            "text_density_label": MLEngine.get_score_label(100 - final_density),
             "ocr_summary": llm_result.get("slides_feedback", "")
         },
         "confidence_index": {
-            "total": round(total_conf, 1),
+            "total": final_total,
+            "total_label": MLEngine.get_score_label(final_total),
+
             "components": {
-                "volume_level": audio_metrics.get("volume_level", "Normal"),
-                "volume_score": audio_metrics.get("volume_score", 0),
-                "filler_score": round(filler_score, 1),
-                "gaze_score": round(cv_metrics.get("gaze_score", 0), 1),
+                # Громкость
+                "volume_level": audio_metrics.get("volume_level", "Нормально"),
+                "volume_score": final_volume,
+                "volume_score_label": MLEngine.get_score_label(final_volume),
+
+                # Чистота речи
+                "filler_score": final_filler,
+                "filler_label": MLEngine.get_score_label(final_filler),
+
+                # Взгляд
+                "gaze_score": final_gaze,
+                "gaze_label": MLEngine.get_score_label(final_gaze),
+
+                # Жесты
+                "gesture_score": final_gesture,
+                "gesture_label": MLEngine.get_score_label(final_gesture),
                 "gesture_advice": cv_metrics.get("gesture_advice", "Норма"),
-                "gesture_score": round(cv_metrics.get("gesture_score", 0), 1),
-                "tone_score": round(audio_metrics.get("tone_score", 0), 1),
+
+                # Тон
+                "tone_score": final_tone,
+                "tone_label": MLEngine.get_score_label(final_tone),
             }
         },
         "summary": llm_result.get("summary", ""),
@@ -134,6 +170,7 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
         "mistakes": llm_result.get("mistakes", ""),
         "ideal_text": llm_result.get("ideal_text", ""),
         "persona_feedback": llm_result.get("persona_feedback", ""),
+        "model_used": model_type
     }
 
     save_json_result(task_id, result_data)
