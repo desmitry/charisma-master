@@ -10,6 +10,11 @@ class PersonaEnum(str, Enum):
     steve_jobs_style = "steve_jobs_style"
 
 
+class LLMProviderEnum(str, Enum):
+    openai = "openai"
+    gigachat = "gigachat"
+
+
 class ProcessingState(str, Enum):
     queued = "queued"
     processing = "processing"

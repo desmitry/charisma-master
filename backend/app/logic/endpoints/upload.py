@@ -3,7 +3,7 @@ import uuid
 
 from app.config import settings
 from app.logic.tasks import process_video_pipeline
-from app.models.schemas import PersonaEnum, UploadResponse
+from app.models.schemas import LLMProviderEnum, PersonaEnum, UploadResponse
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from rutube import Rutube
 
@@ -15,6 +15,7 @@ async def process_video(
     file: UploadFile = File(None),
     video_url: str = Form(None),
     persona: PersonaEnum = Form(None),
+    analyze_llm_provider: LLMProviderEnum = Form(None),
 ):
     task_id = str(uuid.uuid4())
 
@@ -42,7 +43,21 @@ async def process_video(
         raise HTTPException(status_code=400, detail="Файл или ссылка на видео")
 
     process_video_pipeline.apply_async(
-        args=[task_id, final_path, persona],
+        args=[
+            task_id,
+            final_path,
+            (
+                analyze_llm_provider.value
+                if analyze_llm_provider
+                else LLMProviderEnum.gigachat.value
+            ),
+            (
+                settings.openai_model_name
+                if analyze_llm_provider == LLMProviderEnum.openai
+                else settings.gigachat_model_name
+            ),
+            persona.value if persona else None,
+        ],
         task_id=task_id,
     )
 
