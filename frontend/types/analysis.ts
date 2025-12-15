@@ -50,6 +50,8 @@ export interface AnalysisResult {
   ideal_text: string;
   persona_feedback?: string | null;
   slide_text_density: number;
+  analyze_provider?: string;
+  analyze_model?: string;
   raw_metrics?: {
     gaze_score?: number;
     gesture_score?: number;
