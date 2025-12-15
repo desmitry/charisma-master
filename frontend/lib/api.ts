@@ -1,4 +1,5 @@
 import { AnalysisResult, TaskStatusResponse } from "@/types/analysis";
+import { uploadVideoAction } from "@/app/actions/upload";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || 
@@ -15,18 +16,32 @@ class ExpectedError extends Error {
 async function checkResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    const errorMessage = text || response.statusText || "Ошибка сервера";
+    let errorMessage = text || response.statusText || "";
+    
+    try {
+      const jsonData = JSON.parse(text);
+      if (jsonData.detail || jsonData.error || jsonData.message) {
+        errorMessage = jsonData.detail || jsonData.error || jsonData.message;
+      }
+    } catch {
+    }
     
     if (response.status === 502 || response.status === 503) {
       console.warn("[API] Backend unavailable:", response.status);
-      throw new ExpectedError("Сервер недоступен. Проверьте, запущен ли backend.");
+      const error = new ExpectedError(errorMessage || "Сервер недоступен. Проверьте, запущен ли backend.");
+      (error as any).statusCode = response.status;
+      throw error;
     }
     if (response.status === 413) {
       console.warn("[API] File too large:", response.status);
-      throw new ExpectedError("Файл слишком большой. Максимальный размер: 200MB.");
+      const error = new ExpectedError(errorMessage || "Файл слишком большой. Максимальный размер: 200MB.");
+      (error as any).statusCode = response.status;
+      throw error;
     }
     
-    throw new Error(errorMessage);
+    const error = new Error(errorMessage || "Ошибка сервера");
+    (error as any).statusCode = response.status;
+    throw error;
   }
   return response.json() as Promise<T>;
 }
@@ -47,16 +62,53 @@ export async function uploadVideo(
     formData.append("persona", persona);
   }
 
-  const uploadUrl = typeof window !== "undefined" 
-    ? "/api/upload" 
-    : `${process.env.BACKEND_URL || "http://localhost:8000"}/api/v1/process`;
+  try {
+    // Use API route instead of Server Action to bypass body size limits
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
 
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    body: formData,
-  });
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      let errorMessage = text || response.statusText || "";
+      
+      try {
+        const jsonData = JSON.parse(text);
+        if (jsonData.detail || jsonData.error || jsonData.message) {
+          errorMessage = jsonData.detail || jsonData.error || jsonData.message;
+        }
+      } catch {
+      }
+      
+      if (response.status === 502 || response.status === 503) {
+        const error = new ExpectedError(errorMessage || "Сервер недоступен. Проверьте, запущен ли backend.");
+        (error as any).statusCode = response.status;
+        throw error;
+      }
+      if (response.status === 413) {
+        const error = new ExpectedError(errorMessage || "Файл слишком большой. Максимальный размер: 200MB.");
+        (error as any).statusCode = response.status;
+        throw error;
+      }
+      
+      const error = new Error(errorMessage || "Ошибка сервера");
+      (error as any).statusCode = response.status;
+      throw error;
+    }
 
-  return checkResponse<{ task_id: string }>(response);
+    return await response.json();
+  } catch (error) {
+    if (error instanceof ExpectedError) {
+      throw error;
+    }
+    if (error instanceof Error) {
+      if (error.message.includes("Сервер недоступен") || error.message.includes("File too large")) {
+        throw new ExpectedError(error.message);
+      }
+    }
+    throw error;
+  }
 }
 
 export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
@@ -105,4 +157,7 @@ export function resolveVideoUrl(videoPath: string): string {
   console.log("[API] Resolved video URL:", { videoPath, url });
   return url;
 }
+
+
+
 

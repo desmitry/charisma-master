@@ -9,6 +9,7 @@ import { AnalysisResult } from "@/types/analysis";
 import { pollForAnalysis, uploadVideo } from "@/lib/api";
 import { GL } from "@/components/gl";
 import { cn } from "@/lib/utils";
+import { ComingSoonNotification } from "@/components/coming-soon-notification";
 
 type Stage = "landing" | "processing" | "result";
 
@@ -47,6 +48,7 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState("");
   const [selectedPersona, setSelectedPersona] = useState<string>("");
+  const [isValidRuTubeUrl, setIsValidRuTubeUrl] = useState(false);
   const [isPersonaOpen, setIsPersonaOpen] = useState(false);
   const [personaOpenUp, setPersonaOpenUp] = useState(false);
   const personaRef = useRef<HTMLDivElement>(null);
@@ -59,6 +61,8 @@ export default function Home() {
   const [isExiting, setIsExiting] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [serverErrorText, setServerErrorText] = useState("");
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -177,11 +181,39 @@ export default function Home() {
     };
   }, [isTouchDevice, stage]);
 
+  const validateRuTubeUrl = (url: string): boolean => {
+    if (!url.trim()) return false;
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname.toLowerCase();
+      return hostname.includes('rutube.ru') && urlObj.pathname.includes('/video/');
+    } catch {
+      return false;
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setSelectedFile(file || null);
     if (file) {
       setError(null);
+      setVideoUrl("");
+      setIsValidRuTubeUrl(false);
+    }
+  };
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    setVideoUrl(url);
+    const isValid = validateRuTubeUrl(url);
+    setIsValidRuTubeUrl(isValid);
+    if (url && !isValid) {
+      setError(null);
+    } else {
+      setError(null);
+    }
+    if (url && isValid) {
+      setSelectedFile(null);
     }
   };
 
@@ -261,6 +293,12 @@ export default function Home() {
     console.log("[Page] Setting isUploading = true");
     setIsUploading(true);
 
+    if (!selectedFile && videoUrl && !isValidRuTubeUrl) {
+      setError("Введите корректную ссылку на RuTube видео");
+      setIsUploading(false);
+      return;
+    }
+
     if (isMockMode || (!selectedFile && !videoUrl)) {
       console.log("[Page] Starting mock flow");
       return startMockFlow();
@@ -280,15 +318,8 @@ export default function Home() {
         }
         task_id = uploadResult.task_id;
       } catch (uploadErr) {
-        const uploadError = uploadErr instanceof Error ? uploadErr.message : "Ошибка загрузки";
-        if (uploadError.includes("Сервер недоступен") || uploadError.includes("502") || uploadError.includes("503")) {
-          console.warn("[Page] Backend unavailable during upload - this is expected when backend is not running");
-          const expectedError = new Error("Сервер недоступен. Проверьте, запущен ли backend.");
-          expectedError.name = "ExpectedError";
-          throw expectedError;
-        }
         console.error("[Page] Upload error:", uploadErr);
-        throw new Error("Не удалось загрузить видео. Проверьте подключение к серверу.");
+        throw uploadErr;
       }
       
       console.log("[Page] Upload successful, setting stage to processing");
@@ -318,27 +349,27 @@ export default function Home() {
       await new Promise((res) => setTimeout(res, 400));
       setStage("result");
       setShowResult(true);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Не удалось связаться с бэкендом";
-      const isBackendError = errorMessage.includes("бэкенд") || 
-                             errorMessage.includes("Failed") || 
-                             errorMessage.includes("Сервер недоступен") ||
-                             errorMessage.includes("502") ||
-                             errorMessage.includes("503");
+      } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "";
+      const statusCode = (err as any)?.statusCode;
+      
+      let displayError = errorMessage && errorMessage.trim() 
+        ? errorMessage 
+        : "Непредвиденная ошибка";
+      
       const isExpectedError = err instanceof Error && err.name === "ExpectedError";
       
-      if (isExpectedError || isBackendError) {
-        console.warn("[Page] Expected error (backend unavailable):", errorMessage);
+      if (isExpectedError) {
+        console.warn("[Page] Expected error:", errorMessage);
+        if (errorMessage.includes("Сервер недоступен") || errorMessage.includes("502") || errorMessage.includes("503")) {
+          displayError = "Сервер недоступен. Проверьте, запущен ли backend.";
+        }
       } else {
-        console.error("[Page] Unexpected error during analysis:", err);
+        console.error("[Page] Error during analysis:", err);
       }
       
-      const finalErrorMessage = isBackendError
-        ? "Не удалось связаться с бэкендом. Можно запустить демо-режим."
-        : errorMessage;
-      
-      console.log("[Page] Setting error message:", finalErrorMessage);
-      setError(finalErrorMessage);
+      setServerErrorText(displayError);
+      setShowErrorPopup(true);
       
       setIsExiting(false);
       setIsUploading(false);
@@ -347,6 +378,7 @@ export default function Home() {
       setStage("landing");
       setIsMockMode(false);
       setShowResult(false);
+      setError(null);
       
       console.log("[Page] Error handled, returned to landing page");
     }
@@ -598,20 +630,26 @@ export default function Home() {
                   </p>
                   <input
                     type="text"
-                    placeholder="https://rutube.ru/video/... или https://vk.com/video..."
+                    placeholder="https://rutube.ru/video/..."
                     className="mt-3 w-full rounded-2xl border border-white/20 bg-black/30 px-4 py-3 text-sm text-white placeholder:text-white/50 focus:border-white focus:outline-none"
                     value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
+                    onChange={handleUrlChange}
                   />
                   
                   <button
-                    className="mt-6 w-full rounded-2xl bg-white/20 py-3 text-sm font-semibold text-white transition hover:bg-white/35"
+                    className={cn(
+                      "mt-6 w-full rounded-2xl py-3 text-sm font-semibold text-white transition",
+                      (!selectedFile && (!videoUrl || !isValidRuTubeUrl))
+                        ? "bg-white/10 cursor-not-allowed opacity-50"
+                        : "bg-white/20 hover:bg-white/35"
+                    )}
                     onClick={handleAnalyze}
+                    disabled={!selectedFile && (!videoUrl || !isValidRuTubeUrl)}
                   >
                     Анализируй
                   </button>
                   <p className="mt-3 text-xs text-white/50">
-                    Прямая ссылка, Rutube или ВК видео
+                    Ссылка на RuTube видео
                   </p>
                   {error && <p className="mt-3 text-xs text-red-300">{error}</p>}
                 </div>
@@ -751,6 +789,33 @@ export default function Home() {
           />
         </div>
       )}
+
+      <ComingSoonNotification
+        isOpen={showErrorPopup}
+        onClose={() => {
+          setShowErrorPopup(false);
+          setServerErrorText("");
+        }}
+        title="Ошибка"
+        message={serverErrorText || "Непредвиденная ошибка"}
+        icon={
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-white/90"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        }
+      />
 
       <Leva hidden />
     </>
