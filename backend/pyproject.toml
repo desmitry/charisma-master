@@ -21,7 +21,7 @@ dependencies = [
     "requests>=2.32.5",
     "rutube-downloader>=0.0.8",
     "uvicorn[standard]>=0.38.0",
-    "easyocr=1.7.2",
+    "easyocr==1.7.2",
     "gigachat==0.1.43",
     "requests==2.32.5",
 ]
