@@ -165,8 +165,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
 
       pdf.save(`charisma-report-${result.task_id.slice(0, 8)}.pdf`);
       onClose();
-    } catch (error) {
-      console.error("Error generating PDF:", error);
     } finally {
       setIsGenerating(false);
     }
@@ -185,7 +183,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
 
   return (
     <>
-      {/* Dropdown */}
       <div
         ref={dropdownRef}
         className={cn(
@@ -193,7 +190,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
           isOpen ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 -translate-y-2 pointer-events-none"
         )}
       >
-        {/* Options List */}
         <div className="p-3 space-y-1">
           {optionsList.map((opt) => (
             <button
@@ -225,7 +221,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
           ))}
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-white/10 bg-white/[0.02]">
           <span className="text-xs text-white/40">
             {Object.values(options).filter(Boolean).length} из {optionsList.length} выбрано
@@ -260,7 +255,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
         </div>
       </div>
 
-      {/* Hidden PDF Content */}
       <div className="fixed left-[-9999px] top-0">
         <div 
           ref={pdfContentRef}
@@ -272,7 +266,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
             padding: "0"
           }}
         >
-          {/* PDF Header */}
           <div 
             data-pdf-block
             style={{ 
@@ -303,7 +296,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
             </table>
           </div>
 
-          {/* Summary Stats */}
           {options.summary && (
             <div 
               data-pdf-block
@@ -343,7 +335,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
             </div>
           )}
 
-          {/* Confidence */}
           {options.confidence && (
             <div 
               data-pdf-block
@@ -378,7 +369,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
             </div>
           )}
 
-          {/* Tempo */}
           {options.tempo && result.tempo.length > 0 && (() => {
             const tempoData = result.tempo.slice(0, 60);
             const maxWpm = Math.max(...result.tempo.map(p => p.wpm));
@@ -418,7 +408,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
             );
           })()}
 
-          {/* Transcript */}
           {options.transcript &&
             transcriptChunks.map((chunk, idx) => (
               <div
@@ -473,7 +462,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
               </div>
             ))}
 
-          {/* Mistakes */}
           {options.mistakes && result.mistakes && (
             <div 
               data-pdf-block
@@ -489,7 +477,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
             </div>
           )}
 
-          {/* Structure */}
           {options.structure && result.structure && (
             <div 
               data-pdf-block
@@ -505,7 +492,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
             </div>
           )}
 
-          {/* Ideal */}
           {options.idealText && result.ideal_text && (
             <div 
               data-pdf-block
@@ -521,7 +507,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
             </div>
           )}
 
-          {/* Persona */}
           {options.personaFeedback && result.persona_feedback && (
             <div 
               data-pdf-block

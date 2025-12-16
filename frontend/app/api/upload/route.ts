@@ -43,8 +43,7 @@ export async function POST(request: NextRequest) {
         "Content-Type": response.headers.get("content-type") || "application/json",
       },
     });
-  } catch (error) {
-    console.error("Upload error:", error);
+  } catch {
     return NextResponse.json(
       { error: "Failed to upload file to backend" },
       { status: 502 }
