@@ -1,99 +1,115 @@
+import json
+import logging
+from typing import Any, Dict, Optional
+
 import openai
 import json
 import os
 from app.config import settings
+from app.logic import prompts
+from app.models.schemas import PersonaEnum
 from gigachat import GigaChat
+
+logger = logging.getLogger(__name__)
 
 
 class LLMClient:
-    def __init__(self, provider: str = "openai"):
-        self.provider = provider
+    """
+    Client for interacting with LLM providers (OpenAI and GigaChat).
+    Allows runtime selection of the provider and model.
+    """
 
-        if self.provider == "openai":
-            self.client = openai.AsyncOpenAI(
-                base_url=settings.llm_api_base, api_key=settings.llm_api_key
+    def __init__(self):
+        self.openai_client = openai.AsyncOpenAI(
+            base_url=settings.openai_api_base, api_key=settings.openai_api_key
+        )
+
+        # Initialize GigaChat client if credentials are present
+        self.gigachat_client: Optional[GigaChat] = None
+        if getattr(settings, "gigachat_credentials", None):
+            self.gigachat_client = GigaChat(
+                credentials=settings.gigachat_credentials,
+                verify_ssl_certs=getattr(
+                    settings, "gigachat_verify_ssl", False
+                ),
+                scope=getattr(settings, "gigachat_scope", "GIGACHAT_API_PERS"),
             )
-            self.model = settings.llm_model_name
 
-        elif self.provider == "gigachat":
-            auth_data = os.getenv("GIGACHAT_CREDENTIALS")
-            if not auth_data:
-                print("WARNING: GIGACHAT_CREDENTIALS not found in env")
+    async def analyze_speech(
+        self,
+        transcript_text: str,
+        slides_text: str,
+        provider: str,
+        model: str,
+        persona: PersonaEnum | None = None,
+    ) -> dict[str, Any]:
+        """
+        Analyze the speech text using the specified provider and model.
 
-            if GigaChat:
-                self.giga = GigaChat(credentials=auth_data, verify_ssl_certs=False)
-            else:
-                raise ImportError("Библиотека gigachat не установлена")
+        :param transcript_text: Transcript of the speech.
+        :param slides_text: Text from slides.
+        :param persona: Persona identifier for the system prompt.
+        :param provider: 'openai' or 'gigachat'. Defaults to settings if None.
+        :param model: Specific model name (e.g., 'gpt-4', 'GigaChat-Pro').
+        """
 
-    async def analyze_speech(self, transcript_text: str, slides_text: str, persona: str = None) -> dict:
-        persona_prompt = "Ты эксперт по публичным выступлениям."
-        if persona == "strict_critic":
-            persona_prompt = "Ты строгий критик. Жестко указывай на недостатки."
-
-        system_prompt = f"""
-                {persona_prompt}
-
-                Тебе даны:
-                1. Текст выступления (транскрипция). ВНИМАНИЕ: Транскрипция получена автоматически, в ней могут отсутствовать знаки препинания и заглавные буквы. Игнорируй отсутствие пунктуации, оценивай только смысл, структуру речи и подбор слов.
-                2. Текст, распознанный со слайдов презентации (OCR).
-
-                Твоя задача проанализировать это и вернуть JSON.
-
-                ЗАДАЧА 1: Найди "Динамические слова-паразиты" (Dynamic Fillers).
-                Это слова, которые спикер повторяет слишком часто (например: "собственно", "как бы", "вот", "значит"). Верни список из 3-5 таких слов.
-
-                ЗАДАЧА 2: Оцени слайды (если есть текст).
-                Если текста много, напиши, что слайды перегружены. Если текста мало/нет, оцени уместность.
-
-                Формат JSON ответа (все поля обязательны):
-                {{
-                    "summary": "Краткое содержание (2-3 предложения)",
-                    "structure": "Вступление, Основная часть, Вывод (оцени наличие)",
-                    "mistakes": "Основные ошибки (стилистика, логика, повторы)",
-                    "ideal_text": "Улучшенная версия небольшого фрагмента (добавь пунктуацию)",
-                    "persona_feedback": "Обратная связь в стиле персоны",
-                    "dynamic_fillers": ["слово1", "слово2", "слово3"],
-                    "slides_feedback": "Отзыв о слайдах"
-                }}
-                """
+        persona_prompt = prompts.get_persona_prompt(persona)
+        system_prompt = prompts.get_system_prompt(persona_prompt)
 
         user_content = f"ТРАНСКРИПЦИЯ:\n{transcript_text[:3000]}\n\nСЛАЙДЫ:\n{slides_text[:1000]}"
 
-        if self.provider == "openai":
-            try:
-                response = await self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_content},
-                    ],
-                    response_format={"type": "json_object"},
-                )
-                return json.loads(response.choices[0].message.content)
-            except Exception as e:
-                return self._error_response(str(e))
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+        ]
 
-        elif self.provider == "gigachat":
-            try:
-                payload = [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content}
-                ]
-                response = self.giga.chat(payload=payload)
-                content = response.choices[0].message.content
+        try:
+            if provider == "gigachat":
+                content = await self._call_gigachat(messages, model)
+            else:
+                content = await self._call_openai(messages, model)
 
-                if "```json" in content:
-                    content = content.split("```json")[1].split("```")[0]
-                elif "```" in content:
-                    content = content.split("```")[1].split("```")[0]
+            return self._parse_json_response(content)
 
-                return json.loads(content)
-            except Exception as e:
-                return self._error_response(f"GigaChat Error: {str(e)}")
+        except Exception as error_msg:
+            logger.error(
+                f"LLM Analysis Error ({provider}/{model}): {str(error_msg)}",
+                exc_info=True,
+            )
 
-        return self._error_response("Unknown provider")
+            return self._error_response(error_msg)
 
-    def _error_response(self, error_msg: str):
+    async def _call_openai(self, messages: list, model: str) -> str:
+        response = await self.openai_client.chat.completions.create(
+            model=model,
+            messages=messages,
+            response_format={"type": "json_object"},
+        )
+        return response.choices[0].message.content
+
+    async def _call_gigachat(self, messages: list, model: str) -> str:
+        if not self.gigachat_client:
+            raise ValueError(
+                "GigaChat client is not initialized. Check credentials."
+            )
+
+        response = await self.gigachat_client.achat(
+            payload={"messages": messages, "model": model}
+        )
+        return response.choices[0].message.content
+
+    def _parse_json_response(self, content: str) -> dict:
+        """Clean and parse the JSON string returned by LLM."""
+        cleaned = content.replace("```json", "").replace("```", "").strip()
+
+        try:
+            result = json.loads(cleaned)
+            return result
+        except Exception as error_msg:
+            return self._error_response(error_msg)
+
+    @staticmethod
+    def _error_response(error_msg: str):
         return {
             "summary": "Ошибка анализа",
             "structure": "-",
@@ -101,5 +117,5 @@ class LLMClient:
             "ideal_text": "-",
             "persona_feedback": "Ошибка LLM",
             "dynamic_fillers": [],
-            "slides_feedback": "-"
+            "slides_feedback": "-",
         }

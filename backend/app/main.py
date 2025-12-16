@@ -1,20 +1,15 @@
-import os
-
 from app.config import settings
 from app.logic.endpoints import analysis, status, upload
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
-environment = os.getenv("ENVIRONMENT", "development")
+# Base configurations
+if settings.environment == "production" and settings.backend_origin == "*":
+    raise Exception("You need to specify a specific url for production!")
 
-if environment == "production":
-    origins = [os.getenv("ORIGIN_URL")]
-else:
-    origins = ["*"]
+origins = [settings.backend_origin]
 
-if not settings.llm_api_key or settings.llm_api_key.startswith("sk-proj-..."):
-    print("Warning: LLM_API_KEY is missing or looks like a placeholder!")
 
 app = FastAPI(
     title="Speech Analysis",

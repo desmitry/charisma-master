@@ -187,14 +187,36 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               C
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-[0.3em] text-white/40">Анализ</p>
               <h1 className="text-base font-semibold sm:text-lg">Разбор выступления</h1>
+              {result.analyze_provider && result.analyze_model && (
+                <p className="text-[9px] text-white/30 mt-0.5 flex items-center gap-1">
+                  <img 
+                    src={`/icons/${result.analyze_provider}.svg`} 
+                    alt={result.analyze_provider}
+                    className="w-3 h-3 inline"
+                  />
+                  {result.analyze_provider}/{result.analyze_model}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <StatBadge label="Паразиты" value={`${(result.fillers_summary.ratio * 100).toFixed(1)}%`} />
             <StatBadge label="Уверенность" value={`${result.confidence_index.total.toFixed(0)}`} accent />
             
+            {result.analyze_provider && result.analyze_model && (
+              <div className="hidden lg:flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs">
+                <img 
+                  src={`/icons/${result.analyze_provider}.svg`} 
+                  alt={result.analyze_provider}
+                  className="w-4 h-4"
+                />
+                <span className="text-white/70">
+                  {result.analyze_provider}/{result.analyze_model}
+                </span>
+              </div>
+            )}
+
             <button
               onClick={() => setShowComingSoon(true)}
               className="hidden rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium transition hover:bg-white/15 sm:block sm:px-4 sm:py-2"
@@ -624,7 +646,7 @@ function GlassStat({
         <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-white/45">{label}</p>
           <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-2xl font-semibold tabular-nums">{displayValue.toFixed(suffix === "%" ? 1 : 0)}</span>
+            <span className="text-2xl font-semibold tabular-nums">{(displayValue || 0).toFixed(suffix === "%" ? 1 : 0)}</span>
             <span className="text-xs text-white/50">{suffix}</span>
           </div>
         </div>
