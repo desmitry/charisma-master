@@ -4,11 +4,12 @@ import os
 from enum import Enum
 from app.config import settings
 from app.logic.tasks import process_video_pipeline
-from app.models.schemas import PersonaEnum, UploadResponse
+from app.models.schemas import LLMProviderEnum, PersonaEnum, UploadResponse
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from rutube import Rutube
 
 router = APIRouter()
+
 
 class ModelType(str, Enum):
     sber_gigachat = "sber_gigachat"
@@ -18,10 +19,11 @@ class ModelType(str, Enum):
 
 @router.post("/process", response_model=UploadResponse)
 async def process_video(
-        file: UploadFile = File(None),
-        video_url: str = Form(None),
-        persona: PersonaEnum = Form(None),
-        model_type: ModelType = Form(ModelType.whisper_local),
+    file: UploadFile = File(None),
+    video_url: str = Form(None),
+    persona: PersonaEnum = Form(None),
+    analyze_llm_provider: LLMProviderEnum = Form(None),
+    transcribe_model: ModelType = Form(ModelType.whisper_local),
 ):
     task_id = str(uuid.uuid4())
     final_path = None
@@ -42,7 +44,7 @@ async def process_video(
 
             video.download(destination=str(settings.media_root))
 
-            list_of_files = list(settings.media_root.glob('*.mp4'))
+            list_of_files = list(settings.media_root.glob("*.mp4"))
             if not list_of_files:
                 raise HTTPException(status_code=500, detail="Download failed")
 
@@ -57,7 +59,18 @@ async def process_video(
         raise HTTPException(status_code=400, detail="Файл или ссылка")
 
     process_video_pipeline.apply_async(
-        args=[task_id, final_path, persona.value if persona else None, model_type.value],
+        args=[
+            task_id,
+            final_path,
+            analyze_llm_provider.value,
+            (
+                settings.openai_model_name
+                if analyze_llm_provider == LLMProviderEnum.openai
+                else settings.gigachat_model_name
+            ),
+            transcribe_model.value,
+            persona.value if persona else None,
+        ],
         task_id=task_id,
     )
 

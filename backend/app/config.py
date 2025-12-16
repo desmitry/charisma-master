@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"  # noqa: S104
     port: int = 8000
 
+    environment: str = os.getenv("ENVIRONMENT", "development")
+    backend_origin: str = os.getenv("BACKEND_ORIGIN_URL", "*")
+
     # Paths
     base_dir: Path = Path(__file__).parent.parent.resolve() / "app"
     media_root: Path = base_dir / "media"
@@ -33,12 +36,19 @@ class Settings(BaseSettings):
     whisper_compute_type: str = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
 
     # LLM
-    llm_api_base: str = os.getenv("LLM_API_BASE", "https://api.openai.com/v1")
-    llm_api_key: str = os.getenv("LLM_API_KEY", "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")
-    llm_model_name: str = os.getenv("LLM_MODEL_NAME", "gpt-4o-mini")
+    openai_api_base: str = os.getenv(
+        "OPENAI_API_BASE", "https://api.openai.com/v1"
+    )
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "sk-placeholder")
+    openai_model_name: str = os.getenv("OPENAI_MODEL_NAME", "gpt-3.5-turbo")
 
+    gigachat_credentials: str | None = os.getenv("GIGACHAT_CREDENTIALS", None)
+    gigachat_scope: str = "GIGACHAT_API_PERS"
+    gigachat_verify_ssl: bool = False
+    gigachat_model_name: str = os.getenv("GIGACHAT_MODEL_NAME", "GigaChat-2")
     gigachat_credentials: Optional[str] = os.getenv("GIGACHAT_CREDENTIALS")
     sber_speech_scope: str = os.getenv("SBER_SPEECH_SCOPE", "SALUTE_SPEECH_B2B")
+
     class Config:
         env_file = ".env"
 

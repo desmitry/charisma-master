@@ -49,7 +49,8 @@ async function checkResponse<T>(response: Response): Promise<T> {
 export async function uploadVideo(
   file: File | null,
   videoUrl: string | null,
-  persona?: string
+  persona?: string,
+  llmProvider?: string
 ): Promise<{ task_id: string }> {
   const formData = new FormData();
   if (file) {
@@ -60,6 +61,9 @@ export async function uploadVideo(
   }
   if (persona) {
     formData.append("persona", persona);
+  }
+  if (llmProvider) {
+    formData.append("analyze_llm_provider", llmProvider);
   }
 
   try {

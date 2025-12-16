@@ -6,7 +6,7 @@ from pathlib import Path
 from app.config import settings
 from app.logic.llm_client import LLMClient
 from app.logic.ml_engine import MLEngine
-from app.models.schemas import ProcessingStage
+from app.models.schemas import PersonaEnum, ProcessingStage
 from celery import shared_task
 from celery.signals import worker_process_init
 
@@ -34,78 +34,112 @@ def save_json_result(task_id: str, data: dict):
 
 
 @shared_task(bind=True)
-def process_video_pipeline(self, task_id: str, video_path: str, persona: str = None, model_type: str = "whisper_local"):
-    transcription_provider = "local"
-    llm_provider = "openai"
-
-    if model_type == "whisper_openai":
-        transcription_provider = "openai"
-        llm_provider = "openai"
-    elif model_type == "sber_gigachat":
-        transcription_provider = "sber"
-        llm_provider = "openai"
-
-    logger.info(f"Task {task_id} Model: {model_type} (ASR: {transcription_provider}, LLM: {llm_provider})")
-
+def process_video_pipeline(
+    self,
+    task_id: str,
+    video_path: str,
+    analyze_provider: str,
+    analyze_model: str,
+    transcribe_model: str,
+    persona: str = None,
+):
     try:
         # Аудио и Транскрипция
-        self.update_state(state="PROCESSING", meta={"stage": ProcessingStage.listening, "progress": 0.1})
+        self.update_state(
+            state="PROCESSING",
+            meta={"stage": ProcessingStage.listening, "progress": 0.1},
+        )
         audio_path = str(Path(video_path).with_suffix(".wav"))
 
         MLEngine.extract_audio(video_path, audio_path)
-        transcript_segments = MLEngine.transcribe(audio_path, provider=transcription_provider)
+        transcript_segments = MLEngine.transcribe(
+            audio_path, provider=transcription_provider
+        )
 
         full_text = " ".join([s.text for s in transcript_segments])
-        long_pauses = MLEngine.get_long_pauses(transcript_segments, threshold=2.0)
+        long_pauses = MLEngine.get_long_pauses(
+            transcript_segments, threshold=2.0
+        )
 
     except Exception as e:
-        logger.critical(f"Audio/Transcribe failed: {e}")
+        logger.critical(f"Ошибка при вырезании аудиодорожки: {e}")
+        self.update_state(state="FAILURE", meta={"error": str(e)})
         raise e
 
     # Видео (Жесты + OCR)
-    self.update_state(state="PROCESSING", meta={"stage": ProcessingStage.gestures, "progress": 0.4})
-    cv_metrics = {"gaze_score": 0, "gesture_score": 0, "ocr_text": "", "gesture_advice": "Нет данных",
-                  "gaze_label": "-", "gesture_label": "-"}
+    self.update_state(
+        state="PROCESSING",
+        meta={"stage": ProcessingStage.gestures, "progress": 0.4},
+    )
+
+    cv_metrics = {
+        "gaze_score": 0,
+        "gesture_score": 0,
+        "ocr_text": "",
+        "gesture_advice": "Нет данных",
+        "gaze_label": "-",
+        "gesture_label": "-",
+    }
+
     try:
         cv_metrics = MLEngine.analyze_slides_and_video(video_path)
     except Exception as e:
         logger.warning(f"CV analysis failed: {e}")
 
     # Аудио
-    audio_metrics = {"volume_level": "Unknown", "tone_score": 0, "volume_score": 0, "tone_label": "-"}
+    audio_metrics = {
+        "volume_level": "Unknown",
+        "tone_score": 0,
+        "volume_score": 0,
+        "tone_label": "-",
+    }
+
     try:
         audio_metrics = MLEngine.analyze_audio_features(audio_path)
     except Exception as e:
         logger.warning(f"Audio features failed: {e}")
 
     # LLM
-    self.update_state(state="PROCESSING", meta={"stage": ProcessingStage.analyzing, "progress": 0.7})
+    self.update_state(
+        state="PROCESSING",
+        meta={"stage": ProcessingStage.analyzing, "progress": 0.7},
+    )
     tempo_data = MLEngine.calculate_tempo(transcript_segments)
     llm_result = {}
+
     try:
         llm_client = LLMClient(provider=llm_provider)
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         llm_result = loop.run_until_complete(
-            llm_client.analyze_speech(full_text, cv_metrics.get("ocr_text", ""), persona)
+            llm_client.analyze_speech(
+                full_text,
+                cv_metrics.get("ocr_text", ""),
+                analyze_provider,
+                analyze_model,
+                persona,
+            )
         )
         loop.close()
     except Exception as e:
-        logger.error(f"LLM failed: {e}")
+        logger.error(f"LLM упал: {e}")
 
     # Итоги и Расчет баллов
-    base_filler_count = sum(1 for s in transcript_segments for w in s.words if w.is_filler)
     total_words = len(full_text.split()) if full_text else 1
+
+    base_filler_count = sum(
+        1 for s in transcript_segments for w in s.words if w.is_filler
+    )
 
     filler_ratio = base_filler_count / total_words if total_words > 0 else 0
     filler_score = max(0, 100 - (filler_ratio * 750))
 
     total_conf = (
-            (filler_score * 0.35) +
-            (audio_metrics.get("tone_score", 0) * 0.25) +
-            (audio_metrics.get("volume_score", 0) * 0.20) +
-            (cv_metrics.get("gaze_score", 0) * 0.10) +
-            (cv_metrics.get("gesture_score", 0) * 0.10)
+        (filler_score * 0.35)
+        + (audio_metrics.get("tone_score", 0) * 0.25)
+        + (audio_metrics.get("volume_score", 0) * 0.20)
+        + (cv_metrics.get("gaze_score", 0) * 0.10)
+        + (cv_metrics.get("gesture_score", 0) * 0.10)
     )
     total_conf = min(total_conf, 100)
 
@@ -127,50 +161,47 @@ def process_video_pipeline(self, task_id: str, video_path: str, persona: str = N
         "tempo": tempo_data,
         "long_pauses": long_pauses,
         "fillers_summary": {
-            "count": base_filler_count,
-            "ratio": round(filler_ratio, 4)
+            "count": filler_count,
+            "ratio": round(filler_ratio, 4),
         },
         "dynamic_fillers": llm_result.get("dynamic_fillers", []),
         "slide_analysis": {
             "has_slides": cv_metrics.get("has_slides", False),
             "text_density_score": final_density,
             "text_density_label": MLEngine.get_score_label(100 - final_density),
-            "ocr_summary": llm_result.get("slides_feedback", "")
+            "ocr_summary": llm_result.get("slides_feedback", ""),
         },
         "confidence_index": {
             "total": final_total,
             "total_label": MLEngine.get_score_label(final_total),
-
             "components": {
                 # Громкость
                 "volume_level": audio_metrics.get("volume_level", "Нормально"),
                 "volume_score": final_volume,
                 "volume_score_label": MLEngine.get_score_label(final_volume),
-
                 # Чистота речи
                 "filler_score": final_filler,
                 "filler_label": MLEngine.get_score_label(final_filler),
-
                 # Взгляд
                 "gaze_score": final_gaze,
                 "gaze_label": MLEngine.get_score_label(final_gaze),
-
                 # Жесты
                 "gesture_score": final_gesture,
                 "gesture_label": MLEngine.get_score_label(final_gesture),
                 "gesture_advice": cv_metrics.get("gesture_advice", "Норма"),
-
                 # Тон
                 "tone_score": final_tone,
                 "tone_label": MLEngine.get_score_label(final_tone),
-            }
+            },
         },
-        "summary": llm_result.get("summary", ""),
-        "structure": llm_result.get("structure", ""),
-        "mistakes": llm_result.get("mistakes", ""),
-        "ideal_text": llm_result.get("ideal_text", ""),
-        "persona_feedback": llm_result.get("persona_feedback", ""),
-        "model_used": model_type
+        "summary": llm_result.get("summary", "N/A"),
+        "structure": llm_result.get("structure", "N/A"),
+        "mistakes": llm_result.get("mistakes", "N/A"),
+        "ideal_text": llm_result.get("ideal_text", "N/A"),
+        "persona_feedback": llm_result.get("persona_feedback", "N/A"),
+        "analyze_provider": analyze_provider,
+        "analyze_model": analyze_model,
+        "transcribe_model": transcribe_model,
     }
 
     save_json_result(task_id, result_data)
