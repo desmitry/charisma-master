@@ -27,13 +27,11 @@ async function checkResponse<T>(response: Response): Promise<T> {
     }
     
     if (response.status === 502 || response.status === 503) {
-      console.warn("[API] Backend unavailable:", response.status);
       const error = new ExpectedError(errorMessage || "Сервер недоступен. Проверьте, запущен ли backend.");
       (error as any).statusCode = response.status;
       throw error;
     }
     if (response.status === 413) {
-      console.warn("[API] File too large:", response.status);
       const error = new ExpectedError(errorMessage || "Файл слишком большой. Максимальный размер: 200MB.");
       (error as any).statusCode = response.status;
       throw error;
@@ -156,9 +154,7 @@ export function resolveVideoUrl(videoPath: string): string {
   if (!videoPath) return "";
   if (videoPath.startsWith("http")) return videoPath;
   if (videoPath.startsWith("/") && !videoPath.startsWith("/media/")) return videoPath;
-  const url = `${API_BASE_URL}${videoPath}`;
-  console.log("[API] Resolved video URL:", { videoPath, url });
-  return url;
+  return `${API_BASE_URL}${videoPath}`;
 }
 
 

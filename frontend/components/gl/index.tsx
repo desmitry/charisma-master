@@ -27,20 +27,15 @@ export const GL = () => {
   const cleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    console.log("[GL] Component mounted");
     const supported = checkWebGLSupport();
     setWebglSupported(supported);
-    console.log("[GL] WebGL supported:", supported);
     
     return () => {
-      console.log("[GL] Component unmounting - forcing cleanup");
       if (cleanupRef.current) {
-        console.log("[GL] Calling cleanup function from handleCreated");
         cleanupRef.current();
         cleanupRef.current = null;
       }
       if (rendererRef.current) {
-        console.log("[GL] Force disposing renderer from useEffect cleanup");
         try {
           rendererRef.current.setAnimationLoop(null);
           rendererRef.current.dispose();
@@ -48,106 +43,59 @@ export const GL = () => {
           if (context) {
             const loseContext = (context as any).loseContext;
             if (loseContext) {
-              console.log("[GL] Force losing context");
               loseContext.call(context);
             }
           }
           rendererRef.current = null;
-        } catch (e) {
-          console.error("[GL] Error in useEffect cleanup:", e);
-        }
+        } catch {}
       }
     };
   }, []);
 
-  useEffect(() => {
-    console.log("[GL] Context lost state changed:", contextLost);
-  }, [contextLost]);
-
-  useEffect(() => {
-    console.log("[GL] Key changed (Canvas recreated):", key);
-  }, [key]);
-
   const handleCreated = useCallback(({ gl }: { gl: THREE.WebGLRenderer }) => {
-    console.log("[GL] Canvas created, WebGL renderer initialized");
     rendererRef.current = gl;
     const canvas = gl.domElement;
     let isMounted = true;
-    const startTime = Date.now();
     
     const handleContextLost = (event: Event) => {
-      const elapsed = Date.now() - startTime;
-      console.error("[GL] ⚠️ WebGL context lost!", {
-        elapsed: `${elapsed}ms`,
-        isMounted,
-        timestamp: new Date().toISOString(),
-        stack: new Error().stack
-      });
       event.preventDefault();
       if (isMounted) {
         setContextLost(true);
-        console.warn("[GL] Setting contextLost state to true");
-      } else {
-        console.warn("[GL] Context lost but component already unmounted - ignoring");
-        return;
       }
     };
     
     const handleContextRestored = () => {
-      const elapsed = Date.now() - startTime;
-      console.log("[GL] ✅ WebGL context restored!", {
-        elapsed: `${elapsed}ms`,
-        isMounted,
-        timestamp: new Date().toISOString()
-      });
       if (isMounted) {
         setContextLost(false);
-        setKey(prev => {
-          console.log("[GL] Incrementing key for Canvas recreation:", prev + 1);
-          return prev + 1;
-        });
-      } else {
-        console.warn("[GL] Context restored but component already unmounted");
+        setKey(prev => prev + 1);
       }
     };
     
-    console.log("[GL] Adding event listeners for context lost/restored");
     canvas.addEventListener("webglcontextlost", handleContextLost);
     canvas.addEventListener("webglcontextrestored", handleContextRestored);
     
     const cleanup = () => {
-      const elapsed = Date.now() - startTime;
-      console.log("[GL] Canvas cleanup started", {
-        elapsed: `${elapsed}ms`,
-        isMounted,
-        timestamp: new Date().toISOString()
-      });
       isMounted = false;
       canvas.removeEventListener("webglcontextlost", handleContextLost);
       canvas.removeEventListener("webglcontextrestored", handleContextRestored);
       try {
-        console.log("[GL] Stopping animation loop");
         gl.setAnimationLoop(null);
-        console.log("[GL] Disposing renderer");
         gl.dispose();
         const context = gl.getContext();
         if (context) {
           const loseContext = (context as any).loseContext;
           if (loseContext) {
-            console.log("[GL] Forcing context loss");
             loseContext.call(context);
           }
         }
         rendererRef.current = null;
-        console.log("[GL] ✅ Cleanup completed");
-      } catch (e) {
-        console.error("[GL] ❌ Error disposing WebGL:", e);
-      }
+      } catch {}
     };
     
     cleanupRef.current = cleanup;
     return cleanup;
   }, []);
+
   const {
     speed,
     focus,
@@ -185,18 +133,7 @@ export const GL = () => {
   });
   const effectiveSize = isEcoMode ? Math.min(size, 256) : size;
 
-  useEffect(() => {
-    console.log("[GL] Render check:", {
-      contextLost,
-      webglSupported,
-      effectiveSize,
-      isEcoMode,
-      key
-    });
-  }, [contextLost, webglSupported, effectiveSize, isEcoMode, key]);
-
   if (contextLost || !webglSupported) {
-    console.log("[GL] Rendering fallback (contextLost or not supported)");
     return (
       <div id="webgl">
         <div className="eco-bg w-full h-full" />
@@ -204,7 +141,6 @@ export const GL = () => {
     );
   }
 
-  console.log("[GL] Rendering Canvas");
   return (
     <div id="webgl" key={key}>
       <Canvas
