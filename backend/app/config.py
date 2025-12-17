@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import Optional
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -32,25 +32,32 @@ class Settings(BaseSettings):
     # ML Models
     whisper_provider: str = os.getenv("WHISPER_PROVIDER", "local")
     whisper_model_path: str = os.getenv("WHISPER_MODEL_PATH", "base")
-    whisper_device: str = os.getenv("WHISPER_DEVICE", "cpu")
+    whisper_device: str = os.getenv("WHISPER_DEVICE", "cuda")
     whisper_compute_type: str = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
 
     # LLM
     openai_api_base: str = os.getenv(
         "OPENAI_API_BASE", "https://api.openai.com/v1"
     )
-    openai_api_key: str = os.getenv("OPENAI_API_KEY", "sk-placeholder")
-    openai_model_name: str = os.getenv("OPENAI_MODEL_NAME", "gpt-3.5-turbo")
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+    openai_model_name: str = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
 
-    gigachat_credentials: str | None = os.getenv("GIGACHAT_CREDENTIALS", None)
-    gigachat_scope: str = "GIGACHAT_API_PERS"
-    gigachat_verify_ssl: bool = False
-    gigachat_model_name: str = os.getenv("GIGACHAT_MODEL_NAME", "GigaChat-2")
+    # GigaChat
     gigachat_credentials: Optional[str] = os.getenv("GIGACHAT_CREDENTIALS")
+    gigachat_scope: str = os.getenv("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")
+    gigachat_model_name: str = os.getenv("GIGACHAT_MODEL_NAME", "GigaChat")
+    gigachat_verify_ssl: bool = False
+
+    # Sber Speech
     sber_speech_scope: str = os.getenv("SBER_SPEECH_SCOPE", "SALUTE_SPEECH_B2B")
 
-    class Config:
-        env_file = ".env"
+    # HuggingFace
+    hf_token: Optional[str] = os.getenv("HF_TOKEN")
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore"
+    )
 
 
 settings = Settings()
