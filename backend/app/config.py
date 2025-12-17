@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     port: int = 8000
 
     environment: str = os.getenv("ENVIRONMENT", "development")
-    backend_origin: str = os.getenv("BACKEND_ORIGIN_URL", "*")
+    backend_origin_url: str = os.getenv("BACKEND_ORIGIN_URL", "*")
 
     # Paths
     base_dir: Path = Path(__file__).parent.parent.resolve() / "app"
