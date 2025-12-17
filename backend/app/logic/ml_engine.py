@@ -538,56 +538,67 @@ class MLEngine:
         slide_text_accum = []
         frame_interval_ocr = int(fps * 10)
 
-        with mp_holistic.Holistic(
-            min_detection_confidence=0.5, model_complexity=1
-        ) as holistic:
+        faces_detected_count = 0
+
+        with mp_holistic.Holistic(min_detection_confidence=0.5, model_complexity=1) as holistic:
             while True:
                 ret, frame = cap.read()
-                if not ret:
-                    break
+                if not ret: break
                 total_frames += 1
+
+                # OCR
                 if total_frames % frame_interval_ocr == 0:
                     try:
                         h, w = frame.shape[:2]
                         scale = 1000 / w
-                        ocr_frame = (
-                            cv2.resize(frame, (0, 0), fx=scale, fy=scale)
-                            if scale < 1
-                            else frame
-                        )
+                        ocr_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale) if scale < 1 else frame
                         result = reader.readtext(ocr_frame, detail=0)
                         txt = " ".join(result)
-                        if len(txt) > 15:
-                            slide_text_accum.append(txt)
+                        if len(txt) > 15: slide_text_accum.append(txt)
                     except:
                         pass
-                if total_frames % 5 != 0:
-                    continue
+
+                if total_frames % 5 != 0: continue
                 try:
                     img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    img.flags.writeable = False
                     res = holistic.process(img)
+                    img.flags.writeable = True  #
+
                     if res.face_landmarks:
-                        f = res.face_landmarks.landmark
-                        if abs(f[1].x - (f[234].x + f[454].x) / 2) < 0.06:
-                            looking_at_camera += 1
+                        faces_detected_count += 1
+                        face = res.face_landmarks.landmark
+                        nose_x = face[1].x
+                        left_cheek_x = face[234].x
+                        right_cheek_x = face[454].x
+
+                        face_width = abs(right_cheek_x - left_cheek_x)
+                        face_center_x = (left_cheek_x + right_cheek_x) / 2
+
+                        if face_width > 0:
+                            deviation = abs(nose_x - face_center_x) / face_width
+
+                            if deviation < 0.30:
+                                looking_at_camera += 1
+
                     if res.pose_landmarks:
                         p = res.pose_landmarks.landmark
-                        lw, rw = (
-                            p[mp_holistic.PoseLandmark.LEFT_WRIST].y,
-                            p[mp_holistic.PoseLandmark.RIGHT_WRIST].y,
-                        )
+                        lw, rw = p[mp_holistic.PoseLandmark.LEFT_WRIST].y, p[mp_holistic.PoseLandmark.RIGHT_WRIST].y
                         if prev_wrist_y["left"]:
-                            delta = abs(lw - prev_wrist_y["left"]) + abs(
-                                rw - prev_wrist_y["right"]
-                            )
-                            if delta > 0.01:
-                                movement_accum += delta
+                            delta = abs(lw - prev_wrist_y["left"]) + abs(rw - prev_wrist_y["right"])
+                            if delta > 0.01: movement_accum += delta
                         prev_wrist_y = {"left": lw, "right": rw}
-                except:
-                    pass
+
+                except Exception as e:
+                    if total_frames % 100 == 0:
+                        logger.error(f"CV Error at frame {total_frames}: {e}")
+
         cap.release()
 
         proc_frames = total_frames / 5 if total_frames > 0 else 1
+
+        logger.info(
+            f"Video analysis: Total frames={total_frames}, Processed={proc_frames}, Looking={looking_at_camera}")
         gaze_score = (looking_at_camera / proc_frames) * 100
         avg_movement = movement_accum / proc_frames
         gesture_score = min(avg_movement * 1000, 100)

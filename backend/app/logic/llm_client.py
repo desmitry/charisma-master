@@ -1,10 +1,8 @@
-import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import openai
 import json
-import os
 from app.config import settings
 from app.logic import prompts
 from app.models.schemas import PersonaEnum
