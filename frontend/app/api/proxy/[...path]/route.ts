@@ -134,8 +134,7 @@ async function proxyRequest(
         "Content-Type": responseContentType || "application/json",
       },
     });
-  } catch (error) {
-    console.error("Proxy error:", error);
+  } catch {
     return NextResponse.json(
       { error: "Failed to proxy request to backend" },
       { status: 502 }

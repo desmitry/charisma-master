@@ -181,12 +181,20 @@ export default function Home() {
       });
     };
 
+    const handleScroll = () => {
+      if (!isScrolling.current) {
+        updateCurrentSection();
+      }
+    };
+
     updateCurrentSection();
 
     window.addEventListener("wheel", handleWheel, { passive: false });
+    window.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
       window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("scroll", handleScroll);
       clearTimeout(resetTimeout);
     };
   }, [isTouchDevice, stage]);
@@ -283,19 +291,12 @@ export default function Home() {
   };
 
   const startMockFlow = async () => {
-    console.log("[Page] 🎭 startMockFlow called", {
-      timestamp: new Date().toISOString()
-    });
     setIsMockMode(true);
-    console.log("[Page] Setting isExiting = true (mock)");
     setIsExiting(true);
-    console.log("[Page] Setting isUploading = true (mock)");
     setIsUploading(true);
     
-    console.log("[Page] Waiting 300ms before setting stage to processing (mock)");
     await new Promise((res) => setTimeout(res, 300));
     
-    console.log("[Page] Setting stage = 'processing' (mock)");
     setStage("processing");
     setStatusText("Анализируем видео...");
     setProgress(0.2);
@@ -335,15 +336,8 @@ export default function Home() {
   };
 
   const handleAnalyze = async () => {
-    console.log("[Page] 🚀 handleAnalyze called", {
-      timestamp: new Date().toISOString(),
-      hasFile: !!selectedFile,
-      hasUrl: !!videoUrl,
-      isMockMode
-    });
     setError(null);
     setIsMockMode(false);
-    console.log("[Page] Setting isUploading = true");
     setIsUploading(true);
 
     if (!selectedFile && videoUrl && !isValidRuTubeUrl) {
@@ -353,12 +347,10 @@ export default function Home() {
     }
 
     if (isMockMode || (!selectedFile && !videoUrl)) {
-      console.log("[Page] Starting mock flow");
       return startMockFlow();
     }
 
     try {
-      console.log("[Page] Setting isExiting = true");
       setIsExiting(true);
       
       let task_id: string;
@@ -376,11 +368,9 @@ export default function Home() {
         }
         task_id = uploadResult.task_id;
       } catch (uploadErr) {
-        console.error("[Page] Upload error:", uploadErr);
         throw uploadErr;
       }
       
-      console.log("[Page] Upload successful, setting stage to processing");
       await new Promise(resolve => setTimeout(resolve, 100));
       setStage("processing");
       setProgress(0.3);
@@ -418,12 +408,9 @@ export default function Home() {
       const isExpectedError = err instanceof Error && err.name === "ExpectedError";
       
       if (isExpectedError) {
-        console.warn("[Page] Expected error:", errorMessage);
         if (errorMessage.includes("Сервер недоступен") || errorMessage.includes("502") || errorMessage.includes("503")) {
           displayError = "Сервер недоступен. Проверьте, запущен ли backend.";
         }
-      } else {
-        console.error("[Page] Error during analysis:", err);
       }
       
       setServerErrorText(displayError);
@@ -437,41 +424,12 @@ export default function Home() {
       setIsMockMode(false);
       setShowResult(false);
       setError(null);
-      
-      console.log("[Page] Error handled, returned to landing page");
     }
   };
 
   const showLanding = stage === "landing";
   const showProcessing = stage === "processing";
   const shouldShowGL = showLanding && !showProcessing && !isUploading && !isExiting;
-
-  useEffect(() => {
-    console.log("[Page] State changed:", {
-      stage,
-      showLanding,
-      showProcessing,
-      isUploading,
-      isExiting,
-      shouldShowGL,
-      hasResult: !!result,
-      showResult,
-      timestamp: new Date().toISOString()
-    });
-  }, [stage, showLanding, showProcessing, isUploading, isExiting, shouldShowGL, result, showResult]);
-
-  useEffect(() => {
-    if (shouldShowGL) {
-      console.log("[Page] ✅ Rendering GL component");
-    } else {
-      console.log("[Page] ❌ NOT rendering GL component", {
-        showLanding,
-        showProcessing,
-        isUploading,
-        isExiting
-      });
-    }
-  }, [shouldShowGL, showLanding, showProcessing, isUploading, isExiting]);
 
   return (
     <>
@@ -636,7 +594,6 @@ export default function Home() {
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         >
-          {/* Drag Overlay */}
           <div
             className={cn(
               "pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md transition-all duration-300",
@@ -659,7 +616,6 @@ export default function Home() {
 
           <div className="flex flex-col items-center justify-center px-4 py-8 sm:px-6 lg:min-h-svh lg:py-4">
             <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-md">
-              {/* Header */}
               <div className="text-center mb-5">
                 <h2 className="text-xl font-semibold text-white sm:text-2xl">
                   Загрузи видео для анализа
@@ -669,7 +625,6 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* Upload Area */}
               <div className="grid gap-3 md:grid-cols-2">
                 <label
                   htmlFor="video-upload"
@@ -746,9 +701,7 @@ export default function Home() {
 
               {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
 
-              {/* Settings Row */}
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                {/* Persona Dropdown */}
                 <div ref={personaRef} className="relative">
                   <button
                     ref={personaButtonRef}
@@ -815,7 +768,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Provider Dropdown */}
                 <div ref={providerRef} className="relative">
                   <button
                     ref={providerButtonRef}
@@ -880,10 +832,8 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Spacer */}
                 <div className="flex-1" />
 
-                {/* Analyze Button */}
                 <button
                   className={cn(
                     "rounded-lg px-6 py-2.5 text-sm font-medium transition-all duration-300",
