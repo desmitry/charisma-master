@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { SmoothScroll } from "./smooth-scroll";
 import { TempoChart } from "./analysis/tempo-chart";
 import { ComingSoonNotification } from "./coming-soon-notification";
+import { PdfExportDropdown } from "./pdf-export-modal";
 
 type Props = {
   result: AnalysisResult;
@@ -68,9 +69,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<"transcript" | "insights">("transcript");
   const [videoSrc, setVideoSrc] = useState(() => {
-    const url = resolveVideoUrl(result.video_path);
-    console.log("[AnalysisDashboard] Initial video URL:", { videoPath: result.video_path, url });
-    return url;
+    return resolveVideoUrl(result.video_path);
   });
   const { isEcoMode } = useEcoMode();
   
@@ -81,6 +80,8 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   }>({ open: false, phase: "closed", originRect: null });
 
   const [showComingSoon, setShowComingSoon] = useState(false);
+  const [showPdfDropdown, setShowPdfDropdown] = useState(false);
+  const pdfButtonRef = useRef<HTMLButtonElement>(null);
 
   const openTempoModal = useCallback(() => {
     if (!tempoChartRef.current) return;
@@ -101,13 +102,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   }, []);
 
   useEffect(() => {
-    const url = resolveVideoUrl(result.video_path);
-    console.log("[AnalysisDashboard] Video URL updated:", { 
-      videoPath: result.video_path, 
-      url,
-      timestamp: new Date().toISOString()
-    });
-    setVideoSrc(url);
+    setVideoSrc(resolveVideoUrl(result.video_path));
   }, [result.video_path]);
 
   useEffect(() => {
@@ -217,12 +212,21 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               </div>
             )}
 
-            <button
-              onClick={() => setShowComingSoon(true)}
-              className="hidden rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium transition hover:bg-white/15 sm:block sm:px-4 sm:py-2"
-            >
-              PDF Отчет
-            </button>
+            <div className="relative hidden sm:block">
+              <button
+                ref={pdfButtonRef}
+                onClick={() => setShowPdfDropdown(!showPdfDropdown)}
+                className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium transition hover:bg-white/15 sm:px-4 sm:py-2"
+              >
+                PDF Отчет
+              </button>
+              <PdfExportDropdown 
+                isOpen={showPdfDropdown} 
+                onClose={() => setShowPdfDropdown(false)} 
+                result={result}
+                buttonRef={pdfButtonRef}
+              />
+            </div>
 
             {onBack && (
               <button
@@ -262,14 +266,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                 isEcoMode ? "bg-black" : "bg-black"
               )}
               onTimeUpdate={onTimeUpdate}
-              onLoadedData={() => {
-                console.log("[Video] Video loaded successfully", { videoSrc });
-              }}
-              onCanPlay={() => {
-                console.log("[Video] Video can play", { videoSrc });
-              }}
-              onError={(e) => {
-                console.error("[Video] Video error:", e, { videoSrc });
+              onError={() => {
                 if (videoSrc.includes("flower.mp4")) return;
                 setVideoSrc("https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4");
               }}
