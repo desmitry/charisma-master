@@ -43,6 +43,16 @@ def process_video_pipeline(
     transcribe_model: str,
     persona: str = None,
 ):
+    transcription_provider = "local"
+    if transcribe_model == "sber_gigachat":
+        transcription_provider = "sber"
+    elif transcribe_model == "whisper_openai":
+        transcription_provider = "openai"
+    elif transcribe_model == "whisper_local":
+        transcription_provider = "local"
+
+    logger.info(f"Таска {task_id}: Транскрибация с помощью {transcription_provider}, Анализ с помощью {analyze_provider}")
+
     try:
         # Аудио и Транскрипция
         self.update_state(
@@ -79,6 +89,8 @@ def process_video_pipeline(
         "gesture_advice": "Нет данных",
         "gaze_label": "-",
         "gesture_label": "-",
+        "slide_density": 0,
+        "has_slides": False
     }
 
     try:
@@ -108,7 +120,8 @@ def process_video_pipeline(
     llm_result = {}
 
     try:
-        llm_client = LLMClient(provider=llm_provider)
+        llm_client = LLMClient()
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         llm_result = loop.run_until_complete(
@@ -161,7 +174,7 @@ def process_video_pipeline(
         "tempo": tempo_data,
         "long_pauses": long_pauses,
         "fillers_summary": {
-            "count": filler_count,
+            "count": base_filler_count,
             "ratio": round(filler_ratio, 4),
         },
         "dynamic_fillers": llm_result.get("dynamic_fillers", []),
