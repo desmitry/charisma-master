@@ -5,10 +5,10 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
 # Base configurations
-if settings.environment == "production" and settings.backend_origin == "*":
+if settings.environment == "production" and settings.backend_origin_url == "*":
     raise Exception("You need to specify a specific url for production!")
 
-origins = [settings.backend_origin]
+origins = [settings.backend_origin_url]
 
 
 app = FastAPI(
