@@ -135,7 +135,9 @@ export default function DashboardPage() {
                   Плотность слайдов
                 </p>
                 <p className="mt-1 text-lg font-semibold text-white">
-                  {analysis.slide_text_density?.toFixed(1) ?? "-"}%
+                  {(analysis.slide_analysis?.text_density_score ?? analysis.slide_text_density) !== undefined 
+                    ? Math.min(100, Math.max(0, analysis.slide_analysis?.text_density_score ?? analysis.slide_text_density ?? 0)).toFixed(1) 
+                    : "-"}%
                 </p>
               </div>
             </div>

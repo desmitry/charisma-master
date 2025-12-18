@@ -49,9 +49,9 @@ export function ConfidenceGauge({ data }: { data: ConfidenceIndex }) {
           </div>
         </div>
         <div className="grid flex-1 grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-          <MetricCard label="Громкость" value={data.components.volume_score} />
-          <MetricCard label="Паразиты" value={data.components.filler_score} />
-          <MetricCard label="Взгляд" value={data.components.gaze_score} />
+          <MetricCard label="Громкость" value={Math.min(100, Math.max(0, data.components.volume_score))} />
+          <MetricCard label="Паразиты" value={Math.min(100, Math.max(0, data.components.filler_score))} />
+          <MetricCard label="Взгляд" value={Math.min(100, Math.max(0, data.components.gaze_score))} />
         </div>
       </div>
     </div>
