@@ -89,6 +89,10 @@ class AnalysisResult(BaseModel):
     mistakes: str
     ideal_text: str
     persona_feedback: str
+    transcribe_provider: Optional[str] = None
+    transcribe_model: Optional[str] = None
+    analyze_provider: Optional[str] = None
+    analyze_model: Optional[str] = None
     raw_metrics: Optional[dict] = None
 
 
