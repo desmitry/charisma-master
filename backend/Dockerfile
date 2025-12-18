@@ -39,8 +39,8 @@ RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
 COPY --from=builder --chown=appuser:appuser /backend/.venv /backend/.venv
 COPY --from=builder --chown=appuser:appuser /backend /backend
-RUN mkdir /backend/app/media
-RUN mkdir /backend/app/media/results
+RUN mkdir -p /backend/app/media
+RUN mkdir -p /backend/app/media/results
 
 RUN chown -R appuser:appuser /backend/app
 
