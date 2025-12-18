@@ -48,7 +48,8 @@ export async function uploadVideo(
   file: File | null,
   videoUrl: string | null,
   persona?: string,
-  llmProvider?: string
+  llmProvider?: string,
+  modelType?: string
 ): Promise<{ task_id: string }> {
   const formData = new FormData();
   if (file) {
@@ -62,6 +63,9 @@ export async function uploadVideo(
   }
   if (llmProvider) {
     formData.append("analyze_llm_provider", llmProvider);
+  }
+  if (modelType) {
+    formData.append("model_type", modelType);
   }
 
   try {

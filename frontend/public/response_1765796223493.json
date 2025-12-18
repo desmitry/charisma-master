@@ -1,7 +1,7 @@
 {
   "task_id": "7fc1dfc7-dc82-468d-8f30-0d7715cc62c5",
   "video_path": "/media/7fc1dfc7-dc82-468d-8f30-0d7715cc62c5.mp4",
-  "analyze_model": "GigaChat-2",
+  "analyze_model": "sber_gigachat",
   "analyze_provider": "gigachat",
   "transcript": [
     {
