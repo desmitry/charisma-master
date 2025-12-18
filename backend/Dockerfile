@@ -1,10 +1,25 @@
-# Use bookworm-slim because of opencv-python
-FROM ghcr.io/astral-sh/uv:0.9.8-python3.11-bookworm-slim AS builder
+FROM ubuntu:22.04 AS builder
 
-ENV UV_TOOL_BIN_DIR=/usr/local/bin
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV UV_COMPILE_BYTECODE=1
-ENV UV_LINK_MODE=copy
+# Устанавливаем только необходимые пакеты
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt update -y && \
+    DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    python3.11 \
+    python3.11-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+# Устанавливаем UV (можно зафиксировать версию)
+ARG UV_VERSION=0.4.8
+RUN curl -LsSf "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz" \
+    | tar -xz -C /usr/local/bin --strip-components=1 \
+    && chmod +x /usr/local/bin/uv
+
+ENV UV_TOOL_BIN_DIR=/usr/local/bin \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
 
 WORKDIR /backend
 
@@ -18,7 +33,7 @@ COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-FROM python:3.11-slim-bookworm AS runtime
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04 AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -32,13 +47,15 @@ RUN --mount=type=cache,target=/var/cache/apt \
     apt install -y \
     libgl1 \
     ffmpeg \
+    python3.11 \
+    python3.11-venv \
     libglib2.0-0 && \
     rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
-COPY --from=builder --chown=appuser:appuser /backend/.venv /backend/.venv
 COPY --from=builder --chown=appuser:appuser /backend /backend
+
 RUN mkdir -p /backend/app/media
 RUN mkdir -p /backend/app/media/results
 
