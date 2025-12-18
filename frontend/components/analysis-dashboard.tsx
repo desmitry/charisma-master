@@ -201,7 +201,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <StatBadge label="Паразиты" value={`${(result.fillers_summary.ratio * 100).toFixed(1)}%`} />
-            <StatBadge label="Уверенность" value={`${result.confidence_index.total.toFixed(0)}`} accent />
+            <StatBadge label="Уверенность" value={`${Math.min(100, Math.max(0, result.confidence_index.total)).toFixed(0)}`} accent />
             
             {(result.analyze_provider || result.analyze_model) && (
               <div className="hidden lg:flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs">
@@ -294,7 +294,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             <GlassStat
               icon={<IconDoc />}
               label="Плотность слайдов"
-              value={result.slide_text_density}
+              value={Math.min(100, Math.max(0, result.slide_analysis?.text_density_score ?? result.slide_text_density ?? 0))}
               suffix="%"
               delay={300}
               mounted={mounted}
@@ -303,7 +303,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             <GlassStat
               icon={<IconBolt />}
               label="Уверенность"
-              value={result.confidence_index.total}
+              value={Math.min(100, Math.max(0, result.confidence_index.total))}
               suffix="/100"
               delay={400}
               mounted={mounted}
@@ -321,7 +321,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             <GlassStat
               icon={<IconHand />}
               label="Жестикуляция"
-              value={result.confidence_index.components.gesture_score || 0}
+              value={Math.min(100, Math.max(0, result.confidence_index.components.gesture_score || 0))}
               suffix="/100"
               delay={600}
               mounted={mounted}
@@ -867,6 +867,7 @@ function AnimatedConfidenceGauge({
   mounted: boolean;
 }) {
   const [animValue, setAnimValue] = useState(0);
+  const normalizedTotal = Math.min(100, Math.max(0, total));
 
   useEffect(() => {
     if (!mounted) return;
@@ -876,12 +877,12 @@ function AnimatedConfidenceGauge({
       const elapsed = Date.now() - start;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 4);
-      setAnimValue(total * eased);
+      setAnimValue(normalizedTotal * eased);
       if (progress < 1) requestAnimationFrame(animate);
     };
     const timer = setTimeout(animate, 600);
     return () => clearTimeout(timer);
-  }, [mounted, total]);
+  }, [mounted, normalizedTotal]);
 
   const radius = 50;
   const circumference = 2 * Math.PI * radius;
@@ -925,9 +926,9 @@ function AnimatedConfidenceGauge({
           </div>
         </div>
         <div className="flex-1 space-y-2">
-          <MiniBar label="Громкость" value={components.volume_score} delay={700} mounted={mounted} />
-          <MiniBar label="Паразиты" value={components.filler_score} delay={800} mounted={mounted} />
-          <MiniBar label="Взгляд" value={components.gaze_score} delay={900} mounted={mounted} />
+          <MiniBar label="Громкость" value={Math.min(100, Math.max(0, components.volume_score))} delay={700} mounted={mounted} />
+          <MiniBar label="Паразиты" value={Math.min(100, Math.max(0, components.filler_score))} delay={800} mounted={mounted} />
+          <MiniBar label="Взгляд" value={Math.min(100, Math.max(0, components.gaze_score))} delay={900} mounted={mounted} />
         </div>
       </div>
     </div>
@@ -972,7 +973,7 @@ function MiniBar({
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
         <div
           className="h-full rounded-full bg-white/80"
-          style={{ width: `${animValue}%`, transition: "width 0.1s linear" }}
+          style={{ width: `${Math.min(100, Math.max(0, animValue))}%`, transition: "width 0.1s linear" }}
         />
       </div>
     </div>

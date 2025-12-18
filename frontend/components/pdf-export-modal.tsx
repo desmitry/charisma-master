@@ -308,8 +308,8 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
               <div>
                 {[
                   { label: "Паразиты", value: result.fillers_summary.count, sub: `${(result.fillers_summary.ratio * 100).toFixed(1)}%` },
-                  { label: "Уверенность", value: result.confidence_index.total.toFixed(0), sub: "из 100" },
-                  { label: "Плотность", value: `${result.slide_text_density?.toFixed(1) || 0}%`, sub: "" },
+                  { label: "Уверенность", value: Math.min(100, Math.max(0, result.confidence_index.total)).toFixed(0), sub: "из 100" },
+                  { label: "Плотность", value: `${Math.min(100, Math.max(0, result.slide_analysis?.text_density_score ?? result.slide_text_density ?? 0)).toFixed(1)}%`, sub: "" },
                   { label: "Фрагментов", value: result.transcript.length, sub: "" },
                 ].map((item, idx) => (
                   <div 
@@ -343,13 +343,13 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
                 backgroundColor: "#0a0a0a"
               }}
             >
-              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Индекс уверенности: {result.confidence_index.total.toFixed(0)}/100</h2>
+              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Индекс уверенности: {Math.min(100, Math.max(0, result.confidence_index.total)).toFixed(0)}/100</h2>
               <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "16px", border: "1px solid rgba(255,255,255,0.1)" }}>
                 {[
-                  { label: "Громкость", value: result.confidence_index.components.volume_score },
-                  { label: "Паразиты", value: result.confidence_index.components.filler_score },
-                  { label: "Взгляд", value: result.confidence_index.components.gaze_score },
-                  { label: "Жесты", value: result.confidence_index.components.gesture_score || 0 },
+                  { label: "Громкость", value: Math.min(100, Math.max(0, result.confidence_index.components.volume_score)) },
+                  { label: "Паразиты", value: Math.min(100, Math.max(0, result.confidence_index.components.filler_score)) },
+                  { label: "Взгляд", value: Math.min(100, Math.max(0, result.confidence_index.components.gaze_score)) },
+                  { label: "Жесты", value: Math.min(100, Math.max(0, result.confidence_index.components.gesture_score || 0)) },
                 ].map((item, idx) => (
                   <div key={item.label} style={{ marginBottom: idx < 3 ? "10px" : 0 }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", marginBottom: "6px" }}>

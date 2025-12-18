@@ -123,7 +123,43 @@ export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse>
 
 export async function getAnalysis(taskId: string): Promise<AnalysisResult> {
   const response = await fetch(`${API_BASE_URL}/api/v1/analysis/${taskId}`);
-  return checkResponse<AnalysisResult>(response);
+  const data = await checkResponse<any>(response);
+  
+  // Маппинг slide_analysis.text_density_score в slide_text_density
+  if (data.slide_analysis?.text_density_score !== undefined && data.slide_text_density === undefined) {
+    data.slide_text_density = Math.min(100, Math.max(0, data.slide_analysis.text_density_score));
+  }
+  
+  // Ограничиваем все score значения до 100
+  if (data.confidence_index) {
+    if (data.confidence_index.total !== undefined) {
+      data.confidence_index.total = Math.min(100, Math.max(0, data.confidence_index.total));
+    }
+    if (data.confidence_index.components) {
+      if (data.confidence_index.components.volume_score !== undefined) {
+        // Если volume_score меньше 1, значит это доля (0-1), умножаем на 100
+        let volumeScore = data.confidence_index.components.volume_score;
+        if (volumeScore < 1 && volumeScore > 0) {
+          volumeScore = volumeScore * 100;
+        }
+        data.confidence_index.components.volume_score = Math.min(100, Math.max(0, volumeScore));
+      }
+      if (data.confidence_index.components.filler_score !== undefined) {
+        data.confidence_index.components.filler_score = Math.min(100, Math.max(0, data.confidence_index.components.filler_score));
+      }
+      if (data.confidence_index.components.gaze_score !== undefined) {
+        data.confidence_index.components.gaze_score = Math.min(100, Math.max(0, data.confidence_index.components.gaze_score));
+      }
+      if (data.confidence_index.components.gesture_score !== undefined) {
+        data.confidence_index.components.gesture_score = Math.min(100, Math.max(0, data.confidence_index.components.gesture_score));
+      }
+      if (data.confidence_index.components.tone_score !== undefined) {
+        data.confidence_index.components.tone_score = Math.min(100, Math.max(0, data.confidence_index.components.tone_score));
+      }
+    }
+  }
+  
+  return data as AnalysisResult;
 }
 
 export async function pollForAnalysis(
