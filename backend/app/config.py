@@ -32,9 +32,9 @@ class Settings(BaseSettings):
 
     # ML Models
     whisper_provider: str = os.getenv("WHISPER_PROVIDER", "local")
-    whisper_model_path: str = os.getenv("WHISPER_MODEL_PATH", "base")
+    whisper_model_path: str = os.getenv("WHISPER_MODEL_PATH", "medium")
     whisper_device: str = os.getenv("WHISPER_DEVICE", "cuda")
-    whisper_compute_type: str = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
+    whisper_compute_type: str = os.getenv("WHISPER_COMPUTE_TYPE", "float16")
 
     # LLM
     openai_api_base: str = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
