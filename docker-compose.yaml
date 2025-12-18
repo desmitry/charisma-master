@@ -16,12 +16,12 @@ services:
     depends_on:
       - redis
     volumes:
-      - media-data:/backend/app/media
+      - ./media:/backend/app/media
 
   backend:
     image: ghcr.io/desmitry/charisma-master-backend:latest
     container_name: backend
-    command: [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000" ]
+    command: [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "600" ]
     restart: always
     env_file:
       - ./backend/.docker.env
@@ -30,7 +30,7 @@ services:
     depends_on:
       - celery
     volumes:
-      - media-data:/backend/app/media
+      - ./media:/backend/app/media
 
   frontend:
     image: ghcr.io/desmitry/charisma-master-frontend:latest
@@ -46,5 +46,3 @@ services:
     depends_on:
       - backend
 
-volumes:
-  media-data:
