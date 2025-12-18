@@ -94,7 +94,7 @@ export function setFastRequestsCount(count: number): void {
   const expires = new Date();
   expires.setTime(expires.getTime() + COOKIE_LIFETIME_DAYS * 24 * 60 * 60 * 1000);
   
-  const isSecure = window.location.protocol === 'https:';
+  const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
   const secureFlag = isSecure ? '; Secure' : '';
   
   document.cookie = `${COOKIE_NAME}=${encodeURIComponent(encrypted)}; expires=${expires.toUTCString()}; path=/; SameSite=Strict${secureFlag}`;
