@@ -37,7 +37,7 @@ jobs:
                     docker compose down
 
                     echo "Running build script..."
-                    ./scripts/build
+                    ./scripts/build.sh
 
                     echo "Starting containers..."
                     docker compose up -d

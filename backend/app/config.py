@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import Optional
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,9 +37,7 @@ class Settings(BaseSettings):
     whisper_compute_type: str = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
 
     # LLM
-    openai_api_base: str = os.getenv(
-        "OPENAI_API_BASE", "https://api.openai.com/v1"
-    )
+    openai_api_base: str = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     openai_model_name: str = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
 
@@ -54,10 +53,7 @@ class Settings(BaseSettings):
     # HuggingFace
     hf_token: Optional[str] = os.getenv("HF_TOKEN")
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 settings = Settings()

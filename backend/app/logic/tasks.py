@@ -6,7 +6,7 @@ from pathlib import Path
 from app.config import settings
 from app.logic.llm_client import LLMClient
 from app.logic.ml_engine import MLEngine
-from app.models.schemas import PersonaEnum, ProcessingStage
+from app.models.schemas import ProcessingStage
 from celery import shared_task
 from celery.signals import worker_process_init
 
@@ -51,7 +51,9 @@ def process_video_pipeline(
     elif transcribe_model == "whisper_local":
         transcription_provider = "local"
 
-    logger.info(f"Таска {task_id}: Транскрибация с помощью {transcription_provider}, Анализ с помощью {analyze_provider}")
+    logger.info(
+        f"Таска {task_id}: Транскрибация с помощью {transcription_provider}, Анализ с помощью {analyze_provider}"
+    )
 
     try:
         # Аудио и Транскрипция
@@ -62,14 +64,10 @@ def process_video_pipeline(
         audio_path = str(Path(video_path).with_suffix(".wav"))
 
         MLEngine.extract_audio(video_path, audio_path)
-        transcript_segments = MLEngine.transcribe(
-            audio_path, provider=transcription_provider
-        )
+        transcript_segments = MLEngine.transcribe(audio_path, provider=transcription_provider)
 
         full_text = " ".join([s.text for s in transcript_segments])
-        long_pauses = MLEngine.get_long_pauses(
-            transcript_segments, threshold=2.0
-        )
+        long_pauses = MLEngine.get_long_pauses(transcript_segments, threshold=2.0)
 
     except Exception as e:
         logger.critical(f"Ошибка при вырезании аудиодорожки: {e}")
@@ -90,7 +88,7 @@ def process_video_pipeline(
         "gaze_label": "-",
         "gesture_label": "-",
         "slide_density": 0,
-        "has_slides": False
+        "has_slides": False,
     }
 
     try:
@@ -140,9 +138,7 @@ def process_video_pipeline(
     # Итоги и Расчет баллов
     total_words = len(full_text.split()) if full_text else 1
 
-    base_filler_count = sum(
-        1 for s in transcript_segments for w in s.words if w.is_filler
-    )
+    base_filler_count = sum(1 for s in transcript_segments for w in s.words if w.is_filler)
 
     filler_ratio = base_filler_count / total_words if total_words > 0 else 0
     filler_score = max(0, 100 - (filler_ratio * 750))
