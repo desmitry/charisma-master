@@ -183,14 +183,18 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             </div>
             <div>
               <h1 className="text-base font-semibold sm:text-lg">Разбор выступления</h1>
-              {result.analyze_provider && result.analyze_model && (
+              {(result.analyze_provider || result.analyze_model) && (
                 <p className="text-[9px] text-white/30 mt-0.5 flex items-center gap-1">
-                  <img 
-                    src={`/icons/${result.analyze_provider}.svg`} 
-                    alt={result.analyze_provider}
-                    className="w-3 h-3 inline"
-                  />
-                  {result.analyze_provider}/{result.analyze_model}
+                  {result.analyze_provider && (
+                    <img 
+                      src={`/icons/${result.analyze_provider}.svg`} 
+                      alt={result.analyze_provider}
+                      className="w-3 h-3 inline"
+                    />
+                  )}
+                  {result.analyze_provider && result.analyze_model 
+                    ? `${result.analyze_provider}/${result.analyze_model}`
+                    : result.analyze_provider || result.analyze_model}
                 </p>
               )}
             </div>
@@ -199,15 +203,19 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             <StatBadge label="Паразиты" value={`${(result.fillers_summary.ratio * 100).toFixed(1)}%`} />
             <StatBadge label="Уверенность" value={`${result.confidence_index.total.toFixed(0)}`} accent />
             
-            {result.analyze_provider && result.analyze_model && (
+            {(result.analyze_provider || result.analyze_model) && (
               <div className="hidden lg:flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs">
-                <img 
-                  src={`/icons/${result.analyze_provider}.svg`} 
-                  alt={result.analyze_provider}
-                  className="w-4 h-4"
-                />
+                {result.analyze_provider && (
+                  <img 
+                    src={`/icons/${result.analyze_provider}.svg`} 
+                    alt={result.analyze_provider}
+                    className="w-4 h-4"
+                  />
+                )}
                 <span className="text-white/70">
-                  {result.analyze_provider}/{result.analyze_model}
+                  {result.analyze_provider && result.analyze_model 
+                    ? `${result.analyze_provider}/${result.analyze_model}`
+                    : result.analyze_provider || result.analyze_model}
                 </span>
               </div>
             )}

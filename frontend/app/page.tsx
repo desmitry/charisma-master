@@ -10,6 +10,7 @@ import { pollForAnalysis, uploadVideo } from "@/lib/api";
 import { GL } from "@/components/gl";
 import { cn } from "@/lib/utils";
 import { ComingSoonNotification } from "@/components/coming-soon-notification";
+import { getFastRequestsCount, decrementFastRequests, hasFastRequestsAvailable } from "@/lib/cookie-utils";
 
 type Stage = "landing" | "processing" | "result";
 
@@ -48,16 +49,22 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState("");
   const [selectedPersona, setSelectedPersona] = useState<string>("");
-  const [selectedLlmProvider, setSelectedLlmProvider] = useState<string>("gigachat");
+  const [selectedLlmProvider, setSelectedLlmProvider] = useState<string>("default");
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [fastRequestsCount, setFastRequestsCount] = useState<number>(3);
   const [isValidRuTubeUrl, setIsValidRuTubeUrl] = useState(false);
   const [isPersonaOpen, setIsPersonaOpen] = useState(false);
   const [personaOpenUp, setPersonaOpenUp] = useState(false);
   const [isProviderOpen, setIsProviderOpen] = useState(false);
   const [providerOpenUp, setProviderOpenUp] = useState(false);
+  const [isModelOpen, setIsModelOpen] = useState(false);
+  const [modelOpenUp, setModelOpenUp] = useState(false);
   const personaRef = useRef<HTMLDivElement>(null);
   const personaButtonRef = useRef<HTMLButtonElement>(null);
   const providerRef = useRef<HTMLDivElement>(null);
   const providerButtonRef = useRef<HTMLButtonElement>(null);
+  const modelRef = useRef<HTMLDivElement>(null);
+  const modelButtonRef = useRef<HTMLButtonElement>(null);
   const [statusText, setStatusText] = useState("Готовим обработку...");
   const [progress, setProgress] = useState(0.15);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +79,12 @@ export default function Home() {
   const [serverErrorText, setServerErrorText] = useState("");
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      setFastRequestsCount(getFastRequestsCount());
+    }
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (personaRef.current && !personaRef.current.contains(event.target as Node)) {
         setIsPersonaOpen(false);
@@ -79,16 +92,25 @@ export default function Home() {
       if (providerRef.current && !providerRef.current.contains(event.target as Node)) {
         setIsProviderOpen(false);
       }
+      if (modelRef.current && !modelRef.current.contains(event.target as Node)) {
+        setIsModelOpen(false);
+      }
     };
 
-    if (isPersonaOpen || isProviderOpen) {
+    if (isPersonaOpen || isProviderOpen || isModelOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isPersonaOpen, isProviderOpen]);
+  }, [isPersonaOpen, isProviderOpen, isModelOpen]);
+
+  useEffect(() => {
+    if (selectedLlmProvider === "default") {
+      setSelectedModel("");
+    }
+  }, [selectedLlmProvider]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -357,11 +379,22 @@ export default function Home() {
       try {
         setProgress(0.1);
         setStatusText("Загружаем видео...");
+        const actualProvider = selectedLlmProvider === "default" ? "gigachat" : selectedLlmProvider;
+        
+        if (selectedModel === "whisper_openai") {
+          if (!hasFastRequestsAvailable()) {
+            throw new Error("У вас закончились запросы для Fast модели");
+          }
+          decrementFastRequests();
+          setFastRequestsCount(getFastRequestsCount());
+        }
+        
         const uploadResult = await uploadVideo(
           selectedFile, 
           videoUrl || null, 
           selectedPersona || undefined,
-          selectedLlmProvider || undefined
+          actualProvider || undefined,
+          selectedModel || undefined
         );
         if (!uploadResult?.task_id) {
           throw new Error("Не получен task_id от сервера");
@@ -383,7 +416,7 @@ export default function Home() {
           setProgress(Math.max(0.3, Math.min(1, p)));
           setStatusText(stageName(status.stage));
         },
-        90_000
+        300_000
       );
 
       if (!analysis) {
@@ -788,12 +821,13 @@ export default function Home() {
                     )}
                   >
                     <img 
-                      src={`/icons/${selectedLlmProvider}.svg`} 
+                      src={`/icons/${selectedLlmProvider === "default" ? "default" : selectedLlmProvider}.svg`} 
                       alt={selectedLlmProvider}
                       className="h-4 w-4"
                     />
                     <span className="text-white/80">
-                      {selectedLlmProvider === "gigachat" ? "GigaChat" : "OpenAI"}
+                      {selectedLlmProvider === "default" ? "По умолчанию" : 
+                       selectedLlmProvider === "gigachat" ? "GigaChat" : "OpenAI"}
                     </span>
                     <svg className={cn("h-3 w-3 text-white/40 transition-transform", isProviderOpen && "rotate-180")} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -808,8 +842,9 @@ export default function Home() {
                     )}
                   >
                     {[
-                      { value: "gigachat", label: "GigaChat" },
-                      { value: "openai", label: "OpenAI" }
+                      { value: "default", label: "По умолчанию", icon: "default" },
+                      { value: "gigachat", label: "GigaChat", icon: "gigachat" },
+                      { value: "openai", label: "OpenAI", icon: "openai" }
                     ].map((option) => (
                       <button
                         key={option.value}
@@ -825,12 +860,122 @@ export default function Home() {
                             : "text-white/60 hover:bg-white/5 hover:text-white"
                         )}
                       >
-                        <img src={`/icons/${option.value}.svg`} alt={option.label} className="h-4 w-4" />
+                        <img src={`/icons/${option.icon}.svg`} alt={option.label} className="h-4 w-4" />
                         {option.label}
                       </button>
                     ))}
                   </div>
                 </div>
+
+                {selectedLlmProvider !== "default" && (
+                  <div 
+                    ref={modelRef} 
+                    className="relative"
+                    style={{
+                      animation: "fadeIn 0.3s ease-out"
+                    }}
+                  >
+                    <button
+                      ref={modelButtonRef}
+                      type="button"
+                      onClick={() => {
+                        if (!isModelOpen && modelButtonRef.current) {
+                          const rect = modelButtonRef.current.getBoundingClientRect();
+                          const spaceBelow = window.innerHeight - rect.bottom;
+                          setModelOpenUp(spaceBelow < 200);
+                        }
+                        setIsModelOpen(!isModelOpen);
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm backdrop-blur-sm transition-all",
+                        isModelOpen
+                          ? "border-white/30 bg-white/15"
+                          : "border-white/10 bg-white/[0.05] hover:border-white/20 hover:bg-white/10"
+                      )}
+                    >
+                      <span className="text-white/80">
+                        {selectedModel === "sber_gigachat" ? "Sber GigaChat" :
+                         selectedModel === "whisper_local" ? "Whisper (Long)" :
+                         selectedModel === "whisper_openai" ? "Whisper (Fast)" :
+                         "Модель"}
+                      </span>
+                      <svg className={cn("h-3 w-3 text-white/40 transition-transform", isModelOpen && "rotate-180")} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    
+                    <div
+                      className={cn(
+                        "absolute z-50 min-w-[200px] rounded-xl border border-white/15 bg-black/95 backdrop-blur-xl overflow-hidden shadow-xl transition-all duration-200",
+                        modelOpenUp ? "bottom-full mb-1" : "top-full mt-1",
+                        isModelOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+                      )}
+                    >
+                      {selectedLlmProvider === "gigachat" ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedModel("sber_gigachat");
+                            setIsModelOpen(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors",
+                            selectedModel === "sber_gigachat"
+                              ? "bg-white/10 text-white"
+                              : "text-white/60 hover:bg-white/5 hover:text-white"
+                          )}
+                        >
+                          <img src="/icons/gigachat.svg" alt="Sber GigaChat" className="h-4 w-4" />
+                          <span>Sber GigaChat</span>
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedModel("whisper_local");
+                              setIsModelOpen(false);
+                            }}
+                            className={cn(
+                              "w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors",
+                              selectedModel === "whisper_local"
+                                ? "bg-white/10 text-white"
+                                : "text-white/60 hover:bg-white/5 hover:text-white"
+                            )}
+                          >
+                            <img src="/icons/openai.svg" alt="OpenAI" className="h-4 w-4" />
+                            <span>Whisper (Long)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (hasFastRequestsAvailable()) {
+                                setSelectedModel("whisper_openai");
+                                setIsModelOpen(false);
+                              }
+                            }}
+                            disabled={!hasFastRequestsAvailable()}
+                            className={cn(
+                              "w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors",
+                              selectedModel === "whisper_openai"
+                                ? "bg-white/10 text-white"
+                                : "text-white/60 hover:bg-white/5 hover:text-white",
+                              !hasFastRequestsAvailable() && "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <img src="/icons/openai.svg" alt="OpenAI" className="h-4 w-4" />
+                              <span>Whisper (Fast)</span>
+                            </div>
+                            <span className="text-[10px] text-white/40">
+                              {fastRequestsCount > 0 ? `осталось ${fastRequestsCount}` : "нет запросов"}
+                            </span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex-1" />
 
