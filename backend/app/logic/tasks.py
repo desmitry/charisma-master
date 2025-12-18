@@ -43,15 +43,27 @@ def process_video_pipeline(
     transcribe_model: str,
     persona: str = None,
 ):
-    transcription_provider = "local"
-    if transcribe_model == "sber_gigachat":
-        transcription_provider = "sber"
-    elif transcribe_model == "whisper_openai":
-        transcription_provider = "openai"
-    elif transcribe_model == "whisper_local":
-        transcription_provider = "local"
+    transcription_provider = "Local"
+    transcription_model_name = settings.whisper_model_path
 
-    logger.info(f"Таска {task_id}: Транскрибация с помощью {transcription_provider}, Анализ с помощью {analyze_provider}")
+    if transcribe_model == "sber_gigachat":
+        transcription_provider = "Sber"
+        transcription_model_name = "SaluteSpeech"
+    elif transcribe_model == "whisper_openai":
+        transcription_provider = "OpenAI"
+        transcription_model_name = "whisper-1"
+    elif transcribe_model == "whisper_local":
+        transcription_provider = "Local"
+        transcription_model_name = settings.whisper_model_path
+
+    # Normalize Analyze string
+    analyze_provider_name = analyze_provider
+    if analyze_provider == "gigachat":
+        analyze_provider_name = "Sber"
+    elif analyze_provider == "openai":
+        analyze_provider_name = "OpenAI"
+
+    logger.info(f"Таска {task_id}: Транскрибация {transcription_provider} ({transcription_model_name}), Анализ {analyze_provider_name} ({analyze_model})")
 
     try:
         # Аудио и Транскрипция
@@ -62,8 +74,18 @@ def process_video_pipeline(
         audio_path = str(Path(video_path).with_suffix(".wav"))
 
         MLEngine.extract_audio(video_path, audio_path)
+        # Note: MLEngine expects lowercase provider key for logic (local, sber, openai)
+        engine_provider_key = transcription_provider.lower()
+        if engine_provider_key == "local":
+             # "Local" -> "local"
+             pass
+        elif engine_provider_key == "sber":
+             pass
+        elif engine_provider_key == "openai":
+             pass
+        
         transcript_segments = MLEngine.transcribe(
-            audio_path, provider=transcription_provider
+            audio_path, provider=engine_provider_key
         )
 
         full_text = " ".join([s.text for s in transcript_segments])
@@ -212,9 +234,10 @@ def process_video_pipeline(
         "mistakes": llm_result.get("mistakes", "N/A"),
         "ideal_text": llm_result.get("ideal_text", "N/A"),
         "persona_feedback": llm_result.get("persona_feedback", "N/A"),
-        "analyze_provider": analyze_provider,
+        "analyze_provider": analyze_provider_name,
         "analyze_model": analyze_model,
-        "transcribe_model": transcribe_model,
+        "transcribe_provider": transcription_provider,
+        "transcribe_model": transcription_model_name,
     }
 
     save_json_result(task_id, result_data)
