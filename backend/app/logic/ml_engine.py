@@ -1,19 +1,20 @@
 import logging
-import subprocess
 import os
+import subprocess
 import time
-import requests
-import urllib3
 import uuid
-import easyocr
-import openai
 from typing import Dict, List
+
 import cv2
-import numpy as np
+import easyocr
 import librosa
 import mediapipe as mp
+import numpy as np
+import openai
+import requests
+import urllib3
 from app.config import settings
-from app.models.schemas import TranscriptSegment, TranscriptWord, PauseInterval
+from app.models.schemas import PauseInterval, TranscriptSegment, TranscriptWord
 
 logger = logging.getLogger(__name__)
 
@@ -52,13 +53,8 @@ class MLEngine:
             return None
 
         if model_type == "whisper":
-            if (
-                settings.whisper_provider == "local"
-                and cls._whisper_model is None
-            ):
-                logger.info(
-                    f"Загрузка local Whisper ({settings.whisper_compute_type})..."
-                )
+            if settings.whisper_provider == "local" and cls._whisper_model is None:
+                logger.info(f"Загрузка local Whisper ({settings.whisper_compute_type})...")
                 from faster_whisper import WhisperModel
 
                 cls._whisper_model = WhisperModel(
@@ -70,9 +66,7 @@ class MLEngine:
 
         if cls._ocr_reader is None:
             logger.info("Загрузка EasyOCR...")
-            cls._ocr_reader = easyocr.Reader(
-                ["ru", "en"], gpu=settings.whisper_device == "cuda"
-            )
+            cls._ocr_reader = easyocr.Reader(["ru", "en"], gpu=settings.whisper_device == "cuda")
 
         return None
 
@@ -125,10 +119,7 @@ class MLEngine:
         return temp_path
 
     @staticmethod
-    def transcribe(
-        audio_path: str, provider: str = "local"
-    ) -> List[TranscriptSegment]:
-
+    def transcribe(audio_path: str, provider: str = "local") -> List[TranscriptSegment]:
         if provider == "sber":
             logger.info("Используем Sber SaluteSpeech API (Async)...")
             try:
@@ -139,9 +130,7 @@ class MLEngine:
                     if os.path.exists(sber_audio_path):
                         os.remove(sber_audio_path)
             except Exception as e:
-                logger.error(
-                    f"Sber API ASR failed: {e}. Fallback to local Whisper."
-                )
+                logger.error(f"Sber API ASR failed: {e}. Fallback to local Whisper.")
                 return MLEngine.transcribe(audio_path, provider="local")
 
         elif provider == "openai":
@@ -162,9 +151,7 @@ class MLEngine:
             segments = []
             for seg in transcript.segments:
                 segments.append(
-                    TranscriptSegment(
-                        start=seg.start, end=seg.end, text=seg.text, words=[]
-                    )
+                    TranscriptSegment(start=seg.start, end=seg.end, text=seg.text, words=[])
                 )
             return segments
 
@@ -180,20 +167,13 @@ class MLEngine:
                 )
                 MLEngine._whisper_model = model
 
-            segments_gen, _ = model.transcribe(
-                audio_path, language="ru", word_timestamps=True
-            )
+            segments_gen, _ = model.transcribe(audio_path, language="ru", word_timestamps=True)
             segments = []
             for seg in segments_gen:
                 words = []
                 if seg.words:
                     for w in seg.words:
-                        clean = (
-                            w.word.strip()
-                            .lower()
-                            .replace(",", "")
-                            .replace(".", "")
-                        )
+                        clean = w.word.strip().lower().replace(",", "").replace(".", "")
                         is_filler = clean in MLEngine.BASE_FILLER_WORDS
                         words.append(
                             TranscriptWord(
@@ -204,9 +184,7 @@ class MLEngine:
                             )
                         )
                 segments.append(
-                    TranscriptSegment(
-                        start=seg.start, end=seg.end, text=seg.text, words=words
-                    )
+                    TranscriptSegment(start=seg.start, end=seg.end, text=seg.text, words=words)
                 )
             return segments
 
@@ -280,9 +258,7 @@ class MLEngine:
 
         logger.info(f"Sber Task Payload: {payload}")
 
-        r_task = requests.post(
-            task_url, headers=headers_task, json=payload, verify=False
-        )
+        r_task = requests.post(task_url, headers=headers_task, json=payload, verify=False)
 
         if r_task.status_code != 200:
             raise RuntimeError(f"Sber Task Creation Error: {r_task.text}")
@@ -290,16 +266,12 @@ class MLEngine:
         task_id = r_task.json()["result"]["id"]
         logger.info(f"Sber: Task started, id={task_id}")
 
-        status_url = (
-            f"https://smartspeech.sber.ru/rest/v1/task:get?id={task_id}"
-        )
+        status_url = f"https://smartspeech.sber.ru/rest/v1/task:get?id={task_id}"
         response_file_id = None
 
         for _ in range(90):
             time.sleep(10)
-            r_status = requests.get(
-                status_url, headers=auth_header, verify=False
-            )
+            r_status = requests.get(status_url, headers=auth_header, verify=False)
 
             if r_status.status_code != 200:
                 continue
@@ -316,7 +288,9 @@ class MLEngine:
         else:
             raise TimeoutError("Sber transcription timed out")
 
-        download_url = f"https://smartspeech.sber.ru/rest/v1/data:download?response_file_id={response_file_id}"
+        download_url = (
+            f"https://smartspeech.sber.ru/rest/v1/data:download?response_file_id={response_file_id}"
+        )
         r_res = requests.get(download_url, headers=auth_header, verify=False)
         r_res.raise_for_status()
         data = r_res.json()
@@ -331,12 +305,7 @@ class MLEngine:
                 if "word" in obj and "start" in obj and "end" in obj:
                     found.append(obj)
                 # Или просто text (иногда бывает)
-                elif (
-                    "text" in obj
-                    and "start" in obj
-                    and "end" in obj
-                    and "word" not in obj
-                ):
+                elif "text" in obj and "start" in obj and "end" in obj and "word" not in obj:
                     found.append(obj)
 
                 for v in obj.values():
@@ -363,9 +332,7 @@ class MLEngine:
             is_filler = clean in MLEngine.BASE_FILLER_WORDS
 
             words_objs.append(
-                TranscriptWord(
-                    start=w_start, end=w_end, text=w_text, is_filler=is_filler
-                )
+                TranscriptWord(start=w_start, end=w_end, text=w_text, is_filler=is_filler)
             )
 
         if words_objs:
@@ -415,16 +382,12 @@ class MLEngine:
             diff = curr_start - prev_end
             if diff >= threshold:
                 pauses.append(
-                    PauseInterval(
-                        start=prev_end, end=curr_start, duration=round(diff, 2)
-                    )
+                    PauseInterval(start=prev_end, end=curr_start, duration=round(diff, 2))
                 )
         return pauses
 
     @staticmethod
-    def calculate_tempo(
-        transcript: List[TranscriptSegment], window_sec=5.0
-    ) -> List[dict]:
+    def calculate_tempo(transcript: List[TranscriptSegment], window_sec=5.0) -> List[dict]:
         words = []
         for seg in transcript:
             if seg.words:
@@ -450,18 +413,14 @@ class MLEngine:
         points = []
         for t in np.arange(0, duration, 1.0):
             t_start, t_end = t, t + window_sec
-            count = sum(
-                1 for w in words if w.start >= t_start and w.end < t_end
-            )
+            count = sum(1 for w in words if w.start >= t_start and w.end < t_end)
             wpm = (count / window_sec) * 60
             zone = "green"
             if wpm < 80 or wpm > 160:
                 zone = "red"
             elif wpm > 140 or wpm < 100:
                 zone = "yellow"
-            points.append(
-                {"time": float(t), "wpm": float(round(wpm, 1)), "zone": zone}
-            )
+            points.append({"time": float(t), "wpm": float(round(wpm, 1)), "zone": zone})
         return points
 
     @staticmethod
@@ -526,9 +485,7 @@ class MLEngine:
         mp_holistic = mp.solutions.holistic
         reader = MLEngine._ocr_reader
         if reader is None:
-            reader = easyocr.Reader(
-                ["ru", "en"], gpu=settings.whisper_device == "cuda"
-            )
+            reader = easyocr.Reader(["ru", "en"], gpu=settings.whisper_device == "cuda")
         cap = cv2.VideoCapture(video_path)
         fps = cap.get(cv2.CAP_PROP_FPS) or 25
         total_frames = 0
@@ -543,7 +500,8 @@ class MLEngine:
         with mp_holistic.Holistic(min_detection_confidence=0.5, model_complexity=1) as holistic:
             while True:
                 ret, frame = cap.read()
-                if not ret: break
+                if not ret:
+                    break
                 total_frames += 1
 
                 # OCR
@@ -551,14 +509,18 @@ class MLEngine:
                     try:
                         h, w = frame.shape[:2]
                         scale = 1000 / w
-                        ocr_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale) if scale < 1 else frame
+                        ocr_frame = (
+                            cv2.resize(frame, (0, 0), fx=scale, fy=scale) if scale < 1 else frame
+                        )
                         result = reader.readtext(ocr_frame, detail=0)
                         txt = " ".join(result)
-                        if len(txt) > 15: slide_text_accum.append(txt)
+                        if len(txt) > 15:
+                            slide_text_accum.append(txt)
                     except:
                         pass
 
-                if total_frames % 5 != 0: continue
+                if total_frames % 5 != 0:
+                    continue
                 try:
                     img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     img.flags.writeable = False
@@ -583,10 +545,14 @@ class MLEngine:
 
                     if res.pose_landmarks:
                         p = res.pose_landmarks.landmark
-                        lw, rw = p[mp_holistic.PoseLandmark.LEFT_WRIST].y, p[mp_holistic.PoseLandmark.RIGHT_WRIST].y
+                        lw, rw = (
+                            p[mp_holistic.PoseLandmark.LEFT_WRIST].y,
+                            p[mp_holistic.PoseLandmark.RIGHT_WRIST].y,
+                        )
                         if prev_wrist_y["left"]:
                             delta = abs(lw - prev_wrist_y["left"]) + abs(rw - prev_wrist_y["right"])
-                            if delta > 0.01: movement_accum += delta
+                            if delta > 0.01:
+                                movement_accum += delta
                         prev_wrist_y = {"left": lw, "right": rw}
 
                 except Exception as e:
@@ -598,7 +564,8 @@ class MLEngine:
         proc_frames = total_frames / 5 if total_frames > 0 else 1
 
         logger.info(
-            f"Video analysis: Total frames={total_frames}, Processed={proc_frames}, Looking={looking_at_camera}")
+            f"Video analysis: Total frames={total_frames}, Processed={proc_frames}, Looking={looking_at_camera}"
+        )
         gaze_score = (looking_at_camera / proc_frames) * 100
         avg_movement = movement_accum / proc_frames
         gesture_score = min(avg_movement * 1000, 100)

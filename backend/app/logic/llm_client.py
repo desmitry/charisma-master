@@ -1,8 +1,8 @@
+import json
 import logging
 from typing import Any, Optional
 
 import openai
-import json
 from app.config import settings
 from app.logic import prompts
 from app.models.schemas import PersonaEnum
@@ -27,9 +27,7 @@ class LLMClient:
         if getattr(settings, "gigachat_credentials", None):
             self.gigachat_client = GigaChat(
                 credentials=settings.gigachat_credentials,
-                verify_ssl_certs=getattr(
-                    settings, "gigachat_verify_ssl", False
-                ),
+                verify_ssl_certs=getattr(settings, "gigachat_verify_ssl", False),
                 scope=getattr(settings, "gigachat_scope", "GIGACHAT_API_PERS"),
             )
 
@@ -87,13 +85,9 @@ class LLMClient:
 
     async def _call_gigachat(self, messages: list, model: str) -> str:
         if not self.gigachat_client:
-            raise ValueError(
-                "GigaChat client is not initialized. Check credentials."
-            )
+            raise ValueError("GigaChat client is not initialized. Check credentials.")
 
-        response = await self.gigachat_client.achat(
-            payload={"messages": messages, "model": model}
-        )
+        response = await self.gigachat_client.achat(payload={"messages": messages, "model": model})
         return response.choices[0].message.content
 
     def _parse_json_response(self, content: str) -> dict:
