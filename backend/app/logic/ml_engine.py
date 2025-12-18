@@ -493,11 +493,12 @@ class MLEngine:
         movement_accum = 0.0
         prev_wrist_y = {"left": None, "right": None}
         slide_text_accum = []
-        frame_interval_ocr = int(fps * 10)
+        frame_interval_ocr = int(fps * 5)
         
         logger.info(f"Start Video Analysis: {video_path}, FPS={fps}")
 
         faces_detected_count = 0
+        PROCESS_EVERY_N_FRAMES = 10
         poses_detected_count = 0
 
         with mp_holistic.Holistic(min_detection_confidence=0.5, model_complexity=1) as holistic:
@@ -511,10 +512,11 @@ class MLEngine:
                 if total_frames % frame_interval_ocr == 0:
                     try:
                         h, w = frame.shape[:2]
-                        scale = 1000 / w
-                        ocr_frame = (
-                            cv2.resize(frame, (0, 0), fx=scale, fy=scale) if scale < 1 else frame
-                        )
+                        if w > 1000:
+                            scale = 1000 / w
+                            ocr_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale)
+                        else:
+                            ocr_frame = frame
                         result = reader.readtext(ocr_frame, detail=0)
                         txt = " ".join(result)
                         if len(txt) > 15:
@@ -525,7 +527,12 @@ class MLEngine:
                 if total_frames % 5 != 0:
                     continue
                 try:
-                    img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    h, w = frame.shape[:2]
+                    target_w = 480
+                    scale = target_w / w
+                    small_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale)
+
+                    img = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                     img.flags.writeable = False
                     res = holistic.process(img)
                     img.flags.writeable = True  #
@@ -567,7 +574,7 @@ class MLEngine:
 
         cap.release()
 
-        proc_frames = total_frames / 5 if total_frames > 0 else 1
+        proc_frames = total_frames / PROCESS_EVERY_N_FRAMES if total_frames > 0 else 1
 
         logger.info(
             f"Video analysis: Total frames={total_frames}, Processed={proc_frames}, Looking={looking_at_camera}"
