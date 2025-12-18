@@ -537,8 +537,11 @@ class MLEngine:
         prev_wrist_y = {"left": None, "right": None}
         slide_text_accum = []
         frame_interval_ocr = int(fps * 10)
+        
+        logger.info(f"Start Video Analysis: {video_path}, FPS={fps}")
 
         faces_detected_count = 0
+        poses_detected_count = 0
 
         with mp_holistic.Holistic(min_detection_confidence=0.5, model_complexity=1) as holistic:
             while True:
@@ -582,6 +585,7 @@ class MLEngine:
                                 looking_at_camera += 1
 
                     if res.pose_landmarks:
+                        poses_detected_count += 1
                         p = res.pose_landmarks.landmark
                         lw, rw = p[mp_holistic.PoseLandmark.LEFT_WRIST].y, p[mp_holistic.PoseLandmark.RIGHT_WRIST].y
                         if prev_wrist_y["left"]:
@@ -590,8 +594,10 @@ class MLEngine:
                         prev_wrist_y = {"left": lw, "right": rw}
 
                 except Exception as e:
-                    if total_frames % 100 == 0:
                         logger.error(f"CV Error at frame {total_frames}: {e}")
+
+                if total_frames % 100 == 0:
+                     logger.info(f"Analyze progress: Frame {total_frames}, Poses={poses_detected_count}, Faces={faces_detected_count}, MoveAccum={movement_accum:.4f}")
 
         cap.release()
 
