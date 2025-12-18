@@ -1,8 +1,8 @@
-import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import openai
+import json
 from app.config import settings
 from app.logic import prompts
 from app.models.schemas import PersonaEnum
@@ -27,21 +27,25 @@ class LLMClient:
         if getattr(settings, "gigachat_credentials", None):
             self.gigachat_client = GigaChat(
                 credentials=settings.gigachat_credentials,
-                verify_ssl_certs=getattr(settings, "gigachat_verify_ssl", False),
+                verify_ssl_certs=getattr(
+                    settings, "gigachat_verify_ssl", False
+                ),
                 scope=getattr(settings, "gigachat_scope", "GIGACHAT_API_PERS"),
             )
 
     async def analyze_speech(
         self,
-        full_text: str,
+        transcript_text: str,
+        slides_text: str,
         provider: str,
         model: str,
         persona: PersonaEnum | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Analyze the speech text using the specified provider and model.
 
-        :param full_text: Transcript of the speech.
+        :param transcript_text: Transcript of the speech.
+        :param slides_text: Text from slides.
         :param persona: Persona identifier for the system prompt.
         :param provider: 'openai' or 'gigachat'. Defaults to settings if None.
         :param model: Specific model name (e.g., 'gpt-4', 'GigaChat-Pro').
@@ -50,9 +54,11 @@ class LLMClient:
         persona_prompt = prompts.get_persona_prompt(persona)
         system_prompt = prompts.get_system_prompt(persona_prompt)
 
+        user_content = f"ТРАНСКРИПЦИЯ:\n{transcript_text[:3000]}\n\nСЛАЙДЫ:\n{slides_text[:1000]}"
+
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": full_text[:3500]},
+            {"role": "user", "content": user_content},
         ]
 
         try:
@@ -63,18 +69,13 @@ class LLMClient:
 
             return self._parse_json_response(content)
 
-        except Exception as e:
+        except Exception as error_msg:
             logger.error(
-                f"LLM Analysis Error ({provider}/{model}): {str(e)}",
+                f"LLM Analysis Error ({provider}/{model}): {str(error_msg)}",
                 exc_info=True,
             )
-            return {
-                "summary": "Не удалось сгенерировать саммари.",
-                "structure": "Анализ недоступен.",
-                "mistakes": f"Ошибка AI провайдера: {provider}",
-                "ideal_text": "Ошибка генерации.",
-                "persona_feedback": f"Произошла техническая ошибка: {str(e)}",
-            }
+
+            return self._error_response(error_msg)
 
     async def _call_openai(self, messages: list, model: str) -> str:
         response = await self.openai_client.chat.completions.create(
@@ -86,13 +87,33 @@ class LLMClient:
 
     async def _call_gigachat(self, messages: list, model: str) -> str:
         if not self.gigachat_client:
-            raise ValueError("GigaChat client is not initialized. Check credentials.")
+            raise ValueError(
+                "GigaChat client is not initialized. Check credentials."
+            )
 
-        response = await self.gigachat_client.achat(payload={"messages": messages, "model": model})
+        response = await self.gigachat_client.achat(
+            payload={"messages": messages, "model": model}
+        )
         return response.choices[0].message.content
 
-    @staticmethod
-    def _parse_json_response(content: str) -> dict:
+    def _parse_json_response(self, content: str) -> dict:
         """Clean and parse the JSON string returned by LLM."""
         cleaned = content.replace("```json", "").replace("```", "").strip()
-        return json.loads(cleaned)
+
+        try:
+            result = json.loads(cleaned)
+            return result
+        except Exception as error_msg:
+            return self._error_response(error_msg)
+
+    @staticmethod
+    def _error_response(error_msg: str):
+        return {
+            "summary": "Ошибка анализа",
+            "structure": "-",
+            "mistakes": error_msg,
+            "ideal_text": "-",
+            "persona_feedback": "Ошибка LLM",
+            "dynamic_fillers": [],
+            "slides_feedback": "-",
+        }
