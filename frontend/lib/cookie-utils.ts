@@ -1,27 +1,64 @@
 const COOKIE_NAME = 'fast_requests';
 const MAX_REQUESTS = 3;
+const COOKIE_LIFETIME_DAYS = 30;
+
+function getSecretKey(): string {
+  if (typeof window === 'undefined') return 'default-secret-key';
+  return window.location.hostname + window.location.origin + 'charisma-secret-2024';
+}
+
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function createSignature(data: string): string {
+  const secret = getSecretKey();
+  return simpleHash(data + secret);
+}
+
+function verifySignature(data: string, signature: string): boolean {
+  const expectedSignature = createSignature(data);
+  return signature === expectedSignature;
+}
 
 function encrypt(data: string): string {
   if (typeof window === 'undefined') return '';
-  const key = window.location.hostname || 'default';
+  const key = getSecretKey();
   let encrypted = '';
   for (let i = 0; i < data.length; i++) {
     const charCode = data.charCodeAt(i) ^ key.charCodeAt(i % key.length);
     encrypted += String.fromCharCode(charCode);
   }
-  return btoa(encrypted);
+  const signature = createSignature(data);
+  const combined = btoa(encrypted) + '.' + signature;
+  return btoa(combined);
 }
 
 function decrypt(encrypted: string): string {
   if (typeof window === 'undefined') return '';
   try {
-    const key = window.location.hostname || 'default';
-    const data = atob(encrypted);
+    const decoded = atob(encrypted);
+    const [encryptedData, signature] = decoded.split('.');
+    if (!encryptedData || !signature) return '';
+    
+    const key = getSecretKey();
+    const data = atob(encryptedData);
     let decrypted = '';
     for (let i = 0; i < data.length; i++) {
       const charCode = data.charCodeAt(i) ^ key.charCodeAt(i % key.length);
       decrypted += String.fromCharCode(charCode);
     }
+    
+    if (!verifySignature(decrypted, signature)) {
+      return '';
+    }
+    
     return decrypted;
   } catch {
     return '';
@@ -55,9 +92,12 @@ export function setFastRequestsCount(count: number): void {
   
   const encrypted = encrypt(count.toString());
   const expires = new Date();
-  expires.setTime(expires.getTime() + 24 * 60 * 60 * 1000);
+  expires.setTime(expires.getTime() + COOKIE_LIFETIME_DAYS * 24 * 60 * 60 * 1000);
   
-  document.cookie = `${COOKIE_NAME}=${encodeURIComponent(encrypted)}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+  const isSecure = window.location.protocol === 'https:';
+  const secureFlag = isSecure ? '; Secure' : '';
+  
+  document.cookie = `${COOKIE_NAME}=${encodeURIComponent(encrypted)}; expires=${expires.toUTCString()}; path=/; SameSite=Strict${secureFlag}`;
 }
 
 export function decrementFastRequests(): number {
