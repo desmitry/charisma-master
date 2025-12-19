@@ -1,4 +1,3 @@
-import os
 import shutil
 import uuid
 from enum import Enum
@@ -20,7 +19,7 @@ class ModelType(str, Enum):
 
 @router.post("/process", response_model=UploadResponse)
 async def process_video(
-    file: UploadFile = File(None),
+    file: UploadFile | None = File(None),
     video_url: str = Form(None),
     persona: PersonaEnum = Form(None),
     analyze_llm_provider: LLMProviderEnum = Form(None),
@@ -39,21 +38,16 @@ async def process_video(
     elif video_url and "rutube" in video_url.lower():
         try:
             rt = Rutube(video_url.lower())
-            res = [int(i) for i in rt.available_resolutions]
-            best_res = max(res)
-            video = rt.get_by_resolution(best_res)
 
-            video.download(destination=str(settings.media_root))
-
-            list_of_files = list(settings.media_root.glob("*.mp4"))
-            if not list_of_files:
-                raise HTTPException(status_code=500, detail="Download failed")
-
-            latest_file = max(list_of_files, key=os.path.getctime)
-
-            new_path = settings.media_root / f"{task_id}.mp4"
-            shutil.move(str(latest_file), str(new_path))
-            final_path = str(new_path)
+            file_path = settings.media_root / f"{task_id}.mp4"
+            with open(file_path, "wb") as f:
+                video = rt.get_best()
+                if not video:
+                    raise HTTPException(
+                        status_code=500, detail="Download failed: video unavailable"
+                    )
+                video.download(stream=f)
+            final_path = str(file_path)
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     else:
