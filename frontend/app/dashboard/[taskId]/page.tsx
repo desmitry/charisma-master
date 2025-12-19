@@ -9,8 +9,7 @@ import { TempoChart } from "@/components/analysis/tempo-chart";
 import { ConfidenceGauge } from "@/components/analysis/confidence-gauge";
 import { Transcript } from "@/components/analysis/transcript";
 import { SummaryBlocks } from "@/components/analysis/summary-blocks";
-import { SmoothScroll } from "@/components/smooth-scroll";
-import { VideoErrorDisplay } from "@/components/video-error-display";
+import { VideoPlayer, VideoPlayerRef } from "@/components/video-player";
 
 export default function DashboardPage() {
   const { taskId } = useParams<{ taskId: string }>();
@@ -19,19 +18,19 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<VideoPlayerRef>(null);
 
+  // Разрешаем скролл на этой странице
   useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    const originalTouch = document.body.style.touchAction;
     document.body.style.overflow = "auto";
     document.body.style.touchAction = "auto";
     return () => {
-      document.body.style.overflow = originalOverflow;
-      document.body.style.touchAction = originalTouch;
+      document.body.style.overflow = "";
+      document.body.style.touchAction = "";
     };
   }, []);
 
+  // Загружаем данные анализа
   useEffect(() => {
     if (!taskId) return;
     (async () => {
@@ -47,26 +46,20 @@ export default function DashboardPage() {
     })();
   }, [taskId]);
 
+  // Формируем URL видео
   const videoSrc = useMemo(() => {
-    if (!analysis) return "";
-    const apiBase =
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
-    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === "true";
-    if (analysis.video_path?.startsWith("http")) return analysis.video_path;
-    if (useMock) {
-      return "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
-    }
+    if (!analysis?.video_path) return "";
+    if (analysis.video_path.startsWith("http")) return analysis.video_path;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
     return `${apiBase}${analysis.video_path}`;
   }, [analysis]);
 
-  useEffect(() => {
-    setVideoError(null); // Сбрасываем ошибку при изменении источника
-  }, [videoSrc]);
-
+  // Перемотка по клику на слово
   const onSeek = (time: number) => {
-    if (!videoRef.current) return;
-    videoRef.current.currentTime = time;
-    void videoRef.current.play();
+    if (playerRef.current) {
+      playerRef.current.seek(time);
+      playerRef.current.play();
+    }
   };
 
   if (loading) {
@@ -91,7 +84,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-[#0a0c16] to-black text-white">
-      <SmoothScroll />
       <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -110,44 +102,15 @@ export default function DashboardPage() {
 
         <div className="grid gap-6 lg:grid-cols-[1.4fr,1fr]">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
-            <div className="aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black/60">
-              {videoError ? (
-                <VideoErrorDisplay error={videoError} />
-              ) : (
-                <video
-                  ref={videoRef}
-                  src={videoSrc}
-                  controls
-                  className="h-full w-full object-contain"
-                  onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                  onError={(e) => {
-                    const video = e.currentTarget;
-                    const error = video.error;
-                    let errorMessage = "Неизвестная ошибка";
-                    
-                    if (error) {
-                      switch (error.code) {
-                        case MediaError.MEDIA_ERR_ABORTED:
-                          errorMessage = "Загрузка видео была прервана";
-                          break;
-                        case MediaError.MEDIA_ERR_NETWORK:
-                          errorMessage = "Ошибка сети при загрузке видео";
-                          break;
-                        case MediaError.MEDIA_ERR_DECODE:
-                          errorMessage = "Ошибка декодирования видео";
-                          break;
-                        case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-                          errorMessage = "Формат видео не поддерживается";
-                          break;
-                        default:
-                          errorMessage = `Ошибка воспроизведения (код: ${error.code})`;
-                      }
-                    }
-                    
-                    setVideoError(errorMessage);
-                  }}
-                />
-              )}
+            <div className="aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
+              <VideoPlayer
+                ref={playerRef}
+                src={videoSrc}
+                error={videoError}
+                onTimeUpdate={setCurrentTime}
+                onError={setVideoError}
+                className="h-full w-full object-contain"
+              />
             </div>
             <div className="mt-4 grid grid-cols-3 gap-3 text-center text-sm text-white/70">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
@@ -184,7 +147,7 @@ export default function DashboardPage() {
             <p className="text-sm text-white/60">
               Кликни по слову, чтобы перемотать на момент в плеере
             </p>
-            <div className="mt-4 max-h-[520px] overflow-y-auto pr-2" data-lenis-prevent>
+            <div className="mt-4 max-h-[520px] overflow-y-auto pr-2">
               <Transcript
                 segments={analysis.transcript}
                 currentTime={currentTime}
@@ -204,4 +167,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
