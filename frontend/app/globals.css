@@ -38,7 +38,7 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   overflow: hidden;
-  touch-action: none;
+  touch-action: auto;
 }
 
 html {
@@ -60,6 +60,11 @@ html.lenis, html.lenis body {
 
 .lenis.lenis-smooth [data-lenis-prevent] {
   overscroll-behavior: contain;
+}
+
+/* Видео плеер всегда должен принимать touch события */
+video {
+  touch-action: auto;
 }
 
 .lenis.lenis-stopped {

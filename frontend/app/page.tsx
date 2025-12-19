@@ -451,7 +451,7 @@ export default function Home() {
           setProgress(Math.max(0.3, Math.min(1, p)));
           setStatusText(stageName(status.stage));
         },
-        300_000
+        900_000
       );
 
       if (!analysis) {

@@ -11,7 +11,7 @@ import { SmoothScroll } from "./smooth-scroll";
 import { TempoChart } from "./analysis/tempo-chart";
 import { ComingSoonNotification } from "./coming-soon-notification";
 import { PdfExportDropdown } from "./pdf-export-modal";
-import { VideoErrorDisplay } from "./video-error-display";
+import { VideoPlayer, VideoPlayerRef } from "./video-player";
 
 type Props = {
   result: AnalysisResult;
@@ -64,7 +64,7 @@ const IconHand = () => (
 );
 
 export function AnalysisDashboard({ result, onBack }: Props) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const playerRef = useRef<VideoPlayerRef>(null);
   const tempoChartRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -106,7 +106,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   useEffect(() => {
     const newSrc = resolveVideoUrl(result.video_path);
     setVideoSrc(newSrc);
-    setVideoError(null); // Сбрасываем ошибку при изменении источника
+    setVideoError(null);
   }, [result.video_path]);
 
   useEffect(() => {
@@ -132,15 +132,10 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   }, []);
 
   const handleWordClick = (word: TranscriptWord) => {
-    if (!videoRef.current) return;
-    videoRef.current.currentTime = word.start;
-    void videoRef.current.play().catch(() => undefined);
+    if (!playerRef.current) return;
+    playerRef.current.seek(word.start);
+    playerRef.current.play();
     setCurrentTime(word.start);
-  };
-
-  const onTimeUpdate = () => {
-    if (!videoRef.current) return;
-    setCurrentTime(videoRef.current.currentTime);
   };
 
   const groupedTranscript = useMemo(() => {
@@ -267,48 +262,16 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             )}
           >
             {!isEcoMode && !videoError && (
-              <div className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-20 bg-gradient-to-tr from-white/30 via-white/10 to-transparent" />
+              <div className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-20 bg-gradient-to-tr from-white/30 via-white/10 to-transparent pointer-events-none" />
             )}
-            {videoError ? (
-              <VideoErrorDisplay error={videoError} />
-            ) : (
-              <video
-                ref={videoRef}
-                src={videoSrc}
-                controls
-                className={cn(
-                  "aspect-video w-full object-contain",
-                  isEcoMode ? "bg-black" : "bg-black"
-                )}
-                onTimeUpdate={onTimeUpdate}
-                onError={(e) => {
-                  const video = e.currentTarget;
-                  const error = video.error;
-                  let errorMessage = "Неизвестная ошибка";
-                  
-                  if (error) {
-                    switch (error.code) {
-                      case MediaError.MEDIA_ERR_ABORTED:
-                        errorMessage = "Загрузка видео была прервана";
-                        break;
-                      case MediaError.MEDIA_ERR_NETWORK:
-                        errorMessage = "Ошибка сети при загрузке видео";
-                        break;
-                      case MediaError.MEDIA_ERR_DECODE:
-                        errorMessage = "Ошибка декодирования видео";
-                        break;
-                      case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-                        errorMessage = "Формат видео не поддерживается";
-                        break;
-                      default:
-                        errorMessage = `Ошибка воспроизведения (код: ${error.code})`;
-                    }
-                  }
-                  
-                  setVideoError(errorMessage);
-                }}
-              />
-            )}
+            <VideoPlayer
+              ref={playerRef}
+              src={videoSrc}
+              error={videoError}
+              onTimeUpdate={setCurrentTime}
+              onError={setVideoError}
+              className="aspect-video w-full object-contain bg-black"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
@@ -491,6 +454,14 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                 mounted={mounted}
                 accent="amber"
               />
+              {result.slide_analysis && (result.slide_analysis.acr_summary || result.slide_analysis.ocr_summary) && (
+                <InsightCard
+                  title="Анализ презентации"
+                  content={result.slide_analysis.acr_summary || result.slide_analysis.ocr_summary || ""}
+                  delay={500}
+                  mounted={mounted}
+                />
+              )}
             </div>
           )}
         </div>
