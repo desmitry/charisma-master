@@ -52,7 +52,12 @@ class LLMClient:
         persona_prompt = prompts.get_persona_prompt(persona)
         system_prompt = prompts.get_system_prompt(persona_prompt)
 
-        user_content = f"ТРАНСКРИПЦИЯ:\n{transcript_text[:3000]}\n\nСЛАЙДЫ:\n{slides_text[:1000]}"
+        if not slides_text or not slides_text.strip():
+            slides_content = "СЛАЙДЫ НЕ ОБНАРУЖЕНИ (ТЕКСТ ОТСУТСТВУЕТ)"
+        else:
+            slides_content = slides_text[:1000]
+
+        user_content = f"ТРАНСКРИПЦИЯ:\n{transcript_text[:3000]}\n\nСЛАЙДЫ:\n{slides_content}"
 
         messages = [
             {"role": "system", "content": system_prompt},
