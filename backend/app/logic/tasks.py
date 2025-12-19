@@ -98,7 +98,7 @@ def process_video_pipeline(
     }
 
     try:
-        cv_metrics = MLEngine.analyze_slides_and_video(video_path)
+        cv_metrics = MLEngine.analyze_slides_and_video(video_path, do_slides)
     except Exception as e:
         logger.warning(f"CV analysis failed: {e}")
 
