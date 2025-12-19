@@ -1,45 +1,79 @@
 services:
-  redis:
-    image: redis:8.4.0
-    container_name: redis
-    command:
-      - redis-server
-    restart: always
+    redis:
+        image: redis:8.4.0
+        container_name: redis
+        command:
+            - redis-server
+        restart: unless-stopped
 
-  celery:
-    image: ghcr.io/desmitry/charisma-master-backend:latest
-    container_name: celery
-    command: [ "celery", "-A", "app.celery_app", "worker", "--loglevel=info", "--pool=solo" ]
-    restart: always
-    env_file:
-      - ./backend/.env
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    depends_on:
-      - redis
+    celery:
+        image: ghcr.io/desmitry/charisma-master-backend:latest
+        container_name: celery
+        command:
+            [
+                "celery",
+                "-A",
+                "app.celery_app",
+                "worker",
+                "--loglevel=info",
+                "--pool=solo",
+            ]
+        restart: unless-stopped
+        env_file:
+            - ./backend/.docker.env
+        depends_on:
+            - redis
+        volumes:
+            - ./media:/backend/app/media
+        deploy:
+          resources:
+            reservations:
+              devices:
+                - driver: nvidia
+                  count: 1
+                  capabilities: [gpu]
 
-  backend:
-    image: ghcr.io/desmitry/charisma-master-backend:latest
-    container_name: backend
-    command: [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000" ]
-    restart: always
-    env_file:
-      - ./backend/.env
-    ports:
-      - 127.0.0.1:8000:8000
-    depends_on:
-      - celery
+    backend:
+        image: ghcr.io/desmitry/charisma-master-backend:latest
+        container_name: backend
+        command:
+            [
+                "uvicorn",
+                "app.main:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000",
+                "--timeout-keep-alive",
+                "600",
+            ]
+        restart: unless-stopped
+        env_file:
+            - ./backend/.docker.env
+        ports:
+            - 127.0.0.1:8000:8000
+        depends_on:
+            - celery
+        volumes:
+            - ./media:/backend/app/media
+        deploy:
+          resources:
+            reservations:
+              devices:
+                - driver: nvidia
+                  count: 1
+                  capabilities: [gpu]
 
-  frontend:
-    image: ghcr.io/desmitry/charisma-master-frontend:latest
-    container_name: frontend
-    command: [ "npm", "start" ]
-    restart: always
-    ports:
-      - 127.0.0.1:3000:3000
-    environment:
-      - NODE_ENV=production
-      - PORT=3000
-    depends_on:
-      - backend
+    frontend:
+        image: ghcr.io/desmitry/charisma-master-frontend:latest
+        container_name: frontend
+        command: ["npm", "start"]
+        restart: unless-stopped
+        ports:
+            - 127.0.0.1:3030:3000
+        environment:
+            - NODE_ENV=production
+            - PORT=3000
+            - BACKEND_URL=http://backend:8000
+        depends_on:
+            - backend

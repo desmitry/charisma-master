@@ -1,37 +1,47 @@
-### Build:
-* Backend
+# Charisma Master
 
-```cd backend```
+Улучшай свою речь с [нашей помощью](https://charisma.geekiot.tech)!
 
-```uv sync```
+## О проекте
 
-```docker run -d -p 6379:6379 redis```
+* [Сайт](https://charisma.geekiot.tech), предоставляющий AI-анализ выступлений: выявление слов паразитов, недочетов и темпа речи, а также краткая выжимка слов спикера.
 
-```celery -A src.celery_app worker --loglevel=info --pool=solo```
+* Нейросети также анализирует слайды на презентации спикера (при их наличиии) и его жестикуляцию.
 
-```uvicorn src.main:app --reload --host 0.0.0.0 --port 8000```
+* Для навигации в речи спикера есть удобный плеер.
 
-* Frontend:
+## При разработке
 
-```cd frontend```
+Перед началом убедитесь, что вы скопировали содержимое файла `backend/.env.example` в `backend/.env` и настроили его.
 
-```npm install```
+### Backend
 
-```npm run dev```
+ `cd backend`
 
+ `uv sync`
 
-### With Docker:
+ `docker run -d -p 6379:6379 redis`
 
-```cd backend```
+ `celery -A app.celery_app worker --loglevel=info --pool=solo`
 
-```docker build -t ghcr.io/desmitry/charisma-master-backend:latest -f Dockerfile .```
+ `uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
 
-```cd ..```
+### Frontend
 
-```cd frontend```
+ `cd frontend`
 
-```docker build -t ghcr.io/desmitry/charisma-master-frontend:latest -f Dockerfile .```
+ `npm run build`
 
-```cd ..```
+ `npm start`
 
-```docker compose up -d```
+## Деплой с помощью Docker Compose
+
+Перед началом убедитесь, что вы скопировали содержимое файла `backend/.env.example` в `backend/.env` и настроили его.
+
+Все необходимые для связи бекэнда и фронтэнда URL передаются в `docker-compose.yaml` , вам не стоит изменять `backend/.env` ради них, так как они будут перезаписаны. Просто держите в `backend/.env` актуальные данные для разработки, а в `docker-compose.yaml` перезаписывайте необходимые для деплоя данные.
+
+### Команды
+
+ `./scripts/build.sh`
+
+ `docker compose up`

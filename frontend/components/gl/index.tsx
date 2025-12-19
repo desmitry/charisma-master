@@ -1,4 +1,5 @@
-import { Perf } from "r3f-perf";
+import { useCallback, useState, useEffect, useRef } from "react";
+import * as THREE from "three";
 import { Effects } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { useControls } from "leva";
@@ -6,8 +7,95 @@ import { Particles } from "./particles";
 import { VignetteShader } from "./shaders/vignetteShader";
 import { useEcoMode } from "@/lib/eco-mode-context";
 
+function checkWebGLSupport(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+    return !!gl;
+  } catch {
+    return false;
+  }
+}
+
 export const GL = () => {
   const { isEcoMode } = useEcoMode();
+  const [contextLost, setContextLost] = useState(false);
+  const [key, setKey] = useState(0);
+  const [webglSupported, setWebglSupported] = useState(false);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const supported = checkWebGLSupport();
+    setWebglSupported(supported);
+    
+    return () => {
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
+      }
+      if (rendererRef.current) {
+        try {
+          rendererRef.current.setAnimationLoop(null);
+          rendererRef.current.dispose();
+          const context = rendererRef.current.getContext();
+          if (context) {
+            const loseContext = (context as any).loseContext;
+            if (loseContext) {
+              loseContext.call(context);
+            }
+          }
+          rendererRef.current = null;
+        } catch {}
+      }
+    };
+  }, []);
+
+  const handleCreated = useCallback(({ gl }: { gl: THREE.WebGLRenderer }) => {
+    rendererRef.current = gl;
+    const canvas = gl.domElement;
+    let isMounted = true;
+    
+    const handleContextLost = (event: Event) => {
+      event.preventDefault();
+      if (isMounted) {
+        setContextLost(true);
+      }
+    };
+    
+    const handleContextRestored = () => {
+      if (isMounted) {
+        setContextLost(false);
+        setKey(prev => prev + 1);
+      }
+    };
+    
+    canvas.addEventListener("webglcontextlost", handleContextLost);
+    canvas.addEventListener("webglcontextrestored", handleContextRestored);
+    
+    const cleanup = () => {
+      isMounted = false;
+      canvas.removeEventListener("webglcontextlost", handleContextLost);
+      canvas.removeEventListener("webglcontextrestored", handleContextRestored);
+      try {
+        gl.setAnimationLoop(null);
+        gl.dispose();
+        const context = gl.getContext();
+        if (context) {
+          const loseContext = (context as any).loseContext;
+          if (loseContext) {
+            loseContext.call(context);
+          }
+        }
+        rendererRef.current = null;
+      } catch {}
+    };
+    
+    cleanupRef.current = cleanup;
+    return cleanup;
+  }, []);
+
   const {
     speed,
     focus,
@@ -45,8 +133,16 @@ export const GL = () => {
   });
   const effectiveSize = isEcoMode ? Math.min(size, 256) : size;
 
+  if (contextLost || !webglSupported) {
+    return (
+      <div id="webgl">
+        <div className="eco-bg w-full h-full" />
+      </div>
+    );
+  }
+
   return (
-    <div id="webgl">
+    <div id="webgl" key={key}>
       <Canvas
         camera={{
           position: [
@@ -56,11 +152,19 @@ export const GL = () => {
           near: 0.01,
           far: 300,
         }}
-        dpr={isEcoMode ? [1, 1] : [1, 2]}
+        dpr={isEcoMode ? [1, 1] : [1, 1.5]}
         gl={{ 
-          powerPreference: isEcoMode ? "low-power" : "high-performance",
+          powerPreference: "low-power",
           antialias: false,
+          preserveDrawingBuffer: false,
+          failIfMajorPerformanceCaveat: false,
+          stencil: false,
+          depth: true,
+          alpha: false,
         }}
+        onCreated={handleCreated}
+        performance={{ min: 0.5, max: 1, debounce: 200 }}
+        frameloop="always"
       >
         <color attach="background" args={["#000"]} />
         <Particles

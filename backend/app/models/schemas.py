@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import List, Optional
+
 from pydantic import BaseModel
 
 
@@ -7,6 +8,11 @@ class PersonaEnum(str, Enum):
     strict_critic = "strict_critic"
     kind_mentor = "kind_mentor"
     steve_jobs_style = "steve_jobs_style"
+
+
+class LLMProviderEnum(str, Enum):
+    openai = "openai"
+    gigachat = "gigachat"
 
 
 class ProcessingState(str, Enum):
@@ -42,11 +48,24 @@ class TempoPoint(BaseModel):
     zone: str
 
 
+class PauseInterval(BaseModel):
+    start: float
+    end: float
+    duration: float
+
+
+class SlideAnalysis(BaseModel):
+    has_slides: bool
+    text_density_score: float
+    ocr_summary: str = ""
+
+
 class ConfidenceComponents(BaseModel):
+    volume_level: str
     volume_score: float
     filler_score: float
     gaze_score: float
-    gesture_score: float
+    gesture_advice: str
     tone_score: float
 
 
@@ -60,14 +79,20 @@ class AnalysisResult(BaseModel):
     video_path: str
     transcript: List[TranscriptSegment]
     tempo: List[TempoPoint]
+    long_pauses: List[PauseInterval]
     fillers_summary: dict
+    dynamic_fillers: List[str]
+    slide_analysis: SlideAnalysis
     confidence_index: ConfidenceIndex
     summary: str
     structure: str
     mistakes: str
     ideal_text: str
-    persona_feedback: Optional[str] = None
-    slide_text_density: float = 0.0
+    persona_feedback: str
+    transcribe_provider: Optional[str] = None
+    transcribe_model: Optional[str] = None
+    analyze_provider: Optional[str] = None
+    analyze_model: Optional[str] = None
     raw_metrics: Optional[dict] = None
 
 

@@ -1,12 +1,45 @@
 import { AnalysisResult, TaskStatusResponse } from "@/types/analysis";
+import { uploadVideoAction } from "@/app/actions/upload";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || 
+  (typeof window !== "undefined" ? "/api/proxy" : "http://localhost:8000");
+
+class ExpectedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ExpectedError";
+    Object.setPrototypeOf(this, ExpectedError.prototype);
+  }
+}
 
 async function checkResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(text || response.statusText);
+    let errorMessage = text || response.statusText || "";
+    
+    try {
+      const jsonData = JSON.parse(text);
+      if (jsonData.detail || jsonData.error || jsonData.message) {
+        errorMessage = jsonData.detail || jsonData.error || jsonData.message;
+      }
+    } catch {
+    }
+    
+    if (response.status === 502 || response.status === 503) {
+      const error = new ExpectedError(errorMessage || "Сервер недоступен. Проверьте, запущен ли backend.");
+      (error as any).statusCode = response.status;
+      throw error;
+    }
+    if (response.status === 413) {
+      const error = new ExpectedError(errorMessage || "Файл слишком большой. Максимальный размер: 200MB.");
+      (error as any).statusCode = response.status;
+      throw error;
+    }
+    
+    const error = new Error(errorMessage || "Ошибка сервера");
+    (error as any).statusCode = response.status;
+    throw error;
   }
   return response.json() as Promise<T>;
 }
@@ -14,7 +47,10 @@ async function checkResponse<T>(response: Response): Promise<T> {
 export async function uploadVideo(
   file: File | null,
   videoUrl: string | null,
-  persona?: string
+  persona?: string,
+  llmProvider?: string,
+  modelType?: string,
+  doSlides?: boolean
 ): Promise<{ task_id: string }> {
   const formData = new FormData();
   if (file) {
@@ -26,13 +62,62 @@ export async function uploadVideo(
   if (persona) {
     formData.append("persona", persona);
   }
+  if (llmProvider) {
+    formData.append("analyze_llm_provider", llmProvider);
+  }
+  if (modelType) {
+    formData.append("model_type", modelType);
+  }
+  if (doSlides !== undefined) {
+    formData.append("do_slides", doSlides ? "true" : "false");
+  }
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/process`, {
-    method: "POST",
-    body: formData,
-  });
+  try {
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
 
-  return checkResponse<{ task_id: string }>(response);
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      let errorMessage = text || response.statusText || "";
+      
+      try {
+        const jsonData = JSON.parse(text);
+        if (jsonData.detail || jsonData.error || jsonData.message) {
+          errorMessage = jsonData.detail || jsonData.error || jsonData.message;
+        }
+      } catch {
+      }
+      
+      if (response.status === 502 || response.status === 503) {
+        const error = new ExpectedError(errorMessage || "Сервер недоступен. Проверьте, запущен ли backend.");
+        (error as any).statusCode = response.status;
+        throw error;
+      }
+      if (response.status === 413) {
+        const error = new ExpectedError(errorMessage || "Файл слишком большой. Максимальный размер: 200MB.");
+        (error as any).statusCode = response.status;
+        throw error;
+      }
+      
+      const error = new Error(errorMessage || "Ошибка сервера");
+      (error as any).statusCode = response.status;
+      throw error;
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error instanceof ExpectedError) {
+      throw error;
+    }
+    if (error instanceof Error) {
+      if (error.message.includes("Сервер недоступен") || error.message.includes("File too large")) {
+        throw new ExpectedError(error.message);
+      }
+    }
+    throw error;
+  }
 }
 
 export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
@@ -42,7 +127,43 @@ export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse>
 
 export async function getAnalysis(taskId: string): Promise<AnalysisResult> {
   const response = await fetch(`${API_BASE_URL}/api/v1/analysis/${taskId}`);
-  return checkResponse<AnalysisResult>(response);
+  const data = await checkResponse<any>(response);
+  
+  // Маппинг slide_analysis.text_density_score в slide_text_density
+  if (data.slide_analysis?.text_density_score !== undefined && data.slide_text_density === undefined) {
+    data.slide_text_density = Math.min(100, Math.max(0, data.slide_analysis.text_density_score));
+  }
+  
+  // Ограничиваем все score значения до 100
+  if (data.confidence_index) {
+    if (data.confidence_index.total !== undefined) {
+      data.confidence_index.total = Math.min(100, Math.max(0, data.confidence_index.total));
+    }
+    if (data.confidence_index.components) {
+      if (data.confidence_index.components.volume_score !== undefined) {
+        // Если volume_score меньше 1, значит это доля (0-1), умножаем на 100
+        let volumeScore = data.confidence_index.components.volume_score;
+        if (volumeScore < 1 && volumeScore > 0) {
+          volumeScore = volumeScore * 100;
+        }
+        data.confidence_index.components.volume_score = Math.min(100, Math.max(0, volumeScore));
+      }
+      if (data.confidence_index.components.filler_score !== undefined) {
+        data.confidence_index.components.filler_score = Math.min(100, Math.max(0, data.confidence_index.components.filler_score));
+      }
+      if (data.confidence_index.components.gaze_score !== undefined) {
+        data.confidence_index.components.gaze_score = Math.min(100, Math.max(0, data.confidence_index.components.gaze_score));
+      }
+      if (data.confidence_index.components.gesture_score !== undefined) {
+        data.confidence_index.components.gesture_score = Math.min(100, Math.max(0, data.confidence_index.components.gesture_score));
+      }
+      if (data.confidence_index.components.tone_score !== undefined) {
+        data.confidence_index.components.tone_score = Math.min(100, Math.max(0, data.confidence_index.components.tone_score));
+      }
+    }
+  }
+  
+  return data as AnalysisResult;
 }
 
 export async function pollForAnalysis(
@@ -76,6 +197,10 @@ export function getPdfUrl(taskId: string): string {
 export function resolveVideoUrl(videoPath: string): string {
   if (!videoPath) return "";
   if (videoPath.startsWith("http")) return videoPath;
+  if (videoPath.startsWith("/") && !videoPath.startsWith("/media/")) return videoPath;
   return `${API_BASE_URL}${videoPath}`;
 }
+
+
+
 

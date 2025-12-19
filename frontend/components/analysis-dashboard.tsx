@@ -1,22 +1,34 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { AnalysisResult, TempoPoint, TranscriptWord } from "@/types/analysis";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
+import type { CSSProperties } from "react";
+import { AnalysisResult, TempoPoint, TranscriptWord, LongPause } from "@/types/analysis";
 import { resolveVideoUrl, getPdfUrl } from "@/lib/api";
+import { useEcoMode } from "@/lib/eco-mode-context";
 import { cn } from "@/lib/utils";
 import { SmoothScroll } from "./smooth-scroll";
+import { TempoChart } from "./analysis/tempo-chart";
+import { ComingSoonNotification } from "./coming-soon-notification";
+import { PdfExportDropdown } from "./pdf-export-modal";
+import { VideoPlayer, VideoPlayerRef } from "./video-player";
 
 type Props = {
   result: AnalysisResult;
   onBack?: () => void;
 };
 
-// Easing helpers для плавных анимаций
+type ViewportRect = {
+  width: number;
+  height: number;
+  offsetLeft: number;
+  offsetTop: number;
+};
+
 const easeOutExpo = (t: number) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 const easeOutQuint = (t: number) => 1 - Math.pow(1 - t, 5);
 
-// Лаконичные монохромные SVG-иконки
 const IconTarget = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
     <circle cx="12" cy="12" r="9" opacity="0.5" />
@@ -42,14 +54,77 @@ const IconClock = () => (
     <path d="M12 7v6l4 2" />
   </svg>
 );
+const IconHand = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+    <path d="M18 11v-1a2 2 0 0 0-2-2h-1" />
+    <path d="M14 10V9a2 2 0 0 0-2-2h-1" />
+    <path d="M10 9.5V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v7" />
+    <path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-1a8 8 0 0 1-8-8 2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-3z" />
+  </svg>
+);
 
 export function AnalysisDashboard({ result, onBack }: Props) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const playerRef = useRef<VideoPlayerRef>(null);
+  const tempoChartRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<"transcript" | "insights">("transcript");
+  const [videoSrc, setVideoSrc] = useState(() => {
+    return resolveVideoUrl(result.video_path);
+  });
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const { isEcoMode } = useEcoMode();
+  
+  const [tempoModal, setTempoModal] = useState<{
+    open: boolean;
+    phase: "closed" | "opening" | "open" | "closing";
+    originRect: DOMRect | null;
+  }>({ open: false, phase: "closed", originRect: null });
 
-  const videoSrc = resolveVideoUrl(result.video_path);
+  const [showComingSoon, setShowComingSoon] = useState(false);
+  const [showPdfDropdown, setShowPdfDropdown] = useState(false);
+  const pdfButtonRef = useRef<HTMLButtonElement>(null);
+
+  const openTempoModal = useCallback(() => {
+    if (!tempoChartRef.current) return;
+    const rect = tempoChartRef.current.getBoundingClientRect();
+    setTempoModal({ open: true, phase: "opening", originRect: rect });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTempoModal(prev => ({ ...prev, phase: "open" }));
+      });
+    });
+  }, []);
+
+  const closeTempoModal = useCallback(() => {
+    setTempoModal(prev => ({ ...prev, phase: "closing" }));
+    setTimeout(() => {
+      setTempoModal({ open: false, phase: "closed", originRect: null });
+    }, 350);
+  }, []);
+
+  useEffect(() => {
+    const newSrc = resolveVideoUrl(result.video_path);
+    setVideoSrc(newSrc);
+    setVideoError(null);
+  }, [result.video_path]);
+
+  useEffect(() => {
+    if (!tempoModal.open) {
+      return;
+    }
+    
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeTempoModal();
+    };
+    document.addEventListener("keydown", handleEscape);
+    document.body.style.overflow = "hidden";
+    
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "";
+    };
+  }, [tempoModal.open, closeTempoModal]);
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 100);
@@ -57,49 +132,71 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   }, []);
 
   const handleWordClick = (word: TranscriptWord) => {
-    if (!videoRef.current) return;
-    videoRef.current.currentTime = word.start;
-    void videoRef.current.play().catch(() => undefined);
+    if (!playerRef.current) return;
+    playerRef.current.seek(word.start);
+    playerRef.current.play();
     setCurrentTime(word.start);
   };
 
-  const onTimeUpdate = () => {
-    if (!videoRef.current) return;
-    setCurrentTime(videoRef.current.currentTime);
-  };
-
-  // Group transcript by time chunks for better navigation
   const groupedTranscript = useMemo(() => {
-    const groups: { label: string; segments: typeof result.transcript }[] = [];
-    const chunkSize = 30; // 30 seconds per group
+    type TimelineItem = 
+      | { type: "word"; word: TranscriptWord }
+      | { type: "pause"; pause: LongPause };
     
-    result.transcript.forEach((seg) => {
-      const groupIdx = Math.floor(seg.start / chunkSize);
+    const groups: { label: string; items: TimelineItem[] }[] = [];
+    const chunkSize = 30;
+    const longPauses = result.long_pauses || [];
+    
+    // Collect all words
+    const allWords: TimelineItem[] = result.transcript.flatMap((seg) => 
+      seg.words.map((word) => ({ type: "word" as const, word }))
+    );
+    
+    // Collect all pauses
+    const allPauses: TimelineItem[] = longPauses.map((pause) => ({ 
+      type: "pause" as const, 
+      pause 
+    }));
+    
+    // Combine and sort
+    const timeline = [...allWords, ...allPauses].sort((a, b) => {
+      const startA = a.type === "word" ? a.word.start : a.pause.start;
+      const startB = b.type === "word" ? b.word.start : b.pause.start;
+      return startA - startB;
+    });
+    
+    // Group by time chunks
+    timeline.forEach((item) => {
+      const itemStart = item.type === "word" ? item.word.start : item.pause.start;
+      const groupIdx = Math.floor(itemStart / chunkSize);
       const label = `${formatTime(groupIdx * chunkSize)} - ${formatTime((groupIdx + 1) * chunkSize)}`;
       
       if (!groups[groupIdx]) {
-        groups[groupIdx] = { label, segments: [] };
+        groups[groupIdx] = { label, items: [] };
       }
-      groups[groupIdx].segments.push(seg);
+      groups[groupIdx].items.push(item);
     });
     
     return groups.filter(Boolean);
-  }, [result.transcript]);
+  }, [result.transcript, result.long_pauses]);
 
   return (
-    <div className="relative z-10 min-h-screen bg-[#050505] text-white overflow-hidden">
+    <div className="relative z-10 min-h-screen bg-[#050505] text-white overflow-x-hidden w-full max-w-[100vw]">
       <SmoothScroll />
-      {/* Мягкие фоновые свечения */}
-      <div className="pointer-events-none fixed inset-0 blur-3xl opacity-20">
-        <div className="absolute -left-20 top-10 h-80 w-80 rounded-full bg-white/15" />
-        <div className="absolute right-0 bottom-0 h-96 w-96 rounded-full bg-white/10" />
-      </div>
+      {!isEcoMode ? (
+        <div className="pointer-events-none fixed inset-0 blur-3xl opacity-20">
+          <div className="absolute -left-20 top-10 h-80 w-80 rounded-full bg-white/15" />
+          <div className="absolute right-0 bottom-0 h-96 w-96 rounded-full bg-white/10" />
+        </div>
+      ) : (
+        <div className="pointer-events-none fixed inset-0 -z-10 bg-gradient-to-b from-black via-[#0a0a0a] to-[#050505]" />
+      )}
 
-      {/* Header */}
       <header
         className={cn(
-          "sticky top-0 z-40 border-b border-white/10 bg-black/80 backdrop-blur-xl",
-          "transform transition-all duration-700",
+          "sticky top-0 z-40 border-b border-white/10 bg-black/80",
+          isEcoMode ? "backdrop-blur-sm" : "backdrop-blur-xl",
+          isEcoMode ? "" : "transform transition-all duration-700",
           mounted ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0"
         )}
       >
@@ -109,20 +206,59 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               C
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-[0.3em] text-white/40">Анализ</p>
               <h1 className="text-base font-semibold sm:text-lg">Разбор выступления</h1>
+              {(result.analyze_provider || result.analyze_model) && (
+                <p className="text-[9px] text-white/30 mt-0.5 flex items-center gap-1">
+                  {result.analyze_provider && (
+                    <img 
+                      src={`/icons/${result.analyze_provider}.svg`} 
+                      alt={result.analyze_provider}
+                      className="w-3 h-3 inline"
+                    />
+                  )}
+                  {result.analyze_provider && result.analyze_model 
+                    ? `${result.analyze_provider}/${result.analyze_model}`
+                    : result.analyze_provider || result.analyze_model}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <StatBadge label="Паразиты" value={`${(result.fillers_summary.ratio * 100).toFixed(1)}%`} />
-            <StatBadge label="Уверенность" value={`${result.confidence_index.total.toFixed(0)}`} accent />
+            <StatBadge label="Уверенность" value={`${Math.min(100, Math.max(0, result.confidence_index.total)).toFixed(0)}`} accent />
             
-            <button
-              onClick={() => window.open(getPdfUrl(result.task_id), "_blank")}
-              className="hidden rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium transition hover:bg-white/15 sm:block sm:px-4 sm:py-2"
-            >
-              PDF Отчет
-            </button>
+            {(result.analyze_provider || result.analyze_model) && (
+              <div className="hidden lg:flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs">
+                {result.analyze_provider && (
+                  <img 
+                    src={`/icons/${result.analyze_provider}.svg`} 
+                    alt={result.analyze_provider}
+                    className="w-4 h-4"
+                  />
+                )}
+                <span className="text-white/70">
+                  {result.analyze_provider && result.analyze_model 
+                    ? `${result.analyze_provider}/${result.analyze_model}`
+                    : result.analyze_provider || result.analyze_model}
+                </span>
+              </div>
+            )}
+
+            <div className="relative hidden sm:block">
+              <button
+                ref={pdfButtonRef}
+                onClick={() => setShowPdfDropdown(!showPdfDropdown)}
+                className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium transition hover:bg-white/15 sm:px-4 sm:py-2"
+              >
+                PDF Отчет
+              </button>
+              <PdfExportDropdown 
+                isOpen={showPdfDropdown} 
+                onClose={() => setShowPdfDropdown(false)} 
+                result={result}
+                buttonRef={pdfButtonRef}
+              />
+            </div>
 
             {onBack && (
               <button
@@ -136,28 +272,34 @@ export function AnalysisDashboard({ result, onBack }: Props) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        {/* Top section: Video + Quick stats */}
+      <main className="mx-auto max-w-7xl px-2 sm:px-4 md:px-6 py-6 overflow-x-hidden" style={{ maxWidth: 'calc(100vw - 16px)', boxSizing: 'border-box' }}>
         <div
           className={cn(
-            "grid gap-4 lg:grid-cols-[1fr_320px]",
+            "grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]",
             "transform transition-all duration-700 delay-100",
             mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           )}
+          style={{ maxWidth: '100%', width: '100%' }}
         >
-          {/* Video player */}
-          <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-            <div className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-20 bg-gradient-to-tr from-white/30 via-white/10 to-transparent" />
-            <video
-              ref={videoRef}
+          <div
+            className={cn(
+              "relative overflow-hidden rounded-2xl border",
+              isEcoMode ? "border-white/8 bg-black" : "group border-white/10 bg-white/5"
+            )}
+          >
+            {!isEcoMode && !videoError && (
+              <div className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-20 bg-gradient-to-tr from-white/30 via-white/10 to-transparent pointer-events-none" />
+            )}
+            <VideoPlayer
+              ref={playerRef}
               src={videoSrc}
-              controls
-              className="aspect-video w-full bg-black object-contain"
-              onTimeUpdate={onTimeUpdate}
+              error={videoError}
+              onTimeUpdate={setCurrentTime}
+              onError={setVideoError}
+              className="aspect-video w-full object-contain bg-black"
             />
           </div>
 
-          {/* Quick stats panel */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
             <GlassStat
               icon={<IconTarget />}
@@ -166,39 +308,62 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               suffix="шт"
               delay={200}
               mounted={mounted}
+              ecoMode={isEcoMode}
             />
-            <GlassStat
-              icon={<IconDoc />}
-              label="Плотность слайдов"
-              value={result.slide_text_density}
-              suffix="%"
-              delay={300}
-              mounted={mounted}
-            />
+            {result.slide_analysis?.has_slides === false ? (
+              <GlassTextStat
+                icon={<IconDoc />}
+                label="Слайды"
+                text="Не найдены"
+                delay={300}
+                mounted={mounted}
+                ecoMode={isEcoMode}
+              />
+            ) : (
+              <GlassStat
+                icon={<IconDoc />}
+                label="Плотность слайдов"
+                value={Math.min(100, Math.max(0, result.slide_analysis?.text_density_score ?? result.slide_text_density ?? 0))}
+                suffix="%"
+                delay={300}
+                mounted={mounted}
+                ecoMode={isEcoMode}
+              />
+            )}
             <GlassStat
               icon={<IconBolt />}
               label="Уверенность"
-              value={result.confidence_index.total}
+              value={Math.min(100, Math.max(0, result.confidence_index.total))}
               suffix="/100"
               delay={400}
               mounted={mounted}
+              ecoMode={isEcoMode}
             />
             <GlassStat
               icon={<IconClock />}
-              label="Сегментов"
-              value={result.transcript.length}
-              suffix="шт"
+              label="Темп речи"
+              value={Math.round(result.tempo.reduce((sum, p) => sum + p.wpm, 0) / result.tempo.length)}
+              suffix="wpm"
               delay={500}
               mounted={mounted}
+              ecoMode={isEcoMode}
+            />
+            <GlassStat
+              icon={<IconHand />}
+              label="Аудиофрагментов"
+              value={result.transcript.length}
+              suffix="шт"
+              delay={600}
+              mounted={mounted}
+              ecoMode={isEcoMode}
             />
           </div>
         </div>
 
-        {/* Tab navigation */}
         <div
           className={cn(
             "mt-6 flex gap-2",
-            "transform transition-all duration-700 delay-200",
+            isEcoMode ? "" : "transform transition-all duration-700 delay-200",
             mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           )}
         >
@@ -210,62 +375,99 @@ export function AnalysisDashboard({ result, onBack }: Props) {
           </TabButton>
         </div>
 
-        {/* Content area */}
         <div
           className={cn(
             "mt-4",
-            "transform transition-all duration-700 delay-300",
+            isEcoMode ? "" : "transform transition-all duration-700 delay-300",
             mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           )}
+          style={{ maxWidth: '100%', width: '100%', overflow: 'hidden' }}
         >
           {activeTab === "transcript" && (
-            <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
-              {/* Transcript */}
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-                <div className="mb-4 flex items-center justify-between">
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]" style={{ maxWidth: '100%', width: '100%' }}>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)]" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+                <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
                   <h2 className="text-sm font-semibold">Полный транскрипт</h2>
-                  <span className="text-xs text-white/50">
-                    Клик по слову → перемотка
-                  </span>
+                  <span className="text-[10px] sm:text-xs text-white/50">Клик по слову → перемотка</span>
                 </div>
-                <div className="max-h-[500px] space-y-3 overflow-y-auto pr-2 scroll-elegant" data-lenis-prevent>
+                <div className="max-h-[400px] sm:max-h-[500px] space-y-2 sm:space-y-3 overflow-y-auto overflow-x-hidden pr-1 sm:pr-2 scroll-elegant" style={{ width: '100%' }} data-lenis-prevent>
                   {groupedTranscript.map((group, gi) => (
-                    <div key={gi} className="rounded-xl border border-white/5 bg-white/5 p-3 transition hover:border-white/15 hover:bg-white/10">
-                      <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-white/40">
+                    <div key={gi} className="rounded-xl border border-white/5 bg-white/5 p-2 sm:p-3 transition hover:border-white/15 hover:bg-white/10" style={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+                      <p className="mb-1.5 sm:mb-2 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider text-white/40">
                         {group.label}
                       </p>
-                      <div className="space-y-2">
-                        {group.segments.map((seg) => (
-                          <div key={`${seg.start}-${seg.end}`} className="flex flex-wrap gap-1">
-                            {seg.words.map((word) => {
-                              const isActive = currentTime >= word.start && currentTime <= word.end;
-                              return (
-                                <button
-                                  key={`${word.start}-${word.text}`}
-                                  onClick={() => handleWordClick(word)}
+                      <div className="leading-[1.6] sm:leading-[1.5] text-[13px] sm:text-sm" style={{ width: '100%', maxWidth: '100%', wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'normal' }}>
+                        {group.items.map((item, idx) => {
+                          if (item.type === "pause") {
+                            const isActive = currentTime + 0.02 >= item.pause.start && currentTime < item.pause.end - 0.02;
+                            return (
+                              <span
+                                key={`pause-${item.pause.start}-${idx}`}
+                                onClick={() => {
+                                  if (playerRef.current) {
+                                    playerRef.current.seek(item.pause.start);
+                                    playerRef.current.play();
+                                    setCurrentTime(item.pause.start);
+                                  }
+                                }}
+                                className="inline-flex items-center cursor-pointer mx-0.5 sm:mx-1 align-middle group relative"
+                                title={`Пауза: ${item.pause.duration.toFixed(1)}с`}
+                              >
+                                <span
                                   className={cn(
-                                    "rounded px-1.5 py-0.5 text-xs transition-all duration-200",
-                                    word.is_filler
-                                      ? "bg-red-500/20 text-red-300 ring-1 ring-red-500/30"
-                                      : "bg-white/10 text-white/80 hover:bg-white/20",
-                                    isActive && "ring-2 ring-white/60 scale-105"
+                                    "inline-block w-6 sm:w-10 h-3.5 sm:h-4 rounded border-2 border-dashed transition-all duration-150",
+                                    "border-rose-500/60 bg-rose-500/10",
+                                    isActive && "border-rose-400 bg-rose-500/25 shadow-[0_0_12px_rgba(244,63,94,0.3)]",
+                                    "hover:border-rose-400 hover:bg-rose-500/20"
                                   )}
-                                >
-                                  {word.text}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ))}
+                                />
+                                <span className="absolute -top-5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] text-rose-300 bg-black/80 px-1 py-0.5 rounded whitespace-nowrap pointer-events-none z-10">
+                                  {item.pause.duration.toFixed(1)}с
+                                </span>
+                              </span>
+                            );
+                          }
+                          
+                          const isActive = currentTime + 0.02 >= item.word.start && currentTime < item.word.end - 0.02;
+                          const display = item.word.text.trim();
+                          if (!display) return null;
+                          return (
+                            <span
+                              key={`${item.word.start}-${display}-${idx}`}
+                              onClick={() => handleWordClick(item.word)}
+                              className={cn(
+                                "cursor-pointer rounded px-[2px] py-0.5 transition-all duration-150",
+                                item.word.is_filler
+                                  ? "text-rose-300 bg-rose-500/18 hover:bg-rose-500/28"
+                                  : "text-white/75 hover:bg-white/10",
+                                isActive && "bg-white/15 text-white shadow-[0_8px_30px_rgba(255,255,255,0.08)]",
+                                "hover:-translate-y-[1px]"
+                              )}
+                            >
+                              {display}{" "}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Charts sidebar */}
               <div className="space-y-4">
-                <AnimatedTempoChart data={result.tempo} mounted={mounted} />
+                <div 
+                  ref={tempoChartRef}
+                  style={{ 
+                    opacity: tempoModal.open ? 0 : 1,
+                    transition: "opacity 100ms ease-out",
+                  }}
+                >
+                  <TempoChart
+                    data={result.tempo}
+                    currentTime={currentTime}
+                    onExpand={openTempoModal}
+                  />
+                </div>
                 <AnimatedConfidenceGauge
                   total={result.confidence_index.total}
                   components={result.confidence_index.components}
@@ -285,14 +487,24 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               />
               <InsightCard
                 title="Ошибки"
-                content={result.mistakes}
+                content={typeof result.mistakes === "string" 
+                  ? result.mistakes 
+                  : Array.isArray(result.mistakes) 
+                    ? result.mistakes.join("\n") 
+                    : String(result.mistakes || "")}
                 delay={100}
                 mounted={mounted}
                 accent="red"
               />
               <InsightCard
                 title="Структура"
-                content={result.structure}
+                content={typeof result.structure === "string"
+                  ? result.structure
+                  : typeof result.structure === "object" && result.structure !== null
+                    ? Object.entries(result.structure)
+                        .map(([key, value]) => `**${key}**: ${value}`)
+                        .join("\n\n")
+                    : String(result.structure || "")}
                 delay={200}
                 mounted={mounted}
               />
@@ -310,16 +522,119 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                 mounted={mounted}
                 accent="amber"
               />
+              {result.confidence_index.components.gesture_advice && (
+                <InsightCard
+                  title="Советы по жестикуляции"
+                  content={result.confidence_index.components.gesture_advice}
+                  delay={500}
+                  mounted={mounted}
+                  accent="amber"
+                />
+              )}
+              {result.slide_analysis && (
+                <InsightCard
+                  title="Анализ слайдов"
+                  content={
+                    result.slide_analysis.has_slides === false 
+                      ? "Слайды не найдены в видео"
+                      : result.slide_analysis.ocr_summary || "Анализ слайдов недоступен"
+                  }
+                  delay={600}
+                  mounted={mounted}
+                />
+              )}
             </div>
           )}
         </div>
       </main>
       {globalStyles}
+
+      <ComingSoonNotification isOpen={showComingSoon} onClose={() => setShowComingSoon(false)} />
+
+      {tempoModal.open && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-[9999]"
+          style={{
+            backgroundColor: tempoModal.phase === "open" ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0)",
+            backdropFilter: tempoModal.phase === "open" ? "blur(12px)" : "blur(0px)",
+            transition: "background-color 400ms ease-out, backdrop-filter 400ms ease-out",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeTempoModal();
+          }}
+        >
+          {(() => {
+            const origin = tempoModal.originRect;
+            const isExpanded = tempoModal.phase === "open";
+            
+            const finalWidth = Math.min(window.innerWidth - 32, 1100);
+            const finalHeight = Math.min(window.innerHeight - 80, 640);
+            const finalLeft = (window.innerWidth - finalWidth) / 2;
+            const finalTop = (window.innerHeight - finalHeight) / 2;
+            
+            const startLeft = origin?.left ?? finalLeft;
+            const startTop = origin?.top ?? finalTop;
+            const startWidth = origin?.width ?? finalWidth;
+            const startHeight = origin?.height ?? finalHeight;
+            
+            const style: CSSProperties = {
+              position: "fixed",
+              left: isExpanded ? finalLeft : startLeft,
+              top: isExpanded ? finalTop : startTop,
+              width: isExpanded ? finalWidth : startWidth,
+              height: isExpanded ? finalHeight : startHeight,
+              transition: "all 400ms cubic-bezier(0.16, 1, 0.3, 1)",
+            };
+            
+            return (
+              <div
+                className={isExpanded 
+                  ? "rounded-2xl border border-white/10 bg-[#0a0a0c]/95 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col"
+                  : "rounded-2xl border border-white/10 bg-white/5 overflow-hidden"
+                }
+                style={{
+                  ...style,
+                  backgroundColor: isExpanded ? "rgba(10,10,12,0.95)" : "rgba(255,255,255,0.05)",
+                  transition: "all 400ms cubic-bezier(0.16, 1, 0.3, 1)",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {isExpanded && (
+                  <div 
+                    className="flex items-center justify-between text-white px-5 pt-4 pb-2"
+                    style={{
+                      opacity: 1,
+                      transition: "opacity 150ms ease-out",
+                    }}
+                  >
+                    <div className="text-sm font-semibold">Темп речи — все данные</div>
+                    <button
+                      onClick={closeTempoModal}
+                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/60 hover:bg-white/10 hover:text-white/80 transition-colors flex items-center gap-1.5"
+                    >
+                      <span>✕</span>
+                      <span>Закрыть</span>
+                    </button>
+                  </div>
+                )}
+
+                <div className={isExpanded ? "flex-1 px-4 pb-4 overflow-hidden" : "h-full"}>
+                  <TempoChart
+                    data={result.tempo}
+                    currentTime={currentTime}
+                    expanded={isExpanded}
+                    inModal={true}
+                  />
+                </div>
+              </div>
+            );
+          })()}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
-
-// Helper components
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -372,6 +687,7 @@ function GlassStat({
   suffix,
   delay,
   mounted,
+  ecoMode = false,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -379,12 +695,17 @@ function GlassStat({
   suffix: string;
   delay: number;
   mounted: boolean;
+  ecoMode?: boolean;
 }) {
   const [displayValue, setDisplayValue] = useState(0);
   const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
     if (!mounted) return;
+    if (ecoMode) {
+      setDisplayValue(value);
+      return;
+    }
     const timer = setTimeout(() => {
       const start = Date.now();
       const duration = 1400;
@@ -396,28 +717,83 @@ function GlassStat({
       animate();
     }, delay);
     return () => clearTimeout(timer);
-  }, [mounted, value, delay]);
+  }, [mounted, value, delay, ecoMode]);
 
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3",
-        "transition-all duration-500",
+        "relative overflow-hidden rounded-2xl border bg-white/5 p-3",
+        ecoMode ? "border-white/8" : "border-white/10",
+        ecoMode ? "" : "transition-all duration-500",
         mounted ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
-        hovered && "border-white/20 shadow-[0_20px_60px_rgba(255,255,255,0.08)]"
+        !ecoMode && hovered && "border-white/20 shadow-[0_20px_60px_rgba(255,255,255,0.08)]"
       )}
-      style={{ transitionDelay: `${delay}ms` }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      style={{ transitionDelay: ecoMode ? undefined : `${delay}ms` }}
+      onMouseEnter={() => !ecoMode && setHovered(true)}
+      onMouseLeave={() => !ecoMode && setHovered(false)}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/0 to-white/10 opacity-0 transition-opacity duration-500" style={{ opacity: hovered ? 0.2 : 0 }} />
+      {!ecoMode && (
+        <div
+          className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/0 to-white/10 opacity-0 transition-opacity duration-500"
+          style={{ opacity: hovered ? 0.2 : 0 }}
+        />
+      )}
       <div className="relative z-10 flex items-start gap-3">
         <span className="text-lg">{icon}</span>
         <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-white/45">{label}</p>
           <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-2xl font-semibold tabular-nums">{displayValue.toFixed(suffix === "%" ? 1 : 0)}</span>
+            <span className="text-2xl font-semibold tabular-nums">{(displayValue || 0).toFixed(suffix === "%" ? 1 : 0)}</span>
             <span className="text-xs text-white/50">{suffix}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GlassTextStat({
+  icon,
+  label,
+  text,
+  delay,
+  mounted,
+  ecoMode = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  text: string;
+  delay: number;
+  mounted: boolean;
+  ecoMode?: boolean;
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-2xl border bg-white/5 p-3",
+        ecoMode ? "border-white/8" : "border-white/10",
+        ecoMode ? "" : "transition-all duration-500",
+        mounted ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
+        !ecoMode && hovered && "border-white/20 shadow-[0_20px_60px_rgba(255,255,255,0.08)]"
+      )}
+      style={{ transitionDelay: ecoMode ? undefined : `${delay}ms` }}
+      onMouseEnter={() => !ecoMode && setHovered(true)}
+      onMouseLeave={() => !ecoMode && setHovered(false)}
+    >
+      {!ecoMode && (
+        <div
+          className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/0 to-white/10 opacity-0 transition-opacity duration-500"
+          style={{ opacity: hovered ? 0.2 : 0 }}
+        />
+      )}
+      <div className="relative z-10 flex items-start gap-3">
+        <span className="text-lg">{icon}</span>
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-white/45">{label}</p>
+          <div className="mt-1">
+            <span className="text-lg font-medium text-white/60">{text}</span>
           </div>
         </div>
       </div>
@@ -465,10 +841,8 @@ function AnimatedTempoChart({ data, mounted }: { data: TempoPoint[]; mounted: bo
 
     const pad = 30;
 
-    // Clear
     ctx.clearRect(0, 0, w, h);
 
-    // Grid
     ctx.strokeStyle = "rgba(255,255,255,0.06)";
     ctx.lineWidth = 1;
     for (let i = 0; i <= 5; i++) {
@@ -486,7 +860,6 @@ function AnimatedTempoChart({ data, mounted }: { data: TempoPoint[]; mounted: bo
       return { x, y };
     };
 
-    // Сглаженная линия + заливка под ней
     if (visibleCount > 0) {
       ctx.beginPath();
       for (let i = 0; i <= visibleCount; i++) {
@@ -516,7 +889,6 @@ function AnimatedTempoChart({ data, mounted }: { data: TempoPoint[]; mounted: bo
       }
     }
 
-    // Основная линия с подсветкой
     ctx.beginPath();
     ctx.lineWidth = 2.2;
     ctx.strokeStyle = "rgba(255,255,255,0.9)";
@@ -536,7 +908,6 @@ function AnimatedTempoChart({ data, mounted }: { data: TempoPoint[]; mounted: bo
     }
     ctx.stroke();
 
-    // Лёгкое свечение
     ctx.save();
     ctx.strokeStyle = "rgba(255,255,255,0.35)";
     ctx.lineWidth = 6;
@@ -544,7 +915,6 @@ function AnimatedTempoChart({ data, mounted }: { data: TempoPoint[]; mounted: bo
     ctx.stroke();
     ctx.restore();
 
-    // Точки
     for (let i = 0; i <= visibleCount; i++) {
       const d = data[i];
       if (!d) continue;
@@ -555,7 +925,6 @@ function AnimatedTempoChart({ data, mounted }: { data: TempoPoint[]; mounted: bo
       ctx.fill();
     }
 
-    // Labels
     ctx.fillStyle = "rgba(255,255,255,0.45)";
     ctx.font = "10px sans-serif";
     ctx.fillText("0", pad - 12, h - pad + 14);
@@ -639,6 +1008,7 @@ function AnimatedConfidenceGauge({
   mounted: boolean;
 }) {
   const [animValue, setAnimValue] = useState(0);
+  const normalizedTotal = Math.min(100, Math.max(0, total));
 
   useEffect(() => {
     if (!mounted) return;
@@ -648,12 +1018,12 @@ function AnimatedConfidenceGauge({
       const elapsed = Date.now() - start;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 4);
-      setAnimValue(total * eased);
+      setAnimValue(normalizedTotal * eased);
       if (progress < 1) requestAnimationFrame(animate);
     };
     const timer = setTimeout(animate, 600);
     return () => clearTimeout(timer);
-  }, [mounted, total]);
+  }, [mounted, normalizedTotal]);
 
   const radius = 50;
   const circumference = 2 * Math.PI * radius;
@@ -697,9 +1067,9 @@ function AnimatedConfidenceGauge({
           </div>
         </div>
         <div className="flex-1 space-y-2">
-          <MiniBar label="Громкость" value={components.volume_score} delay={700} mounted={mounted} />
-          <MiniBar label="Паразиты" value={components.filler_score} delay={800} mounted={mounted} />
-          <MiniBar label="Взгляд" value={components.gaze_score} delay={900} mounted={mounted} />
+          <MiniBar label="Громкость" value={Math.min(100, Math.max(0, components.volume_score))} delay={700} mounted={mounted} />
+          <MiniBar label="Чистота речи" value={Math.min(100, Math.max(0, components.filler_score))} delay={800} mounted={mounted} />
+          <MiniBar label="Взгляд" value={Math.min(100, Math.max(0, components.gaze_score))} delay={900} mounted={mounted} />
         </div>
       </div>
     </div>
@@ -744,7 +1114,7 @@ function MiniBar({
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
         <div
           className="h-full rounded-full bg-white/80"
-          style={{ width: `${animValue}%`, transition: "width 0.1s linear" }}
+          style={{ width: `${Math.min(100, Math.max(0, animValue))}%`, transition: "width 0.1s linear" }}
         />
       </div>
     </div>
@@ -789,7 +1159,6 @@ function InsightCard({
   );
 }
 
-// Глобальные стили для кастомного скролла транскрипта
 const globalStyles = (
   <style jsx global>{`
     .scroll-elegant::-webkit-scrollbar {

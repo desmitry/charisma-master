@@ -1,0 +1,46 @@
+name: Deploy to Server
+
+on:
+    push:
+        branches:
+            - develop
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup SSH
+              uses: webfactory/ssh-agent@v0.9.0
+              with:
+                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+            - name: Add known hosts
+              run: |
+                  echo "Adding SSH host to known hosts..."
+                  ssh-keyscan -p ${{ secrets.SSH_PORT || '22' }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+                  echo "SSH host added successfully"
+
+            - name: Deploy to server
+              run: |
+                  echo "Starting deployment to server..."
+                  ssh -p ${{ secrets.SSH_PORT || '22' }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+                    echo "Changing to project directory..."
+                    cd /home/${{ secrets.SSH_USER }}/charisma-master
+
+                    echo "Pulling latest changes from develop branch..."
+                    git pull origin develop
+
+                    echo "Stopping & removing existing containers..."
+                    docker compose down
+
+                    echo "Running build script..."
+                    ./scripts/build.sh
+
+                    echo "Starting containers..."
+                    docker compose up -d
+
+                    echo "Deployment completed successfully!"
+                  EOF

@@ -20,11 +20,9 @@ export const VignetteShader = {
     void main() {
       vec4 texel = texture2D(tDiffuse, vUv);
       
-      // Calculate distance from center
       vec2 uv = (vUv - 0.5) * 2.0;
       float dist = dot(uv, uv);
       
-      // Create vignette effect
       float vignette = 1.0 - smoothstep(offset, offset + darkness, dist);
       
       gl_FragColor = vec4(texel.rgb * vignette, texel.a);
