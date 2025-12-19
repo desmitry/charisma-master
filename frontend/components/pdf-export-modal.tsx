@@ -349,9 +349,8 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
                   { label: "Громкость", value: Math.min(100, Math.max(0, result.confidence_index.components.volume_score)) },
                   { label: "Паразиты", value: Math.min(100, Math.max(0, result.confidence_index.components.filler_score)) },
                   { label: "Взгляд", value: Math.min(100, Math.max(0, result.confidence_index.components.gaze_score)) },
-                  { label: "Жесты", value: Math.min(100, Math.max(0, result.confidence_index.components.gesture_score || 0)) },
                 ].map((item, idx) => (
-                  <div key={item.label} style={{ marginBottom: idx < 3 ? "10px" : 0 }}>
+                  <div key={item.label} style={{ marginBottom: idx < 2 ? "10px" : 0 }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", marginBottom: "6px" }}>
                       <tbody>
                         <tr>
@@ -538,6 +537,44 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
               <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Фидбэк персоны</h2>
               <div style={{ borderRadius: "12px", backgroundColor: "rgba(245,158,11,0.08)", padding: "20px", border: "1px solid rgba(245,158,11,0.25)", fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)" }}>
                 {typeof result.persona_feedback === "string" ? result.persona_feedback : String(result.persona_feedback || "")}
+              </div>
+            </div>
+          )}
+
+          {result.confidence_index.components.gesture_advice && (
+            <div 
+              data-pdf-block
+              style={{ 
+                padding: "12px 20px",
+                backgroundColor: "#0a0a0a"
+              }}
+            >
+              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Жестикуляция</h2>
+              <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "20px", border: "1px solid rgba(255,255,255,0.1)", fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)" }}>
+                {result.confidence_index.components.gesture_advice}
+              </div>
+            </div>
+          )}
+
+          {result.slide_analysis && (
+            result.slide_analysis.has_slides === false 
+              ? result.slide_analysis.ocr_summary 
+              : (result.slide_analysis.acr_summary || result.slide_analysis.ocr_summary)
+          ) && (
+            <div 
+              data-pdf-block
+              style={{ 
+                padding: "12px 20px",
+                backgroundColor: "#0a0a0a"
+              }}
+            >
+              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>
+                {result.slide_analysis.has_slides === false ? "Слайды" : "Анализ презентации"}
+              </h2>
+              <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "20px", border: "1px solid rgba(255,255,255,0.1)", fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)" }}>
+                {result.slide_analysis.has_slides === false 
+                  ? result.slide_analysis.ocr_summary 
+                  : (result.slide_analysis.acr_summary || result.slide_analysis.ocr_summary)}
               </div>
             </div>
           )}
