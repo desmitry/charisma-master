@@ -1,7 +1,9 @@
 import shutil
 import uuid
 from enum import Enum
-
+import subprocess
+import os
+import logging
 from app.config import settings
 from app.logic.tasks import process_video_pipeline
 from app.models.schemas import LLMProviderEnum, PersonaEnum, UploadResponse
@@ -9,7 +11,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from rutube import Rutube
 
 router = APIRouter()
-
+logger = logging.getLogger(__name__)
 
 class ModelType(str, Enum):
     sber_gigachat = "sber_gigachat"
@@ -40,14 +42,55 @@ async def process_video(
         try:
             rt = Rutube(video_url.lower())
 
-            file_path = settings.media_root / f"{task_id}.mp4"
+            temp_path = settings.media_root / f"temp_{task_id}"
+
             video = rt.get_best()
             if not video:
                 raise HTTPException(status_code=500, detail="Download failed: video unavailable")
-            with open(file_path, "wb") as f:
+
+            with open(temp_path, "wb") as f:
                 video.download(stream=f)
+
+            if not temp_path.exists() or temp_path.stat().st_size == 0:
+                raise HTTPException(status_code=500, detail="Downloaded file is empty")
+
+            file_path = settings.media_root / f"{task_id}.mp4"
+
+            command = [
+                "ffmpeg", "-y",
+                "-i", str(temp_path),
+                "-c", "copy",
+                "-movflags", "+faststart",
+                str(file_path)
+            ]
+
+            logger.info(f"Remuxing Rutube video: {' '.join(command)}")
+            subprocess.run(
+                command,
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE
+            )
+
+            if temp_path.exists():
+                os.remove(temp_path)
+
             final_path = str(file_path)
+
+
+        except subprocess.CalledProcessError as e:
+            err_msg = e.stderr.decode() if e.stderr else "Unknown FFmpeg error"
+
+            logger.error(f"FFmpeg conversion failed: {err_msg}")
+            if 'temp_path' in locals() and temp_path.exists():
+                os.remove(temp_path)
+
+            raise HTTPException(status_code=500, detail=f"Video conversion failed: {err_msg}")
+
         except Exception as e:
+            logger.error(f"Rutube download error: {e}")
+            if 'temp_path' in locals() and temp_path.exists():
+                os.remove(temp_path)
             raise HTTPException(status_code=500, detail=str(e))
     else:
         raise HTTPException(status_code=400, detail="Файл или ссылка")
@@ -64,7 +107,7 @@ async def process_video(
             ),
             transcribe_model.value,
             persona.value if persona else None,
-            do_slides.value,
+            do_slides,
         ],
         task_id=task_id,
     )
