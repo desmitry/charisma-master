@@ -301,15 +301,50 @@ export default function Home() {
   };
 
   const loadMockResponse = async (): Promise<AnalysisResult> => {
-    const res = await fetch("/response_1765796223493.json");
+    const res = await fetch("/62a26154-2d3e-408d-8737-2dbe5255eac6.json");
     if (!res.ok) throw new Error("mock fetch failed");
-    const data = (await res.json()) as AnalysisResult;
+    const data = (await res.json()) as any;
+    
+    // Маппинг slide_analysis.text_density_score в slide_text_density
+    if (data.slide_analysis?.text_density_score !== undefined && data.slide_text_density === undefined) {
+      data.slide_text_density = Math.min(100, Math.max(0, data.slide_analysis.text_density_score));
+    }
+    
+    // Ограничиваем все score значения до 100
+    if (data.confidence_index) {
+      if (data.confidence_index.total !== undefined) {
+        data.confidence_index.total = Math.min(100, Math.max(0, data.confidence_index.total));
+      }
+      if (data.confidence_index.components) {
+        if (data.confidence_index.components.volume_score !== undefined) {
+          // Если volume_score меньше 1, значит это доля (0-1), умножаем на 100
+          let volumeScore = data.confidence_index.components.volume_score;
+          if (volumeScore < 1 && volumeScore > 0) {
+            volumeScore = volumeScore * 100;
+          }
+          data.confidence_index.components.volume_score = Math.min(100, Math.max(0, volumeScore));
+        }
+        if (data.confidence_index.components.filler_score !== undefined) {
+          data.confidence_index.components.filler_score = Math.min(100, Math.max(0, data.confidence_index.components.filler_score));
+        }
+        if (data.confidence_index.components.gaze_score !== undefined) {
+          data.confidence_index.components.gaze_score = Math.min(100, Math.max(0, data.confidence_index.components.gaze_score));
+        }
+        if (data.confidence_index.components.gesture_score !== undefined) {
+          data.confidence_index.components.gesture_score = Math.min(100, Math.max(0, data.confidence_index.components.gesture_score));
+        }
+        if (data.confidence_index.components.tone_score !== undefined) {
+          data.confidence_index.components.tone_score = Math.min(100, Math.max(0, data.confidence_index.components.tone_score));
+        }
+      }
+    }
+    
     let videoPath = data.video_path;
     if (videoPath && !videoPath.startsWith("http")) {
       const filename = videoPath.split(/[/\\]/).pop() || "";
       videoPath = `/${filename}`;
     }
-    return { ...data, video_path: videoPath || data.video_path };
+    return { ...data, video_path: videoPath || data.video_path } as AnalysisResult;
   };
 
   const startMockFlow = async () => {
@@ -416,7 +451,7 @@ export default function Home() {
           setProgress(Math.max(0.3, Math.min(1, p)));
           setStatusText(stageName(status.stage));
         },
-        300_000
+        900_000
       );
 
       if (!analysis) {

@@ -49,7 +49,14 @@ export interface AnalysisResult {
   mistakes: string;
   ideal_text: string;
   persona_feedback?: string | null;
-  slide_text_density: number;
+  slide_text_density?: number;
+  slide_analysis?: {
+    has_slides: boolean;
+    text_density_score: number;
+    text_density_label?: string;
+    ocr_summary?: string;
+    acr_summary?: string;
+  };
   analyze_provider?: string;
   analyze_model?: string;
   raw_metrics?: {

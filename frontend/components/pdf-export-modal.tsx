@@ -308,8 +308,8 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
               <div>
                 {[
                   { label: "Паразиты", value: result.fillers_summary.count, sub: `${(result.fillers_summary.ratio * 100).toFixed(1)}%` },
-                  { label: "Уверенность", value: result.confidence_index.total.toFixed(0), sub: "из 100" },
-                  { label: "Плотность", value: `${result.slide_text_density?.toFixed(1) || 0}%`, sub: "" },
+                  { label: "Уверенность", value: Math.min(100, Math.max(0, result.confidence_index.total)).toFixed(0), sub: "из 100" },
+                  { label: "Плотность", value: `${Math.min(100, Math.max(0, result.slide_analysis?.text_density_score ?? result.slide_text_density ?? 0)).toFixed(1)}%`, sub: "" },
                   { label: "Фрагментов", value: result.transcript.length, sub: "" },
                 ].map((item, idx) => (
                   <div 
@@ -343,13 +343,13 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
                 backgroundColor: "#0a0a0a"
               }}
             >
-              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Индекс уверенности: {result.confidence_index.total.toFixed(0)}/100</h2>
+              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Индекс уверенности: {Math.min(100, Math.max(0, result.confidence_index.total)).toFixed(0)}/100</h2>
               <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "16px", border: "1px solid rgba(255,255,255,0.1)" }}>
                 {[
-                  { label: "Громкость", value: result.confidence_index.components.volume_score },
-                  { label: "Паразиты", value: result.confidence_index.components.filler_score },
-                  { label: "Взгляд", value: result.confidence_index.components.gaze_score },
-                  { label: "Жесты", value: result.confidence_index.components.gesture_score || 0 },
+                  { label: "Громкость", value: Math.min(100, Math.max(0, result.confidence_index.components.volume_score)) },
+                  { label: "Паразиты", value: Math.min(100, Math.max(0, result.confidence_index.components.filler_score)) },
+                  { label: "Взгляд", value: Math.min(100, Math.max(0, result.confidence_index.components.gaze_score)) },
+                  { label: "Жесты", value: Math.min(100, Math.max(0, result.confidence_index.components.gesture_score || 0)) },
                 ].map((item, idx) => (
                   <div key={item.label} style={{ marginBottom: idx < 3 ? "10px" : 0 }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", marginBottom: "6px" }}>
@@ -472,7 +472,18 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
             >
               <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Ошибки</h2>
               <div style={{ borderRadius: "12px", backgroundColor: "rgba(239,68,68,0.08)", padding: "20px", border: "1px solid rgba(239,68,68,0.25)", fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)" }}>
-                {result.mistakes}
+                {typeof result.mistakes === "string" 
+                  ? result.mistakes 
+                  : Array.isArray(result.mistakes) 
+                    ? (() => {
+                        const mistakesArray = result.mistakes as unknown[];
+                        return mistakesArray.map((item, idx) => (
+                          <div key={idx} style={{ marginBottom: idx < mistakesArray.length - 1 ? "8px" : 0 }}>
+                            {typeof item === "string" ? item : String(item)}
+                          </div>
+                        ));
+                      })()
+                    : String(result.mistakes || "")}
               </div>
             </div>
           )}
@@ -487,7 +498,16 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
             >
               <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Структура</h2>
               <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "20px", border: "1px solid rgba(255,255,255,0.1)", fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)" }}>
-                {result.structure}
+                {typeof result.structure === "string"
+                  ? result.structure
+                  : typeof result.structure === "object" && result.structure !== null
+                    ? Object.entries(result.structure).map(([key, value], idx, arr) => (
+                        <div key={key} style={{ marginBottom: idx < arr.length - 1 ? "12px" : 0 }}>
+                          <strong style={{ color: "#fff", display: "block", marginBottom: "4px" }}>{key}:</strong>
+                          <span style={{ color: "rgba(255,255,255,0.7)" }}>{String(value)}</span>
+                        </div>
+                      ))
+                    : String(result.structure || "")}
               </div>
             </div>
           )}
@@ -502,7 +522,7 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
             >
               <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Идеальный текст</h2>
               <div style={{ borderRadius: "12px", backgroundColor: "rgba(16,185,129,0.08)", padding: "20px", border: "1px solid rgba(16,185,129,0.25)", fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)" }}>
-                {result.ideal_text}
+                {typeof result.ideal_text === "string" ? result.ideal_text : String(result.ideal_text || "")}
               </div>
             </div>
           )}
@@ -517,7 +537,7 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
             >
               <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Фидбэк персоны</h2>
               <div style={{ borderRadius: "12px", backgroundColor: "rgba(245,158,11,0.08)", padding: "20px", border: "1px solid rgba(245,158,11,0.25)", fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)" }}>
-                {result.persona_feedback}
+                {typeof result.persona_feedback === "string" ? result.persona_feedback : String(result.persona_feedback || "")}
               </div>
             </div>
           )}
