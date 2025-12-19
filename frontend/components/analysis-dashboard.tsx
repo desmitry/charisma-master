@@ -181,7 +181,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   }, [result.transcript, result.long_pauses]);
 
   return (
-    <div className="relative z-10 min-h-screen bg-[#050505] text-white overflow-hidden">
+    <div className="relative z-10 min-h-screen bg-[#050505] text-white overflow-x-hidden w-full max-w-[100vw]">
       <SmoothScroll />
       {!isEcoMode ? (
         <div className="pointer-events-none fixed inset-0 blur-3xl opacity-20">
@@ -272,13 +272,14 @@ export function AnalysisDashboard({ result, onBack }: Props) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-7xl px-2 sm:px-4 md:px-6 py-6 overflow-x-hidden" style={{ maxWidth: 'calc(100vw - 16px)', boxSizing: 'border-box' }}>
         <div
           className={cn(
-            "grid gap-4 lg:grid-cols-[1fr_320px]",
+            "grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]",
             "transform transition-all duration-700 delay-100",
             mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           )}
+          style={{ maxWidth: '100%', width: '100%' }}
         >
           <div
             className={cn(
@@ -380,21 +381,22 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             isEcoMode ? "" : "transform transition-all duration-700 delay-300",
             mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           )}
+          style={{ maxWidth: '100%', width: '100%', overflow: 'hidden' }}
         >
           {activeTab === "transcript" && (
-            <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] min-w-0 overflow-hidden">
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]" style={{ maxWidth: '100%', width: '100%' }}>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)]" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
                 <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
                   <h2 className="text-sm font-semibold">Полный транскрипт</h2>
                   <span className="text-[10px] sm:text-xs text-white/50">Клик по слову → перемотка</span>
                 </div>
-                <div className="max-h-[400px] sm:max-h-[500px] space-y-2 sm:space-y-3 overflow-y-auto overflow-x-hidden pr-1 sm:pr-2 scroll-elegant" data-lenis-prevent>
+                <div className="max-h-[400px] sm:max-h-[500px] space-y-2 sm:space-y-3 overflow-y-auto overflow-x-hidden pr-1 sm:pr-2 scroll-elegant" style={{ width: '100%' }} data-lenis-prevent>
                   {groupedTranscript.map((group, gi) => (
-                    <div key={gi} className="rounded-xl border border-white/5 bg-white/5 p-2 sm:p-3 transition hover:border-white/15 hover:bg-white/10">
+                    <div key={gi} className="rounded-xl border border-white/5 bg-white/5 p-2 sm:p-3 transition hover:border-white/15 hover:bg-white/10" style={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
                       <p className="mb-1.5 sm:mb-2 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider text-white/40">
                         {group.label}
                       </p>
-                      <div className="leading-[1.6] sm:leading-[1.5] text-[13px] sm:text-sm break-words" style={{ overflowWrap: 'anywhere' }}>
+                      <div className="leading-[1.6] sm:leading-[1.5] text-[13px] sm:text-sm" style={{ width: '100%', maxWidth: '100%', wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'normal' }}>
                         {group.items.map((item, idx) => {
                           if (item.type === "pause") {
                             const isActive = currentTime + 0.02 >= item.pause.start && currentTime < item.pause.end - 0.02;
@@ -434,7 +436,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                               key={`${item.word.start}-${display}-${idx}`}
                               onClick={() => handleWordClick(item.word)}
                               className={cn(
-                                "cursor-pointer rounded px-[2px] py-0.5 transition-all duration-150 inline",
+                                "cursor-pointer rounded px-[2px] py-0.5 transition-all duration-150",
                                 item.word.is_filler
                                   ? "text-rose-300 bg-rose-500/18 hover:bg-rose-500/28"
                                   : "text-white/75 hover:bg-white/10",

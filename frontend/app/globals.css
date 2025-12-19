@@ -109,11 +109,77 @@ video {
 @media (width <= 768px) {
   body {
     overflow-y: auto;
+    overflow-x: hidden;
     touch-action: pan-y;
   }
 
   #webgl {
     height: 100svh;
+  }
+}
+
+/* Prevent horizontal overflow globally */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden !important;
+}
+
+/* Word breaking for transcript */
+.transcript-word {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+/* Force transcript text to wrap on all devices */
+@media (max-width: 768px) {
+  .scroll-elegant,
+  .scroll-elegant * {
+    max-width: 100% !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+  }
+  
+  /* Ensure grid items don't overflow */
+  [class*="grid"] > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  
+  /* Force all main content to stay within viewport */
+  main,
+  main > *,
+  main > * > *,
+  main > * > * > * {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Specific fix for transcript text containers */
+  [data-lenis-prevent] {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+  
+  [data-lenis-prevent] > div {
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+  
+  [data-lenis-prevent] > div > div {
+    max-width: 100% !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+  }
+  
+  /* Force spans to wrap */
+  [data-lenis-prevent] span {
+    display: inline !important;
+    white-space: normal !important;
+    word-break: break-word !important;
   }
 }
 
