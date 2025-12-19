@@ -11,6 +11,7 @@ import { SmoothScroll } from "./smooth-scroll";
 import { TempoChart } from "./analysis/tempo-chart";
 import { ComingSoonNotification } from "./coming-soon-notification";
 import { PdfExportDropdown } from "./pdf-export-modal";
+import { VideoErrorDisplay } from "./video-error-display";
 
 type Props = {
   result: AnalysisResult;
@@ -71,6 +72,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   const [videoSrc, setVideoSrc] = useState(() => {
     return resolveVideoUrl(result.video_path);
   });
+  const [videoError, setVideoError] = useState<string | null>(null);
   const { isEcoMode } = useEcoMode();
   
   const [tempoModal, setTempoModal] = useState<{
@@ -102,7 +104,9 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   }, []);
 
   useEffect(() => {
-    setVideoSrc(resolveVideoUrl(result.video_path));
+    const newSrc = resolveVideoUrl(result.video_path);
+    setVideoSrc(newSrc);
+    setVideoError(null); // Сбрасываем ошибку при изменении источника
   }, [result.video_path]);
 
   useEffect(() => {
@@ -262,23 +266,49 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               isEcoMode ? "border-white/8 bg-black" : "group border-white/10 bg-white/5"
             )}
           >
-            {!isEcoMode && (
+            {!isEcoMode && !videoError && (
               <div className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-20 bg-gradient-to-tr from-white/30 via-white/10 to-transparent" />
             )}
-            <video
-              ref={videoRef}
-              src={videoSrc}
-              controls
-              className={cn(
-                "aspect-video w-full object-contain",
-                isEcoMode ? "bg-black" : "bg-black"
-              )}
-              onTimeUpdate={onTimeUpdate}
-              onError={() => {
-                if (videoSrc.includes("flower.mp4")) return;
-                setVideoSrc("https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4");
-              }}
-            />
+            {videoError ? (
+              <VideoErrorDisplay error={videoError} />
+            ) : (
+              <video
+                ref={videoRef}
+                src={videoSrc}
+                controls
+                className={cn(
+                  "aspect-video w-full object-contain",
+                  isEcoMode ? "bg-black" : "bg-black"
+                )}
+                onTimeUpdate={onTimeUpdate}
+                onError={(e) => {
+                  const video = e.currentTarget;
+                  const error = video.error;
+                  let errorMessage = "Неизвестная ошибка";
+                  
+                  if (error) {
+                    switch (error.code) {
+                      case MediaError.MEDIA_ERR_ABORTED:
+                        errorMessage = "Загрузка видео была прервана";
+                        break;
+                      case MediaError.MEDIA_ERR_NETWORK:
+                        errorMessage = "Ошибка сети при загрузке видео";
+                        break;
+                      case MediaError.MEDIA_ERR_DECODE:
+                        errorMessage = "Ошибка декодирования видео";
+                        break;
+                      case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                        errorMessage = "Формат видео не поддерживается";
+                        break;
+                      default:
+                        errorMessage = `Ошибка воспроизведения (код: ${error.code})`;
+                    }
+                  }
+                  
+                  setVideoError(errorMessage);
+                }}
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">

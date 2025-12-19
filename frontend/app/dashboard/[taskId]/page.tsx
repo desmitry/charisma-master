@@ -10,12 +10,14 @@ import { ConfidenceGauge } from "@/components/analysis/confidence-gauge";
 import { Transcript } from "@/components/analysis/transcript";
 import { SummaryBlocks } from "@/components/analysis/summary-blocks";
 import { SmoothScroll } from "@/components/smooth-scroll";
+import { VideoErrorDisplay } from "@/components/video-error-display";
 
 export default function DashboardPage() {
   const { taskId } = useParams<{ taskId: string }>();
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -56,6 +58,10 @@ export default function DashboardPage() {
     }
     return `${apiBase}${analysis.video_path}`;
   }, [analysis]);
+
+  useEffect(() => {
+    setVideoError(null); // Сбрасываем ошибку при изменении источника
+  }, [videoSrc]);
 
   const onSeek = (time: number) => {
     if (!videoRef.current) return;
@@ -105,13 +111,43 @@ export default function DashboardPage() {
         <div className="grid gap-6 lg:grid-cols-[1.4fr,1fr]">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
             <div className="aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black/60">
-              <video
-                ref={videoRef}
-                src={videoSrc}
-                controls
-                className="h-full w-full object-contain"
-                onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-              />
+              {videoError ? (
+                <VideoErrorDisplay error={videoError} />
+              ) : (
+                <video
+                  ref={videoRef}
+                  src={videoSrc}
+                  controls
+                  className="h-full w-full object-contain"
+                  onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                  onError={(e) => {
+                    const video = e.currentTarget;
+                    const error = video.error;
+                    let errorMessage = "Неизвестная ошибка";
+                    
+                    if (error) {
+                      switch (error.code) {
+                        case MediaError.MEDIA_ERR_ABORTED:
+                          errorMessage = "Загрузка видео была прервана";
+                          break;
+                        case MediaError.MEDIA_ERR_NETWORK:
+                          errorMessage = "Ошибка сети при загрузке видео";
+                          break;
+                        case MediaError.MEDIA_ERR_DECODE:
+                          errorMessage = "Ошибка декодирования видео";
+                          break;
+                        case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                          errorMessage = "Формат видео не поддерживается";
+                          break;
+                        default:
+                          errorMessage = `Ошибка воспроизведения (код: ${error.code})`;
+                      }
+                    }
+                    
+                    setVideoError(errorMessage);
+                  }}
+                />
+              )}
             </div>
             <div className="mt-4 grid grid-cols-3 gap-3 text-center text-sm text-white/70">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
