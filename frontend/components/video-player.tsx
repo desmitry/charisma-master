@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useImperativeHandle, useRef } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { VideoErrorDisplay } from "./video-error-display";
 
 export interface VideoPlayerRef {
@@ -10,17 +10,31 @@ export interface VideoPlayerRef {
   getCurrentTime: () => number;
 }
 
+interface VideoErrorDetails {
+  code?: number;
+  message?: string;
+  src?: string;
+  networkState?: number;
+  readyState?: number;
+  currentSrc?: string;
+  timestamp?: string;
+  userAgent?: string;
+}
+
 interface VideoPlayerProps {
   src: string;
   error?: string | null;
+  errorDetails?: VideoErrorDetails;
   onTimeUpdate?: (time: number) => void;
-  onError?: (message: string) => void;
+  onError?: (message: string, details?: VideoErrorDetails) => void;
   className?: string;
 }
 
 export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
-  function VideoPlayer({ src, error, onTimeUpdate, onError, className }, ref) {
+  function VideoPlayer({ src, error, errorDetails, onTimeUpdate, onError, className }, ref) {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const [internalError, setInternalError] = useState<string | null>(null);
+    const [internalErrorDetails, setInternalErrorDetails] = useState<VideoErrorDetails | undefined>(undefined);
 
     useImperativeHandle(ref, () => ({
       play: () => {
@@ -46,41 +60,72 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     };
 
     const handleError = () => {
-      if (!onError) return;
       const video = videoRef.current;
       const err = video?.error;
       
+      const details: VideoErrorDetails = {
+        code: err?.code,
+        message: err?.message || undefined,
+        src: src,
+        networkState: video?.networkState,
+        readyState: video?.readyState,
+        currentSrc: video?.currentSrc || undefined,
+        timestamp: new Date().toISOString(),
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+      };
+
+      let errorMessage: string;
+      
       if (!err) {
-        onError("Неизвестная ошибка воспроизведения");
-        return;
+        errorMessage = "Неизвестная ошибка воспроизведения";
+      } else {
+        switch (err.code) {
+          case MediaError.MEDIA_ERR_ABORTED:
+            errorMessage = "Загрузка видео была прервана";
+            break;
+          case MediaError.MEDIA_ERR_NETWORK:
+            errorMessage = "Ошибка сети при загрузке видео";
+            break;
+          case MediaError.MEDIA_ERR_DECODE:
+            errorMessage = "Ошибка декодирования видео";
+            break;
+          case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+            errorMessage = "Формат видео не поддерживается";
+            break;
+          default:
+            errorMessage = `Ошибка воспроизведения (код: ${err.code})`;
+        }
       }
 
-      switch (err.code) {
-        case MediaError.MEDIA_ERR_ABORTED:
-          onError("Загрузка видео была прервана");
-          break;
-        case MediaError.MEDIA_ERR_NETWORK:
-          onError("Ошибка сети при загрузке видео");
-          break;
-        case MediaError.MEDIA_ERR_DECODE:
-          onError("Ошибка декодирования видео");
-          break;
-        case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-          onError("Формат видео не поддерживается");
-          break;
-        default:
-          onError(`Ошибка воспроизведения (код: ${err.code})`);
+      // Set internal state for self-contained error display
+      setInternalError(errorMessage);
+      setInternalErrorDetails(details);
+
+      // Also call the external handler if provided
+      if (onError) {
+        onError(errorMessage, details);
       }
     };
 
-    if (error) {
-      return <VideoErrorDisplay error={error} className={className} />;
+    // Display error from props or internal state
+    const displayError = error || internalError;
+    const displayDetails = errorDetails || internalErrorDetails;
+
+    if (displayError) {
+      return <VideoErrorDisplay error={displayError} details={displayDetails} className={className} />;
     }
 
     if (!src) {
+      const noSrcDetails: VideoErrorDetails = {
+        message: "Source URL is empty or undefined",
+        src: src || "undefined",
+        timestamp: new Date().toISOString(),
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+      };
       return (
         <VideoErrorDisplay 
           error="Видео недоступно. Путь к видео не указан." 
+          details={noSrcDetails}
           className={className} 
         />
       );

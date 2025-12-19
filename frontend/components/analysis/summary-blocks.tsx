@@ -11,6 +11,17 @@ export function SummaryBlocks({ data }: { data: AnalysisResult }) {
     data.persona_feedback
       ? { title: "Persona feedback", text: data.persona_feedback }
       : null,
+    data.confidence_index?.components?.gesture_advice
+      ? { title: "Советы по жестикуляции", text: data.confidence_index.components.gesture_advice, accent: "text-amber-300" }
+      : null,
+    data.slide_analysis
+      ? { 
+          title: "Анализ слайдов", 
+          text: data.slide_analysis.has_slides === false 
+            ? "Слайды не найдены в видео" 
+            : data.slide_analysis.ocr_summary || "Анализ слайдов недоступен"
+        }
+      : null,
   ].filter(Boolean) as { title: string; text: string; accent?: string }[];
 
   return (

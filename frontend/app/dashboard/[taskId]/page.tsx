@@ -131,12 +131,14 @@ export default function DashboardPage() {
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
                 <p className="text-[11px] uppercase tracking-[0.2em] text-white/50">
-                  Плотность слайдов
+                  {analysis.slide_analysis?.has_slides === false ? "Слайды" : "Плотность слайдов"}
                 </p>
                 <p className="mt-1 text-lg font-semibold text-white">
-                  {(analysis.slide_analysis?.text_density_score ?? analysis.slide_text_density) !== undefined 
-                    ? Math.min(100, Math.max(0, analysis.slide_analysis?.text_density_score ?? analysis.slide_text_density ?? 0)).toFixed(1) 
-                    : "-"}%
+                  {analysis.slide_analysis?.has_slides === false 
+                    ? "Не найдены"
+                    : (analysis.slide_analysis?.text_density_score ?? analysis.slide_text_density) !== undefined 
+                      ? `${Math.min(100, Math.max(0, analysis.slide_analysis?.text_density_score ?? analysis.slide_text_density ?? 0)).toFixed(1)}%`
+                      : "-"}
                 </p>
               </div>
             </div>
