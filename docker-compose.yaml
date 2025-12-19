@@ -4,7 +4,7 @@ services:
         container_name: redis
         command:
             - redis-server
-        restart: always
+        restart: unless-stopped
 
     celery:
         image: ghcr.io/desmitry/charisma-master-backend:latest
@@ -18,7 +18,7 @@ services:
                 "--loglevel=info",
                 "--pool=solo",
             ]
-        restart: always
+        restart: unless-stopped
         env_file:
             - ./backend/.docker.env
         depends_on:
@@ -47,7 +47,7 @@ services:
                 "--timeout-keep-alive",
                 "600",
             ]
-        restart: always
+        restart: unless-stopped
         env_file:
             - ./backend/.docker.env
         ports:
@@ -68,7 +68,7 @@ services:
         image: ghcr.io/desmitry/charisma-master-frontend:latest
         container_name: frontend
         command: ["npm", "start"]
-        restart: always
+        restart: unless-stopped
         ports:
             - 127.0.0.1:3030:3000
         environment:
