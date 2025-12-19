@@ -40,12 +40,10 @@ async def process_video(
             rt = Rutube(video_url.lower())
 
             file_path = settings.media_root / f"{task_id}.mp4"
+            video = rt.get_best()
+            if not video:
+                raise HTTPException(status_code=500, detail="Download failed: video unavailable")
             with open(file_path, "wb") as f:
-                video = rt.get_best()
-                if not video:
-                    raise HTTPException(
-                        status_code=500, detail="Download failed: video unavailable"
-                    )
                 video.download(stream=f)
             final_path = str(file_path)
         except Exception as e:
