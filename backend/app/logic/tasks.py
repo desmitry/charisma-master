@@ -69,10 +69,15 @@ def process_video_pipeline(
         full_text = " ".join([s.text for s in transcript_segments])
         long_pauses = MLEngine.get_long_pauses(transcript_segments, threshold=2.0)
 
+
+    except subprocess.CalledProcessError as e:
+        error_msg = f"FFmpeg error: {str(e)}"
+        logger.critical(error_msg)
+        raise RuntimeError(error_msg)
+
     except Exception as e:
-        logger.critical(f"Ошибка при вырезании аудиодорожки: {e}")
-        self.update_state(state="FAILURE", meta={"error": str(e)})
-        raise e
+        logger.critical(f"Global pipeline error: {e}")
+        raise RuntimeError(f"Processing failed: {str(e)}")
 
     # Видео (Жесты + OCR)
     self.update_state(
