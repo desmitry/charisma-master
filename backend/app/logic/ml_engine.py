@@ -1,10 +1,11 @@
+import difflib
 import logging
 import os
 import subprocess
 import time
 import uuid
 from typing import Dict, List
-import difflib
+
 import cv2
 import easyocr
 import librosa
@@ -481,7 +482,7 @@ class MLEngine:
             }
 
     @staticmethod
-    def analyze_slides_and_video(video_path: str) -> Dict:
+    def analyze_slides_and_video(video_path: str, do_slides: bool) -> Dict:
         logger.info(f"--- START DEBUG CV: {video_path} ---")
 
         # 1. ПРОВЕРКА ФАЙЛА
@@ -505,17 +506,19 @@ class MLEngine:
 
         logger.info(f"Video Metadata: {width}x{height}, {fps} FPS, {frame_count} frames")
 
-        # Инициализация OCR
-        reader = MLEngine._ocr_reader
-        if reader is None:
-            logger.info("Initializing EasyOCR...")
-            try:
-                reader = easyocr.Reader(["ru", "en"], gpu=settings.whisper_device == "cuda")
-            except Exception as e:
-                logger.error(f"EasyOCR init failed: {e}")
-                # Продолжаем без OCR, чтобы хоть жесты посчитать
+        reader = None
+        if do_slides:
+            # Инициализация OCR
+            reader = MLEngine._ocr_reader
+            if reader is None:
+                logger.info("Initializing EasyOCR...")
+                try:
+                    reader = easyocr.Reader(["ru", "en"], gpu=settings.whisper_device == "cuda")
+                except Exception as e:
+                    logger.error(f"EasyOCR init failed: {e}")
+                    # Продолжаем без OCR, чтобы хоть жесты посчитать
 
-        mp_holistic = mp.solutions.holistic
+            mp_holistic = mp.solutions.holistic
 
         # Счетчики
         total_frames_processed = 0
@@ -532,12 +535,11 @@ class MLEngine:
         try:
             # ВАЖНО: static_image_mode=False для видео (быстрее и стабильнее трекинг)
             with mp_holistic.Holistic(
-                    min_detection_confidence=0.5,
-                    min_tracking_confidence=0.5,
-                    model_complexity=1,
-                    static_image_mode=False
+                min_detection_confidence=0.5,
+                min_tracking_confidence=0.5,
+                model_complexity=1,
+                static_image_mode=False,
             ) as holistic:
-
                 while True:
                     ret, frame = cap.read()
                     if not ret:
@@ -571,7 +573,9 @@ class MLEngine:
                                 # Проверка на дубликаты
                                 sim = 0.0
                                 if last_slide_text:
-                                    sim = difflib.SequenceMatcher(None, last_slide_text, txt_joined).ratio()
+                                    sim = difflib.SequenceMatcher(
+                                        None, last_slide_text, txt_joined
+                                    ).ratio()
 
                                 if sim < 0.8:
                                     unique_slides_text.append(txt_joined)
@@ -618,10 +622,14 @@ class MLEngine:
 
                             if prev_wrist["left"] is not None:
                                 # Считаем евклидово расстояние
-                                d_left = ((lw[0] - prev_wrist["left"][0]) ** 2 + (
-                                            lw[1] - prev_wrist["left"][1]) ** 2) ** 0.5
-                                d_right = ((rw[0] - prev_wrist["right"][0]) ** 2 + (
-                                            rw[1] - prev_wrist["right"][1]) ** 2) ** 0.5
+                                d_left = (
+                                    (lw[0] - prev_wrist["left"][0]) ** 2
+                                    + (lw[1] - prev_wrist["left"][1]) ** 2
+                                ) ** 0.5
+                                d_right = (
+                                    (rw[0] - prev_wrist["right"][0]) ** 2
+                                    + (rw[1] - prev_wrist["right"][1]) ** 2
+                                ) ** 0.5
 
                                 delta = d_left + d_right
 
@@ -634,7 +642,9 @@ class MLEngine:
                             prev_wrist = {"left": None, "right": None}
 
                     except Exception as e_mp:
-                        logger.error(f"MediaPipe processing error at frame {total_frames_processed}: {e_mp}")
+                        logger.error(
+                            f"MediaPipe processing error at frame {total_frames_processed}: {e_mp}"
+                        )
 
         except Exception as e_global:
             logger.critical(f"Global CV Loop crash: {e_global}")
@@ -642,7 +652,7 @@ class MLEngine:
             cap.release()
 
         # --- ЛОГИРУЕМ ИТОГИ ПЕРЕД РАСЧЕТОМ ---
-        logger.info(f"--- DEBUG STATS ---")
+        logger.info("--- DEBUG STATS ---")
         logger.info(f"Total processed frames: {total_frames_processed}")
         logger.info(f"Frames with Face detected: {frames_with_face}")
         logger.info(f"Frames with Pose detected: {frames_with_pose}")
@@ -693,7 +703,10 @@ class MLEngine:
     @staticmethod
     def _get_empty_cv_metrics():
         return {
-            "gaze_score": 0, "gesture_score": 0,
+            "gaze_score": 0,
+            "gesture_score": 0,
             "gesture_advice": "Ошибка чтения видео",
-            "ocr_text": "", "slide_density": 0, "has_slides": False
+            "ocr_text": "",
+            "slide_density": 0,
+            "has_slides": False,
         }

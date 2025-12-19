@@ -1,8 +1,9 @@
 import asyncio
 import json
 import logging
-from pathlib import Path
 import subprocess
+from pathlib import Path
+
 from app.config import settings
 from app.logic.llm_client import LLMClient
 from app.logic.ml_engine import MLEngine
@@ -42,6 +43,7 @@ def process_video_pipeline(
     analyze_model: str,
     transcribe_model: str,
     persona: str = None,
+    do_slides: bool = False,
 ):
     transcription_provider = "local"
     if transcribe_model == "sber_gigachat":
@@ -68,7 +70,6 @@ def process_video_pipeline(
 
         full_text = " ".join([s.text for s in transcript_segments])
         long_pauses = MLEngine.get_long_pauses(transcript_segments, threshold=2.0)
-
 
     except subprocess.CalledProcessError as e:
         error_msg = f"FFmpeg error: {str(e)}"
