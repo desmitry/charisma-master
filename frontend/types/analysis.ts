@@ -15,6 +15,12 @@ export interface TranscriptSegment {
   words: TranscriptWord[];
 }
 
+export interface LongPause {
+  start: number;
+  end: number;
+  duration: number;
+}
+
 export interface TempoPoint {
   time: number;
   wpm: number;
@@ -25,6 +31,9 @@ export interface ConfidenceComponents {
   volume_score: number;
   filler_score: number;
   gaze_score: number;
+  gesture_score?: number;
+  gesture_advice?: string;
+  tone_score?: number;
 }
 
 export interface ConfidenceIndex {
@@ -41,13 +50,32 @@ export interface AnalysisResult {
     count: number;
     ratio: number;
   };
+  long_pauses?: LongPause[];
+  dynamic_fillers?: string[];
   confidence_index: ConfidenceIndex;
   summary: string;
   structure: string;
   mistakes: string;
   ideal_text: string;
   persona_feedback?: string | null;
-  slide_text_density: number;
+  slide_text_density?: number;
+  slide_analysis?: {
+    has_slides: boolean;
+    text_density_score: number;
+    text_density_label?: string;
+    ocr_summary?: string;
+    acr_summary?: string;
+  };
+  analyze_provider?: string;
+  analyze_model?: string;
+  raw_metrics?: {
+    gaze_score?: number;
+    gesture_score?: number;
+    raw_movement?: number;
+    volume_score?: number;
+    tone_score?: number;
+    pitch_std?: number;
+  };
 }
 
 export interface TaskStatusResponse {

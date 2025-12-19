@@ -17,13 +17,11 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
   const clamped = Math.min(1, Math.max(0, progress || 0));
   const percent = Math.max(5, Math.round(clamped * 100));
 
-  // Animate in on mount
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 50);
     return () => clearTimeout(timer);
   }, []);
 
-  // Trigger exit animation when complete
   useEffect(() => {
     if (progress >= 1) {
       setIsExiting(true);
@@ -49,7 +47,6 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
     const centerY = size / 2;
     const sphereRadius = 70;
 
-    // Sphere particles
     const spherePoints: { x: number; y: number; z: number }[] = [];
     for (let i = 0; i < 1000; i++) {
       const u = Math.random();
@@ -63,7 +60,6 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
       });
     }
 
-    // Spiral lines
     const spirals: { x: number; y: number; z: number }[][] = [];
     for (let s = 0; s < 5; s++) {
       const spiral: { x: number; y: number; z: number }[] = [];
@@ -78,7 +74,6 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
       spirals.push(spiral);
     }
 
-    // Orbit particles
     const orbitParticles: { x: number; y: number; z: number; speed: number }[] = [];
     for (let i = 0; i < 120; i++) {
       const angle = Math.random() * Math.PI * 2;
@@ -121,7 +116,6 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
       const rotY = time * 0.35;
       const rotX = Math.sin(time * 0.25) * 0.12;
 
-      // Draw spirals
       ctx.lineCap = "round";
       for (const spiral of spirals) {
         ctx.beginPath();
@@ -136,7 +130,6 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
         ctx.stroke();
       }
 
-      // Draw sphere particles
       for (const p of spherePoints) {
         const rot = rotate3D(p, rotY, rotX);
         const proj = project(rot);
@@ -147,7 +140,6 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
         ctx.fill();
       }
 
-      // Draw orbit particles
       for (const p of orbitParticles) {
         const angle = time * p.speed;
         const rotP = {
@@ -181,7 +173,8 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: "#000",
-        opacity: isVisible ? 1 : 0,
+        opacity: isVisible && !isExiting ? 1 : 0,
+        pointerEvents: isVisible && !isExiting ? "auto" : "none",
         transition: "opacity 0.5s ease-out",
       }}
     >

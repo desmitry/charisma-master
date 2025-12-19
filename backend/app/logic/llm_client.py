@@ -1,60 +1,118 @@
+import json
+import logging
+from typing import Any, Optional
+
 import openai
 from app.config import settings
+from app.logic import prompts
+from app.models.schemas import PersonaEnum
+from gigachat import GigaChat
+
+logger = logging.getLogger(__name__)
 
 
 class LLMClient:
+    """
+    Client for interacting with LLM providers (OpenAI and GigaChat).
+    Allows runtime selection of the provider and model.
+    """
+
     def __init__(self):
-        # TODO: Убедиться, что в окружении задан LLM_API_KEY
-        self.client = openai.AsyncOpenAI(
-            base_url=settings.llm_api_base, api_key=settings.llm_api_key
+        self.openai_client = openai.AsyncOpenAI(
+            base_url=settings.openai_api_base, api_key=settings.openai_api_key
         )
-        self.model = settings.llm_model_name
 
-    async def analyze_speech(self, full_text: str, persona: str = None) -> dict:
-        persona_prompt = ""
-        if persona == "strict_critic":
-            persona_prompt = "Ты строгий критик. Укажи на все недостатки жестко."
-        elif persona == "kind_mentor":
-            persona_prompt = "Ты добрый наставник. Поддержи и дай мягкие советы."
-        elif persona == "steve_jobs_style":
-            persona_prompt = (
-                "Ты Стив Джобс." + "Оцени выступление с точки зрения минимализма, страсти и подачи."
+        # Initialize GigaChat client if credentials are present
+        self.gigachat_client: Optional[GigaChat] = None
+        if getattr(settings, "gigachat_credentials", None):
+            self.gigachat_client = GigaChat(
+                credentials=settings.gigachat_credentials,
+                verify_ssl_certs=getattr(settings, "gigachat_verify_ssl", False),
+                scope=getattr(settings, "gigachat_scope", "GIGACHAT_API_PERS"),
             )
-        else:
-            persona_prompt = "Ты эксперт по публичным выступлениям."
 
-        system_prompt = f"""
-        {persona_prompt}
-        Проанализируй текст выступления.
-        Учти, что текст является автоматической транскрипцией речи. 
-        В нем могут быть ошибки распознавания (опечатки, неверные окончания). 
-        Не критикуй спикера за орфографию или странные словоформы, оценивай только смысл и структуру.
-        Верни результат строго в JSON формате с ключами:
-        - "summary": краткое содержание (2-3 предложения)
-        - "structure": описание структуры (Вступление, Основная часть, Вывод)
-        - "mistakes": основные ошибки (стилистика, логика, повторы)
-        - "ideal_text": перепиши текст, сделав его убедительным и чистым (первые 3-4 предложения)
-        - "persona_feedback": обратная связь именно в твоем стиле ({persona})
+    async def analyze_speech(
+        self,
+        transcript_text: str,
+        slides_text: str,
+        provider: str,
+        model: str,
+        persona: PersonaEnum | None = None,
+    ) -> dict[str, Any]:
+        """
+        Analyze the speech text using the specified provider and model.
+
+        :param transcript_text: Transcript of the speech.
+        :param slides_text: Text from slides.
+        :param persona: Persona identifier for the system prompt.
+        :param provider: 'openai' or 'gigachat'. Defaults to settings if None.
+        :param model: Specific model name (e.g., 'gpt-4', 'GigaChat-Pro').
         """
 
-        try:
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": full_text[:3500]},
-                ],
-                response_format={"type": "json_object"},
-            )
-            import json
+        persona_prompt = prompts.get_persona_prompt(persona)
+        system_prompt = prompts.get_system_prompt(persona_prompt)
 
-            return json.loads(response.choices[0].message.content)
-        except Exception as e:
-            # TODO: Добавить нормальное логирование ошибки
-            return {
-                "summary": "Не удалось сгенерировать саммари.",
-                "structure": "Анализ недоступен.",
-                "mistakes": "Ошибка подключения к AI.",
-                "ideal_text": "Ошибка генерации.",
-                "persona_feedback": f"Ошибка: {str(e)}",
-            }
+        if not slides_text or not slides_text.strip():
+            slides_content = "СЛАЙДЫ НЕ ОБНАРУЖЕНИ (ТЕКСТ ОТСУТСТВУЕТ)"
+        else:
+            slides_content = slides_text[:1000]
+
+        user_content = f"ТРАНСКРИПЦИЯ:\n{transcript_text[:3000]}\n\nСЛАЙДЫ:\n{slides_content}"
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+        ]
+
+        try:
+            if provider == "gigachat":
+                content = await self._call_gigachat(messages, model)
+            else:
+                content = await self._call_openai(messages, model)
+
+            return self._parse_json_response(content)
+
+        except Exception as error_msg:
+            logger.error(
+                f"LLM Analysis Error ({provider}/{model}): {str(error_msg)}",
+                exc_info=True,
+            )
+
+            return self._error_response(error_msg)
+
+    async def _call_openai(self, messages: list, model: str) -> str:
+        response = await self.openai_client.chat.completions.create(
+            model=model,
+            messages=messages,
+            response_format={"type": "json_object"},
+        )
+        return response.choices[0].message.content
+
+    async def _call_gigachat(self, messages: list, model: str) -> str:
+        if not self.gigachat_client:
+            raise ValueError("GigaChat client is not initialized. Check credentials.")
+
+        response = await self.gigachat_client.achat(payload={"messages": messages, "model": model})
+        return response.choices[0].message.content
+
+    def _parse_json_response(self, content: str) -> dict:
+        """Clean and parse the JSON string returned by LLM."""
+        cleaned = content.replace("```json", "").replace("```", "").strip()
+
+        try:
+            result = json.loads(cleaned)
+            return result
+        except Exception as error_msg:
+            return self._error_response(error_msg)
+
+    @staticmethod
+    def _error_response(error_msg: str):
+        return {
+            "summary": "Ошибка анализа",
+            "structure": "-",
+            "mistakes": error_msg,
+            "ideal_text": "-",
+            "persona_feedback": "Ошибка LLM",
+            "dynamic_fillers": [],
+            "slides_feedback": "-",
+        }

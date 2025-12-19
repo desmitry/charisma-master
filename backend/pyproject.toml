@@ -2,14 +2,16 @@
 name = "charisma-master"
 version = "0.1.0"
 description = ""
-requires-python = ">=3.13,<3.14"
+requires-python = ">=3.11,<3.12"
 dependencies = [
     "celery>=5.6.0",
     "celery-types==0.23.0",
     "fastapi>=0.123.7",
     "faster-whisper>=1.2.1",
+    "gigachat==0.1.43",
     "librosa>=0.11.0",
-    "numpy>=2.3.5",
+    "mediapipe>=0.10.14",
+    "numpy>=1.26.4",
     "openai>=2.8.1",
     "opencv-python>=4.11.0.86",
     "pydantic-settings>=2.12.0",
@@ -17,8 +19,11 @@ dependencies = [
     "redis>=7.1.0",
     "reportlab>=4.4.5",
     "requests>=2.32.5",
+    "rutube-downloader>=0.0.8",
     "uvicorn[standard]>=0.38.0",
-    "mediapipe=0.10.14"
+    "easyocr==1.7.2",
+    "gigachat==0.1.43",
+    "requests==2.32.5",
 ]
 
 [dependency-groups]
@@ -29,7 +34,7 @@ dev = [
 
 [tool.ruff]
 src = ["app"]
-target-version = "py313"
+target-version = "py311"
 line-length = 100
 indent-width = 4
 exclude = [
