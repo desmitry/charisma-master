@@ -24,6 +24,7 @@ async def process_video(
     persona: PersonaEnum = Form(None),
     analyze_llm_provider: LLMProviderEnum = Form(None),
     transcribe_model: ModelType = Form(ModelType.whisper_local),
+    do_slides: bool = Form(False),
 ):
     task_id = str(uuid.uuid4())
     final_path = None
@@ -63,6 +64,7 @@ async def process_video(
             ),
             transcribe_model.value,
             persona.value if persona else None,
+            do_slides.value,
         ],
         task_id=task_id,
     )
