@@ -4,7 +4,7 @@ import subprocess
 import time
 import uuid
 from typing import Dict, List
-
+import difflib
 import cv2
 import easyocr
 import librosa
@@ -486,20 +486,22 @@ class MLEngine:
         reader = MLEngine._ocr_reader
         if reader is None:
             reader = easyocr.Reader(["ru", "en"], gpu=settings.whisper_device == "cuda")
+
         cap = cv2.VideoCapture(video_path)
         fps = cap.get(cv2.CAP_PROP_FPS) or 25
         total_frames = 0
-        looking_at_camera = 0
-        movement_accum = 0.0
-        prev_wrist_y = {"left": None, "right": None}
-        slide_text_accum = []
-        frame_interval_ocr = int(fps * 5)
-        
-        logger.info(f"Start Video Analysis: {video_path}, FPS={fps}")
 
-        faces_detected_count = 0
-        PROCESS_EVERY_N_FRAMES = 10
-        poses_detected_count = 0
+        looking_at_camera_frames = 0
+        faces_detected_frames = 0
+
+        movement_accum = 0.0
+        poses_detected_frames = 0
+        prev_wrist = {"left": None, "right": None}
+
+        unique_slides_text = []
+        last_slide_text = ""
+
+        logger.info(f"Start Video Analysis: {video_path}, FPS={fps}")
 
         with mp_holistic.Holistic(min_detection_confidence=0.5, model_complexity=1) as holistic:
             while True:
@@ -508,24 +510,29 @@ class MLEngine:
                     break
                 total_frames += 1
 
-                # OCR
-                if total_frames % frame_interval_ocr == 0:
+                if total_frames % int(fps * 2) == 0:
                     try:
                         h, w = frame.shape[:2]
-                        if w > 1000:
-                            scale = 1000 / w
+                        if w > 1280:
+                            scale = 1280 / w
                             ocr_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale)
                         else:
                             ocr_frame = frame
+
                         result = reader.readtext(ocr_frame, detail=0)
-                        txt = " ".join(result)
-                        if len(txt) > 15:
-                            slide_text_accum.append(txt)
-                    except:
-                        pass
+                        current_text = " ".join(result).strip()
+
+                        if len(current_text) > 20:
+                            if not last_slide_text or difflib.SequenceMatcher(None, last_slide_text,
+                                                                              current_text).ratio() < 0.8:
+                                unique_slides_text.append(current_text)
+                                last_slide_text = current_text
+                    except Exception as e:
+                        logger.warning(f"OCR Error: {e}")
 
                 if total_frames % 5 != 0:
                     continue
+
                 try:
                     h, w = frame.shape[:2]
                     target_w = 480
@@ -535,10 +542,10 @@ class MLEngine:
                     img = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                     img.flags.writeable = False
                     res = holistic.process(img)
-                    img.flags.writeable = True  #
+                    img.flags.writeable = True
 
                     if res.face_landmarks:
-                        faces_detected_count += 1
+                        faces_detected_frames += 1
                         face = res.face_landmarks.landmark
                         nose_x = face[1].x
                         left_cheek_x = face[234].x
@@ -549,58 +556,75 @@ class MLEngine:
 
                         if face_width > 0:
                             deviation = abs(nose_x - face_center_x) / face_width
-
-                            if deviation < 0.30:
-                                looking_at_camera += 1
+                            if deviation < 0.20:
+                                looking_at_camera_frames += 1
 
                     if res.pose_landmarks:
-                        poses_detected_count += 1
+                        poses_detected_frames += 1
                         p = res.pose_landmarks.landmark
-                        lw, rw = (
-                            p[mp_holistic.PoseLandmark.LEFT_WRIST].y,
-                            p[mp_holistic.PoseLandmark.RIGHT_WRIST].y,
-                        )
-                        if prev_wrist_y["left"]:
-                            delta = abs(lw - prev_wrist_y["left"]) + abs(rw - prev_wrist_y["right"])
-                            if delta > 0.01:
+
+                        lw = (p[mp_holistic.PoseLandmark.LEFT_WRIST].x, p[mp_holistic.PoseLandmark.LEFT_WRIST].y)
+                        rw = (p[mp_holistic.PoseLandmark.RIGHT_WRIST].x, p[mp_holistic.PoseLandmark.RIGHT_WRIST].y)
+
+                        if prev_wrist["left"] is not None:
+                            dist_l = ((lw[0] - prev_wrist["left"][0]) ** 2 + (
+                                        lw[1] - prev_wrist["left"][1]) ** 2) ** 0.5
+                            dist_r = ((rw[0] - prev_wrist["right"][0]) ** 2 + (
+                                        rw[1] - prev_wrist["right"][1]) ** 2) ** 0.5
+
+                            delta = dist_l + dist_r
+
+                            if delta > 0.005:
                                 movement_accum += delta
-                        prev_wrist_y = {"left": lw, "right": rw}
+
+                        prev_wrist = {"left": lw, "right": rw}
+                    else:
+                        prev_wrist = {"left": None, "right": None}
 
                 except Exception as e:
-                        logger.error(f"CV Error at frame {total_frames}: {e}")
-
-                if total_frames % 100 == 0:
-                     logger.info(f"Analyze progress: Frame {total_frames}, Poses={poses_detected_count}, Faces={faces_detected_count}, MoveAccum={movement_accum:.4f}")
+                    logger.error(f"CV Loop Error: {e}")
 
         cap.release()
 
-        proc_frames = total_frames / PROCESS_EVERY_N_FRAMES if total_frames > 0 else 1
+        if faces_detected_frames > 0:
+            gaze_score = (looking_at_camera_frames / faces_detected_frames) * 100
+        else:
+            gaze_score = 0
 
-        logger.info(
-            f"Video analysis: Total frames={total_frames}, Processed={proc_frames}, Looking={looking_at_camera}"
-        )
-        gaze_score = (looking_at_camera / proc_frames) * 100
-        avg_movement = movement_accum / proc_frames
-        gesture_score = min(avg_movement * 1000, 100)
+        if poses_detected_frames > 0:
+            avg_movement = movement_accum / poses_detected_frames
+        else:
+            avg_movement = 0
 
-        gesture_advice = "Отличная жестикуляция!"
-        if gesture_score < 20:
-            gesture_advice = "Добавьте больше движений руками."
-        elif gesture_score > 85:
-            gesture_advice = "Слишком активная жестикуляция."
+        gesture_score = min(avg_movement * 3000, 100)
 
-        unique_text = list(set(slide_text_accum))
-        full_slide_text = " ".join(unique_text)
-        text_density = min(
-            len(full_slide_text) / (max(len(unique_text), 1) * 50 + 1) * 100,
-            100,
-        )
+        if gesture_score < 10:
+            gesture_advice = "Вы почти неподвижны. Попробуйте добавить немного жестикуляции."
+        elif gesture_score > 80:
+            gesture_advice = "Очень активная жестикуляция, возможно, стоит быть спокойнее."
+        else:
+            gesture_advice = "Хороший уровень жестикуляции."
+
+        full_slide_text = " ".join(unique_slides_text)
+        total_chars = len(full_slide_text)
+        slides_count = max(len(unique_slides_text), 1)
+
+        chars_per_slide = total_chars / slides_count
+
+        if chars_per_slide < 50:
+            text_density_score = 80
+        elif 50 <= chars_per_slide <= 600:
+            text_density_score = 100  # Идеал
+        else:
+            # Чем больше текста сверх 600, тем меньше балл
+            overload = chars_per_slide - 600
+            text_density_score = max(100 - (overload / 10), 0)
 
         return {
-            "gaze_score": gaze_score,
-            "gesture_score": gesture_score,
+            "gaze_score": round(gaze_score, 1),
+            "gesture_score": round(gesture_score, 1),
             "gesture_advice": gesture_advice,
-            "ocr_text": full_slide_text[:2000],
-            "slide_density": text_density,
-            "has_slides": len(full_slide_text) > 50,
+            "ocr_text": full_slide_text[:4000],  # Лимит для LLM
+            "slide_density": int(text_density_score),
+            "has_slides": len(unique_slides_text) > 0,
         }
