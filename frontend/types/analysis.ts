@@ -26,6 +26,7 @@ export interface ConfidenceComponents {
   filler_score: number;
   gaze_score: number;
   gesture_score?: number;
+  gesture_advice?: string;
   tone_score?: number;
 }
 

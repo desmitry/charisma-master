@@ -304,18 +304,18 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             />
             <GlassStat
               icon={<IconClock />}
-              label="Аудиофрагментов"
-              value={result.transcript.length}
-              suffix="шт"
+              label="Темп речи"
+              value={Math.round(result.tempo.reduce((sum, p) => sum + p.wpm, 0) / result.tempo.length)}
+              suffix="wpm"
               delay={500}
               mounted={mounted}
               ecoMode={isEcoMode}
             />
             <GlassStat
               icon={<IconHand />}
-              label="Жестикуляция"
-              value={Math.min(100, Math.max(0, result.confidence_index.components.gesture_score || 0))}
-              suffix="/100"
+              label="Аудиофрагментов"
+              value={result.transcript.length}
+              suffix="шт"
               delay={600}
               mounted={mounted}
               ecoMode={isEcoMode}
@@ -454,11 +454,27 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                 mounted={mounted}
                 accent="amber"
               />
-              {result.slide_analysis && (result.slide_analysis.acr_summary || result.slide_analysis.ocr_summary) && (
+              {result.confidence_index.components.gesture_advice && (
                 <InsightCard
-                  title="Анализ презентации"
-                  content={result.slide_analysis.acr_summary || result.slide_analysis.ocr_summary || ""}
+                  title="Жестикуляция"
+                  content={result.confidence_index.components.gesture_advice}
                   delay={500}
+                  mounted={mounted}
+                />
+              )}
+              {result.slide_analysis && (
+                result.slide_analysis.has_slides === false 
+                  ? result.slide_analysis.ocr_summary 
+                  : (result.slide_analysis.acr_summary || result.slide_analysis.ocr_summary)
+              ) && (
+                <InsightCard
+                  title={result.slide_analysis.has_slides === false ? "Слайды" : "Анализ презентации"}
+                  content={
+                    result.slide_analysis.has_slides === false 
+                      ? result.slide_analysis.ocr_summary || ""
+                      : result.slide_analysis.acr_summary || result.slide_analysis.ocr_summary || ""
+                  }
+                  delay={600}
                   mounted={mounted}
                 />
               )}
