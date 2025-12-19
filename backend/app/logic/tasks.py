@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-
+import subprocess
 from app.config import settings
 from app.logic.llm_client import LLMClient
 from app.logic.ml_engine import MLEngine
