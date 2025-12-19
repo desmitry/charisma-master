@@ -957,7 +957,7 @@ function AnimatedConfidenceGauge({
         </div>
         <div className="flex-1 space-y-2">
           <MiniBar label="Громкость" value={Math.min(100, Math.max(0, components.volume_score))} delay={700} mounted={mounted} />
-          <MiniBar label="Паразиты" value={Math.min(100, Math.max(0, components.filler_score))} delay={800} mounted={mounted} />
+          <MiniBar label="Чистота речи" value={Math.min(100, Math.max(0, components.filler_score))} delay={800} mounted={mounted} />
           <MiniBar label="Взгляд" value={Math.min(100, Math.max(0, components.gaze_score))} delay={900} mounted={mounted} />
         </div>
       </div>
