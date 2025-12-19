@@ -22,9 +22,18 @@ type ExportOptions = {
   structure: boolean;
   idealText: boolean;
   personaFeedback: boolean;
+  rawMetrics: boolean;
+  longPauses: boolean;
+  dynamicFillers: boolean;
 };
 
 type Html2CanvasOptions = Parameters<typeof html2canvas>[1];
+
+function formatPdfTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExportDropdownProps) {
   const [options, setOptions] = useState<ExportOptions>({
@@ -36,6 +45,9 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
     structure: false,
     idealText: false,
     personaFeedback: !!result.persona_feedback,
+    rawMetrics: !!result.raw_metrics,
+    longPauses: !!(result.long_pauses && result.long_pauses.length > 0),
+    dynamicFillers: !!(result.dynamic_fillers && result.dynamic_fillers.length > 0),
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const pdfContentRef = useRef<HTMLDivElement>(null);
@@ -179,6 +191,9 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
     { key: "structure" as const, label: "Структура" },
     { key: "idealText" as const, label: "Идеальный текст" },
     { key: "personaFeedback" as const, label: "Фидбэк персоны", disabled: !result.persona_feedback },
+    { key: "rawMetrics" as const, label: "Сырые метрики", disabled: !result.raw_metrics },
+    { key: "longPauses" as const, label: "Долгие паузы", disabled: !result.long_pauses || result.long_pauses.length === 0 },
+    { key: "dynamicFillers" as const, label: "Слова-паразиты (список)", disabled: !result.dynamic_fillers || result.dynamic_fillers.length === 0 },
   ];
 
   return (
@@ -575,6 +590,123 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
                 {result.slide_analysis.has_slides === false 
                   ? result.slide_analysis.ocr_summary 
                   : (result.slide_analysis.acr_summary || result.slide_analysis.ocr_summary)}
+              </div>
+            </div>
+          )}
+
+          {options.rawMetrics && result.raw_metrics && (
+            <div 
+              data-pdf-block
+              style={{ 
+                padding: "12px 20px",
+                backgroundColor: "#0a0a0a"
+              }}
+            >
+              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Сырые метрики</h2>
+              <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "16px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+                  {result.raw_metrics.gaze_score !== undefined && (
+                    <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.03)" }}>
+                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", margin: 0 }}>Взгляд</p>
+                      <p style={{ fontSize: "18px", fontWeight: "bold", margin: "4px 0 0 0", color: "#fff" }}>{result.raw_metrics.gaze_score.toFixed(1)}%</p>
+                    </div>
+                  )}
+                  {result.raw_metrics.gesture_score !== undefined && (
+                    <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.03)" }}>
+                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", margin: 0 }}>Жесты</p>
+                      <p style={{ fontSize: "18px", fontWeight: "bold", margin: "4px 0 0 0", color: "#fff" }}>{result.raw_metrics.gesture_score.toFixed(1)}%</p>
+                    </div>
+                  )}
+                  {result.raw_metrics.volume_score !== undefined && (
+                    <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.03)" }}>
+                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", margin: 0 }}>Громкость</p>
+                      <p style={{ fontSize: "18px", fontWeight: "bold", margin: "4px 0 0 0", color: "#fff" }}>{result.raw_metrics.volume_score.toFixed(1)}%</p>
+                    </div>
+                  )}
+                  {result.raw_metrics.tone_score !== undefined && (
+                    <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.03)" }}>
+                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", margin: 0 }}>Тон</p>
+                      <p style={{ fontSize: "18px", fontWeight: "bold", margin: "4px 0 0 0", color: "#fff" }}>{result.raw_metrics.tone_score.toFixed(1)}%</p>
+                    </div>
+                  )}
+                  {result.raw_metrics.pitch_std !== undefined && (
+                    <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.03)" }}>
+                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", margin: 0 }}>Вариация тона</p>
+                      <p style={{ fontSize: "18px", fontWeight: "bold", margin: "4px 0 0 0", color: "#fff" }}>{result.raw_metrics.pitch_std.toFixed(2)}</p>
+                    </div>
+                  )}
+                  {result.raw_metrics.raw_movement !== undefined && (
+                    <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.03)" }}>
+                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", margin: 0 }}>Движение</p>
+                      <p style={{ fontSize: "18px", fontWeight: "bold", margin: "4px 0 0 0", color: "#fff" }}>{result.raw_metrics.raw_movement.toFixed(2)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {options.longPauses && result.long_pauses && result.long_pauses.length > 0 && (
+            <div 
+              data-pdf-block
+              style={{ 
+                padding: "12px 20px",
+                backgroundColor: "#0a0a0a"
+              }}
+            >
+              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Долгие паузы ({result.long_pauses.length})</h2>
+              <div style={{ borderRadius: "12px", backgroundColor: "rgba(239,68,68,0.08)", padding: "16px", border: "1px solid rgba(239,68,68,0.25)" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {result.long_pauses.map((pause, idx) => (
+                    <div 
+                      key={idx}
+                      style={{ 
+                        padding: "8px 12px", 
+                        borderRadius: "8px", 
+                        backgroundColor: "rgba(239,68,68,0.1)",
+                        border: "1px solid rgba(239,68,68,0.2)"
+                      }}
+                    >
+                      <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.6)" }}>
+                        {formatPdfTime(pause.start)} — {formatPdfTime(pause.end)}
+                      </span>
+                      <span style={{ fontSize: "11px", color: "#fb7185", marginLeft: "8px" }}>
+                        {pause.duration.toFixed(1)}с
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {options.dynamicFillers && result.dynamic_fillers && result.dynamic_fillers.length > 0 && (
+            <div 
+              data-pdf-block
+              style={{ 
+                padding: "12px 20px",
+                backgroundColor: "#0a0a0a"
+              }}
+            >
+              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Обнаруженные слова-паразиты</h2>
+              <div style={{ borderRadius: "12px", backgroundColor: "rgba(245,158,11,0.08)", padding: "16px", border: "1px solid rgba(245,158,11,0.25)" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {result.dynamic_fillers.map((filler, idx) => (
+                    <span 
+                      key={idx}
+                      style={{ 
+                        padding: "6px 12px", 
+                        borderRadius: "6px", 
+                        backgroundColor: "rgba(245,158,11,0.15)",
+                        color: "#fcd34d",
+                        fontSize: "13px",
+                        fontWeight: "500"
+                      }}
+                    >
+                      {filler}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           )}

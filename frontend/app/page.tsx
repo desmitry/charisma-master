@@ -51,6 +51,7 @@ export default function Home() {
   const [selectedPersona, setSelectedPersona] = useState<string>("");
   const [selectedLlmProvider, setSelectedLlmProvider] = useState<string>("default");
   const [selectedModel, setSelectedModel] = useState<string>("");
+  const [doSlides, setDoSlides] = useState<boolean>(false);
   const [fastRequestsCount, setFastRequestsCount] = useState<number>(3);
   const [isValidRuTubeUrl, setIsValidRuTubeUrl] = useState(false);
   const [isPersonaOpen, setIsPersonaOpen] = useState(false);
@@ -424,13 +425,14 @@ export default function Home() {
           setFastRequestsCount(getFastRequestsCount());
         }
         
-        const uploadResult = await uploadVideo(
-          selectedFile, 
-          videoUrl || null, 
-          selectedPersona || undefined,
-          actualProvider || undefined,
-          selectedModel || undefined
-        );
+                        const uploadResult = await uploadVideo(
+                          selectedFile, 
+                          videoUrl || null, 
+                          selectedPersona || undefined,
+                          actualProvider || undefined,
+                          selectedModel || undefined,
+                          doSlides
+                        );
         if (!uploadResult?.task_id) {
           throw new Error("Не получен task_id от сервера");
         }
@@ -1008,13 +1010,45 @@ export default function Home() {
                           </button>
                         </>
                       )}
-                    </div>
-                  </div>
-                )}
+                                    </div>
+                                  </div>
+                                )}
 
-                <div className="flex-1" />
+                                {/* Toggle для анализа слайдов */}
+                                <button
+                                  type="button"
+                                  onClick={() => setDoSlides(!doSlides)}
+                                  className={cn(
+                                    "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm backdrop-blur-sm transition-all",
+                                    doSlides
+                                      ? "border-emerald-500/40 bg-emerald-500/15"
+                                      : "border-white/10 bg-white/[0.05] hover:border-white/20 hover:bg-white/10"
+                                  )}
+                                >
+                                  <div
+                                    className={cn(
+                                      "relative w-8 h-4 rounded-full transition-colors duration-200",
+                                      doSlides ? "bg-emerald-500" : "bg-white/20"
+                                    )}
+                                  >
+                                    <div
+                                      className={cn(
+                                        "absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform duration-200",
+                                        doSlides ? "translate-x-4" : "translate-x-0.5"
+                                      )}
+                                    />
+                                  </div>
+                                  <span className={cn(
+                                    "text-xs sm:text-sm whitespace-nowrap",
+                                    doSlides ? "text-emerald-300" : "text-white/60"
+                                  )}>
+                                    Слайды
+                                  </span>
+                                </button>
 
-                <button
+                                <div className="flex-1" />
+
+                                <button
                   className={cn(
                     "rounded-lg px-6 py-2.5 text-sm font-medium transition-all duration-300",
                     (!selectedFile && (!videoUrl || !isValidRuTubeUrl))

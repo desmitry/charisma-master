@@ -15,6 +15,12 @@ export interface TranscriptSegment {
   words: TranscriptWord[];
 }
 
+export interface LongPause {
+  start: number;
+  end: number;
+  duration: number;
+}
+
 export interface TempoPoint {
   time: number;
   wpm: number;
@@ -44,6 +50,8 @@ export interface AnalysisResult {
     count: number;
     ratio: number;
   };
+  long_pauses?: LongPause[];
+  dynamic_fillers?: string[];
   confidence_index: ConfidenceIndex;
   summary: string;
   structure: string;
