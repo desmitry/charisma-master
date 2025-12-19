@@ -482,149 +482,218 @@ class MLEngine:
 
     @staticmethod
     def analyze_slides_and_video(video_path: str) -> Dict:
-        mp_holistic = mp.solutions.holistic
+        logger.info(f"--- START DEBUG CV: {video_path} ---")
+
+        # 1. ПРОВЕРКА ФАЙЛА
+        if not os.path.exists(video_path):
+            logger.critical(f"CRITICAL: File does not exist at path: {video_path}")
+            return MLEngine._get_empty_cv_metrics()
+
+        file_size = os.path.getsize(video_path)
+        logger.info(f"File size: {file_size / (1024 * 1024):.2f} MB")
+
+        # 2. ПРОВЕРКА OPENCV
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            logger.critical("CRITICAL: OpenCV could not open the video. Check codecs/path.")
+            return MLEngine._get_empty_cv_metrics()
+
+        fps = cap.get(cv2.CAP_PROP_FPS) or 25
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        logger.info(f"Video Metadata: {width}x{height}, {fps} FPS, {frame_count} frames")
+
+        # Инициализация OCR
         reader = MLEngine._ocr_reader
         if reader is None:
-            reader = easyocr.Reader(["ru", "en"], gpu=settings.whisper_device == "cuda")
+            logger.info("Initializing EasyOCR...")
+            try:
+                reader = easyocr.Reader(["ru", "en"], gpu=settings.whisper_device == "cuda")
+            except Exception as e:
+                logger.error(f"EasyOCR init failed: {e}")
+                # Продолжаем без OCR, чтобы хоть жесты посчитать
 
-        cap = cv2.VideoCapture(video_path)
-        fps = cap.get(cv2.CAP_PROP_FPS) or 25
-        total_frames = 0
+        mp_holistic = mp.solutions.holistic
 
+        # Счетчики
+        total_frames_processed = 0
+        frames_with_face = 0
+        frames_with_pose = 0
         looking_at_camera_frames = 0
-        faces_detected_frames = 0
 
         movement_accum = 0.0
-        poses_detected_frames = 0
         prev_wrist = {"left": None, "right": None}
 
         unique_slides_text = []
         last_slide_text = ""
 
-        logger.info(f"Start Video Analysis: {video_path}, FPS={fps}")
+        try:
+            # ВАЖНО: static_image_mode=False для видео (быстрее и стабильнее трекинг)
+            with mp_holistic.Holistic(
+                    min_detection_confidence=0.5,
+                    min_tracking_confidence=0.5,
+                    model_complexity=1,
+                    static_image_mode=False
+            ) as holistic:
 
-        with mp_holistic.Holistic(min_detection_confidence=0.5, model_complexity=1) as holistic:
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                total_frames += 1
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
+                        logger.info("End of video stream (ret=False).")
+                        break
 
-                if total_frames % int(fps * 2) == 0:
+                    total_frames_processed += 1
+
+                    # --- DEBUG: Проверяем первые 5 кадров ---
+                    if total_frames_processed <= 5:
+                        logger.info(f"Processing frame {total_frames_processed}...")
+
+                    # Оптимизация: обрабатываем каждый 5-й кадр
+                    if total_frames_processed % 5 != 0:
+                        continue
+
+                    # OCR (раз в 2 секунды)
+                    if reader and total_frames_processed % int(fps * 2) == 0:
+                        try:
+                            # Для OCR берем кадр побольше, но не 4K
+                            scale_ocr = 1.0
+                            if width > 1280:
+                                scale_ocr = 1280 / width
+
+                            ocr_frame = cv2.resize(frame, (0, 0), fx=scale_ocr, fy=scale_ocr)
+                            # detail=0 -> просто список строк
+                            res_txt = reader.readtext(ocr_frame, detail=0)
+                            txt_joined = " ".join(res_txt).strip()
+
+                            if len(txt_joined) > 15:
+                                # Проверка на дубликаты
+                                sim = 0.0
+                                if last_slide_text:
+                                    sim = difflib.SequenceMatcher(None, last_slide_text, txt_joined).ratio()
+
+                                if sim < 0.8:
+                                    unique_slides_text.append(txt_joined)
+                                    last_slide_text = txt_joined
+                        except Exception as e_ocr:
+                            logger.warning(f"OCR step error: {e_ocr}")
+
+                    # MediaPipe
                     try:
-                        h, w = frame.shape[:2]
-                        if w > 1280:
-                            scale = 1280 / w
-                            ocr_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale)
+                        # Ресайз для скорости
+                        target_w = 480
+                        scale_mp = target_w / width
+                        small_frame = cv2.resize(frame, (0, 0), fx=scale_mp, fy=scale_mp)
+
+                        img_rgb = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+                        img_rgb.flags.writeable = False
+                        results = holistic.process(img_rgb)
+                        img_rgb.flags.writeable = True
+
+                        # --- Логика Взгляда ---
+                        if results.face_landmarks:
+                            frames_with_face += 1
+                            face = results.face_landmarks.landmark
+                            nose_x = face[1].x
+                            left_ear = face[234].x
+                            right_ear = face[454].x  # Используем уши/скулы для ширины
+
+                            face_width = abs(right_ear - left_ear)
+                            face_center = (left_ear + right_ear) / 2
+
+                            if face_width > 0:
+                                deviation = abs(nose_x - face_center) / face_width
+                                if deviation < 0.25:  # Чуть поднял порог
+                                    looking_at_camera_frames += 1
+
+                        # --- Логика Жестов ---
+                        if results.pose_landmarks:
+                            frames_with_pose += 1
+                            pl = results.pose_landmarks.landmark
+
+                            # Индексы: 15=Left Wrist, 16=Right Wrist
+                            lw = (pl[15].x, pl[15].y)
+                            rw = (pl[16].x, pl[16].y)
+
+                            if prev_wrist["left"] is not None:
+                                # Считаем евклидово расстояние
+                                d_left = ((lw[0] - prev_wrist["left"][0]) ** 2 + (
+                                            lw[1] - prev_wrist["left"][1]) ** 2) ** 0.5
+                                d_right = ((rw[0] - prev_wrist["right"][0]) ** 2 + (
+                                            rw[1] - prev_wrist["right"][1]) ** 2) ** 0.5
+
+                                delta = d_left + d_right
+
+                                # Фильтр шума
+                                if delta > 0.002:
+                                    movement_accum += delta
+
+                            prev_wrist = {"left": lw, "right": rw}
                         else:
-                            ocr_frame = frame
+                            prev_wrist = {"left": None, "right": None}
 
-                        result = reader.readtext(ocr_frame, detail=0)
-                        current_text = " ".join(result).strip()
+                    except Exception as e_mp:
+                        logger.error(f"MediaPipe processing error at frame {total_frames_processed}: {e_mp}")
 
-                        if len(current_text) > 20:
-                            if not last_slide_text or difflib.SequenceMatcher(None, last_slide_text,
-                                                                              current_text).ratio() < 0.8:
-                                unique_slides_text.append(current_text)
-                                last_slide_text = current_text
-                    except Exception as e:
-                        logger.warning(f"OCR Error: {e}")
+        except Exception as e_global:
+            logger.critical(f"Global CV Loop crash: {e_global}")
+        finally:
+            cap.release()
 
-                if total_frames % 5 != 0:
-                    continue
+        # --- ЛОГИРУЕМ ИТОГИ ПЕРЕД РАСЧЕТОМ ---
+        logger.info(f"--- DEBUG STATS ---")
+        logger.info(f"Total processed frames: {total_frames_processed}")
+        logger.info(f"Frames with Face detected: {frames_with_face}")
+        logger.info(f"Frames with Pose detected: {frames_with_pose}")
+        logger.info(f"Accumulated Movement: {movement_accum}")
+        logger.info(f"Unique Slides Count: {len(unique_slides_text)}")
 
-                try:
-                    h, w = frame.shape[:2]
-                    target_w = 480
-                    scale = target_w / w
-                    small_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale)
+        # --- РАСЧЕТ БАЛЛОВ ---
 
-                    img = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
-                    img.flags.writeable = False
-                    res = holistic.process(img)
-                    img.flags.writeable = True
+        # 1. Взгляд
+        gaze_score = 0
+        if frames_with_face > 10:
+            gaze_score = (looking_at_camera_frames / frames_with_face) * 100
 
-                    if res.face_landmarks:
-                        faces_detected_frames += 1
-                        face = res.face_landmarks.landmark
-                        nose_x = face[1].x
-                        left_cheek_x = face[234].x
-                        right_cheek_x = face[454].x
+        # 2. Жесты
+        gesture_score = 0
+        gesture_advice = "Анализ не удался (мало данных)"
 
-                        face_width = abs(right_cheek_x - left_cheek_x)
-                        face_center_x = (left_cheek_x + right_cheek_x) / 2
+        if frames_with_pose > 10:
+            avg_move = movement_accum / frames_with_pose
+            gesture_score = min(avg_move * 3500, 100)
 
-                        if face_width > 0:
-                            deviation = abs(nose_x - face_center_x) / face_width
-                            if deviation < 0.20:
-                                looking_at_camera_frames += 1
+            if gesture_score < 15:
+                gesture_advice = "Вы почти неподвижны (или мы не видим рук). Добавьте энергии!"
+            elif gesture_score > 85:
+                gesture_advice = "Очень много движений, попробуйте контролировать жесты."
+            else:
+                gesture_advice = "Отличная, естественная жестикуляция."
 
-                    if res.pose_landmarks:
-                        poses_detected_frames += 1
-                        p = res.pose_landmarks.landmark
+        # 3. Слайды
+        full_text = " ".join(unique_slides_text)
+        has_slides = len(unique_slides_text) > 0
+        density_score = 100
 
-                        lw = (p[mp_holistic.PoseLandmark.LEFT_WRIST].x, p[mp_holistic.PoseLandmark.LEFT_WRIST].y)
-                        rw = (p[mp_holistic.PoseLandmark.RIGHT_WRIST].x, p[mp_holistic.PoseLandmark.RIGHT_WRIST].y)
-
-                        if prev_wrist["left"] is not None:
-                            dist_l = ((lw[0] - prev_wrist["left"][0]) ** 2 + (
-                                        lw[1] - prev_wrist["left"][1]) ** 2) ** 0.5
-                            dist_r = ((rw[0] - prev_wrist["right"][0]) ** 2 + (
-                                        rw[1] - prev_wrist["right"][1]) ** 2) ** 0.5
-
-                            delta = dist_l + dist_r
-
-                            if delta > 0.005:
-                                movement_accum += delta
-
-                        prev_wrist = {"left": lw, "right": rw}
-                    else:
-                        prev_wrist = {"left": None, "right": None}
-
-                except Exception as e:
-                    logger.error(f"CV Loop Error: {e}")
-
-        cap.release()
-
-        if faces_detected_frames > 0:
-            gaze_score = (looking_at_camera_frames / faces_detected_frames) * 100
-        else:
-            gaze_score = 0
-
-        if poses_detected_frames > 0:
-            avg_movement = movement_accum / poses_detected_frames
-        else:
-            avg_movement = 0
-
-        gesture_score = min(avg_movement * 3000, 100)
-
-        if gesture_score < 10:
-            gesture_advice = "Вы почти неподвижны. Попробуйте добавить немного жестикуляции."
-        elif gesture_score > 80:
-            gesture_advice = "Очень активная жестикуляция, возможно, стоит быть спокойнее."
-        else:
-            gesture_advice = "Хороший уровень жестикуляции."
-
-        full_slide_text = " ".join(unique_slides_text)
-        total_chars = len(full_slide_text)
-        slides_count = max(len(unique_slides_text), 1)
-
-        chars_per_slide = total_chars / slides_count
-
-        if chars_per_slide < 50:
-            text_density_score = 80
-        elif 50 <= chars_per_slide <= 600:
-            text_density_score = 100  # Идеал
-        else:
-            # Чем больше текста сверх 600, тем меньше балл
-            overload = chars_per_slide - 600
-            text_density_score = max(100 - (overload / 10), 0)
+        if has_slides:
+            avg_len = len(full_text) / len(unique_slides_text)
+            if avg_len > 600:
+                density_score = max(0, 100 - (avg_len - 600) / 10)
 
         return {
-            "gaze_score": round(gaze_score, 1),
-            "gesture_score": round(gesture_score, 1),
+            "gaze_score": int(gaze_score),
+            "gesture_score": int(gesture_score),
             "gesture_advice": gesture_advice,
-            "ocr_text": full_slide_text[:4000],  # Лимит для LLM
-            "slide_density": int(text_density_score),
-            "has_slides": len(unique_slides_text) > 0,
+            "ocr_text": full_text,
+            "slide_density": int(density_score),
+            "has_slides": has_slides,
+        }
+
+    @staticmethod
+    def _get_empty_cv_metrics():
+        return {
+            "gaze_score": 0, "gesture_score": 0,
+            "gesture_advice": "Ошибка чтения видео",
+            "ocr_text": "", "slide_density": 0, "has_slides": False
         }
