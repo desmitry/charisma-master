@@ -456,14 +456,24 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               />
               <InsightCard
                 title="Ошибки"
-                content={result.mistakes}
+                content={typeof result.mistakes === "string" 
+                  ? result.mistakes 
+                  : Array.isArray(result.mistakes) 
+                    ? result.mistakes.join("\n") 
+                    : String(result.mistakes || "")}
                 delay={100}
                 mounted={mounted}
                 accent="red"
               />
               <InsightCard
                 title="Структура"
-                content={result.structure}
+                content={typeof result.structure === "string"
+                  ? result.structure
+                  : typeof result.structure === "object" && result.structure !== null
+                    ? Object.entries(result.structure)
+                        .map(([key, value]) => `**${key}**: ${value}`)
+                        .join("\n\n")
+                    : String(result.structure || "")}
                 delay={200}
                 mounted={mounted}
               />
