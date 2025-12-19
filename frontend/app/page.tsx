@@ -301,7 +301,7 @@ export default function Home() {
   };
 
   const loadMockResponse = async (): Promise<AnalysisResult> => {
-    const res = await fetch("/response_1765796223493.json");
+    const res = await fetch("/62a26154-2d3e-408d-8737-2dbe5255eac6.json");
     if (!res.ok) throw new Error("mock fetch failed");
     const data = (await res.json()) as any;
     
