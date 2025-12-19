@@ -507,6 +507,8 @@ class MLEngine:
         logger.info(f"Video Metadata: {width}x{height}, {fps} FPS, {frame_count} frames")
 
         reader = None
+
+        mp_holistic = mp.solutions.holistic
         if do_slides:
             # Инициализация OCR
             reader = MLEngine._ocr_reader

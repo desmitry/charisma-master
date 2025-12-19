@@ -61,7 +61,7 @@ def process_video_pipeline(
         # Аудио и Транскрипция
         self.update_state(
             state="PROCESSING",
-            meta={"stage": ProcessingStage.listening, "progress": 0.1},
+            meta={"stage": ProcessingStage.listening.value, "progress": 0.1},
         )
         audio_path = str(Path(video_path).with_suffix(".wav"))
 
