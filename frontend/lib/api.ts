@@ -49,7 +49,8 @@ export async function uploadVideo(
   videoUrl: string | null,
   persona?: string,
   llmProvider?: string,
-  modelType?: string
+  modelType?: string,
+  doSlides?: boolean
 ): Promise<{ task_id: string }> {
   const formData = new FormData();
   if (file) {
@@ -66,6 +67,9 @@ export async function uploadVideo(
   }
   if (modelType) {
     formData.append("model_type", modelType);
+  }
+  if (doSlides !== undefined) {
+    formData.append("do_slides", doSlides ? "true" : "false");
   }
 
   try {

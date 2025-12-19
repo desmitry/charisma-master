@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import type { CSSProperties } from "react";
-import { AnalysisResult, TempoPoint, TranscriptWord } from "@/types/analysis";
+import { AnalysisResult, TempoPoint, TranscriptWord, LongPause } from "@/types/analysis";
 import { resolveVideoUrl, getPdfUrl } from "@/lib/api";
 import { useEcoMode } from "@/lib/eco-mode-context";
 import { cn } from "@/lib/utils";
@@ -139,21 +139,46 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   };
 
   const groupedTranscript = useMemo(() => {
-    const groups: { label: string; segments: typeof result.transcript }[] = [];
-    const chunkSize = 30;
+    type TimelineItem = 
+      | { type: "word"; word: TranscriptWord }
+      | { type: "pause"; pause: LongPause };
     
-    result.transcript.forEach((seg) => {
-      const groupIdx = Math.floor(seg.start / chunkSize);
+    const groups: { label: string; items: TimelineItem[] }[] = [];
+    const chunkSize = 30;
+    const longPauses = result.long_pauses || [];
+    
+    // Collect all words
+    const allWords: TimelineItem[] = result.transcript.flatMap((seg) => 
+      seg.words.map((word) => ({ type: "word" as const, word }))
+    );
+    
+    // Collect all pauses
+    const allPauses: TimelineItem[] = longPauses.map((pause) => ({ 
+      type: "pause" as const, 
+      pause 
+    }));
+    
+    // Combine and sort
+    const timeline = [...allWords, ...allPauses].sort((a, b) => {
+      const startA = a.type === "word" ? a.word.start : a.pause.start;
+      const startB = b.type === "word" ? b.word.start : b.pause.start;
+      return startA - startB;
+    });
+    
+    // Group by time chunks
+    timeline.forEach((item) => {
+      const itemStart = item.type === "word" ? item.word.start : item.pause.start;
+      const groupIdx = Math.floor(itemStart / chunkSize);
       const label = `${formatTime(groupIdx * chunkSize)} - ${formatTime((groupIdx + 1) * chunkSize)}`;
       
       if (!groups[groupIdx]) {
-        groups[groupIdx] = { label, segments: [] };
+        groups[groupIdx] = { label, items: [] };
       }
-      groups[groupIdx].segments.push(seg);
+      groups[groupIdx].items.push(item);
     });
     
     return groups.filter(Boolean);
-  }, [result.transcript]);
+  }, [result.transcript, result.long_pauses]);
 
   return (
     <div className="relative z-10 min-h-screen bg-[#050505] text-white overflow-hidden">
@@ -358,29 +383,59 @@ export function AnalysisDashboard({ result, onBack }: Props) {
         >
           {activeTab === "transcript" && (
             <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-                <div className="mb-4 flex items-center justify-between">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] min-w-0 overflow-hidden">
+                <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
                   <h2 className="text-sm font-semibold">Полный транскрипт</h2>
-                  <span className="text-xs text-white/50">Клик по слову → перемотка</span>
+                  <span className="text-[10px] sm:text-xs text-white/50">Клик по слову → перемотка</span>
                 </div>
-                <div className="max-h-[500px] space-y-3 overflow-y-auto pr-2 scroll-elegant" data-lenis-prevent>
+                <div className="max-h-[400px] sm:max-h-[500px] space-y-2 sm:space-y-3 overflow-y-auto overflow-x-hidden pr-1 sm:pr-2 scroll-elegant" data-lenis-prevent>
                   {groupedTranscript.map((group, gi) => (
-                    <div key={gi} className="rounded-xl border border-white/5 bg-white/5 p-3 transition hover:border-white/15 hover:bg-white/10">
-                      <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-white/40">
+                    <div key={gi} className="rounded-xl border border-white/5 bg-white/5 p-2 sm:p-3 transition hover:border-white/15 hover:bg-white/10">
+                      <p className="mb-1.5 sm:mb-2 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider text-white/40">
                         {group.label}
                       </p>
-                      <div className="leading-[1.5] text-sm">
-                        {group.segments.flatMap((seg) => seg.words).map((word, idx) => {
-                          const isActive = currentTime + 0.02 >= word.start && currentTime < word.end - 0.02;
-                          const display = word.text.trim();
+                      <div className="leading-[1.6] sm:leading-[1.5] text-[13px] sm:text-sm break-words" style={{ overflowWrap: 'anywhere' }}>
+                        {group.items.map((item, idx) => {
+                          if (item.type === "pause") {
+                            const isActive = currentTime + 0.02 >= item.pause.start && currentTime < item.pause.end - 0.02;
+                            return (
+                              <span
+                                key={`pause-${item.pause.start}-${idx}`}
+                                onClick={() => {
+                                  if (playerRef.current) {
+                                    playerRef.current.seek(item.pause.start);
+                                    playerRef.current.play();
+                                    setCurrentTime(item.pause.start);
+                                  }
+                                }}
+                                className="inline-flex items-center cursor-pointer mx-0.5 sm:mx-1 align-middle group relative"
+                                title={`Пауза: ${item.pause.duration.toFixed(1)}с`}
+                              >
+                                <span
+                                  className={cn(
+                                    "inline-block w-6 sm:w-10 h-3.5 sm:h-4 rounded border-2 border-dashed transition-all duration-150",
+                                    "border-rose-500/60 bg-rose-500/10",
+                                    isActive && "border-rose-400 bg-rose-500/25 shadow-[0_0_12px_rgba(244,63,94,0.3)]",
+                                    "hover:border-rose-400 hover:bg-rose-500/20"
+                                  )}
+                                />
+                                <span className="absolute -top-5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] text-rose-300 bg-black/80 px-1 py-0.5 rounded whitespace-nowrap pointer-events-none z-10">
+                                  {item.pause.duration.toFixed(1)}с
+                                </span>
+                              </span>
+                            );
+                          }
+                          
+                          const isActive = currentTime + 0.02 >= item.word.start && currentTime < item.word.end - 0.02;
+                          const display = item.word.text.trim();
                           if (!display) return null;
                           return (
                             <span
-                              key={`${word.start}-${display}-${idx}`}
-                              onClick={() => handleWordClick(word)}
+                              key={`${item.word.start}-${display}-${idx}`}
+                              onClick={() => handleWordClick(item.word)}
                               className={cn(
-                                "cursor-pointer rounded px-[2px] py-0.5 transition-all duration-150",
-                                word.is_filler
+                                "cursor-pointer rounded px-[2px] py-0.5 transition-all duration-150 inline",
+                                item.word.is_filler
                                   ? "text-rose-300 bg-rose-500/18 hover:bg-rose-500/28"
                                   : "text-white/75 hover:bg-white/10",
                                 isActive && "bg-white/15 text-white shadow-[0_8px_30px_rgba(255,255,255,0.08)]",
