@@ -284,15 +284,26 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               mounted={mounted}
               ecoMode={isEcoMode}
             />
-            <GlassStat
-              icon={<IconDoc />}
-              label="Плотность слайдов"
-              value={Math.min(100, Math.max(0, result.slide_analysis?.text_density_score ?? result.slide_text_density ?? 0))}
-              suffix="%"
-              delay={300}
-              mounted={mounted}
-              ecoMode={isEcoMode}
-            />
+            {result.slide_analysis?.has_slides === false ? (
+              <GlassTextStat
+                icon={<IconDoc />}
+                label="Слайды"
+                text="Не найдены"
+                delay={300}
+                mounted={mounted}
+                ecoMode={isEcoMode}
+              />
+            ) : (
+              <GlassStat
+                icon={<IconDoc />}
+                label="Плотность слайдов"
+                value={Math.min(100, Math.max(0, result.slide_analysis?.text_density_score ?? result.slide_text_density ?? 0))}
+                suffix="%"
+                delay={300}
+                mounted={mounted}
+                ecoMode={isEcoMode}
+              />
+            )}
             <GlassStat
               icon={<IconBolt />}
               label="Уверенность"
@@ -456,23 +467,20 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               />
               {result.confidence_index.components.gesture_advice && (
                 <InsightCard
-                  title="Жестикуляция"
+                  title="Советы по жестикуляции"
                   content={result.confidence_index.components.gesture_advice}
                   delay={500}
                   mounted={mounted}
+                  accent="amber"
                 />
               )}
               {result.slide_analysis && (
-                result.slide_analysis.has_slides === false 
-                  ? result.slide_analysis.ocr_summary 
-                  : (result.slide_analysis.acr_summary || result.slide_analysis.ocr_summary)
-              ) && (
                 <InsightCard
-                  title={result.slide_analysis.has_slides === false ? "Слайды" : "Анализ презентации"}
+                  title="Анализ слайдов"
                   content={
                     result.slide_analysis.has_slides === false 
-                      ? result.slide_analysis.ocr_summary || ""
-                      : result.slide_analysis.acr_summary || result.slide_analysis.ocr_summary || ""
+                      ? "Слайды не найдены в видео"
+                      : result.slide_analysis.ocr_summary || "Анализ слайдов недоступен"
                   }
                   delay={600}
                   mounted={mounted}
@@ -680,6 +688,55 @@ function GlassStat({
           <div className="mt-1 flex items-baseline gap-1">
             <span className="text-2xl font-semibold tabular-nums">{(displayValue || 0).toFixed(suffix === "%" ? 1 : 0)}</span>
             <span className="text-xs text-white/50">{suffix}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GlassTextStat({
+  icon,
+  label,
+  text,
+  delay,
+  mounted,
+  ecoMode = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  text: string;
+  delay: number;
+  mounted: boolean;
+  ecoMode?: boolean;
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-2xl border bg-white/5 p-3",
+        ecoMode ? "border-white/8" : "border-white/10",
+        ecoMode ? "" : "transition-all duration-500",
+        mounted ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
+        !ecoMode && hovered && "border-white/20 shadow-[0_20px_60px_rgba(255,255,255,0.08)]"
+      )}
+      style={{ transitionDelay: ecoMode ? undefined : `${delay}ms` }}
+      onMouseEnter={() => !ecoMode && setHovered(true)}
+      onMouseLeave={() => !ecoMode && setHovered(false)}
+    >
+      {!ecoMode && (
+        <div
+          className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/0 to-white/10 opacity-0 transition-opacity duration-500"
+          style={{ opacity: hovered ? 0.2 : 0 }}
+        />
+      )}
+      <div className="relative z-10 flex items-start gap-3">
+        <span className="text-lg">{icon}</span>
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-white/45">{label}</p>
+          <div className="mt-1">
+            <span className="text-lg font-medium text-white/60">{text}</span>
           </div>
         </div>
       </div>

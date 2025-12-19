@@ -4350,11 +4350,11 @@
             "volume_score_label": "Великолепно",
             "filler_score": 76,
             "filler_label": "Хорошо",
-            "gaze_score": 0,
+            "gaze_score": 11,
             "gaze_label": "Требует внимания",
-            "gesture_score": 0,
+            "gesture_score": 15,
             "gesture_label": "Требует внимания",
-            "gesture_advice": "Нет данных",
+            "gesture_advice": "Очень много движений, попробуйте контролировать жесты.",
             "tone_score": 100,
             "tone_label": "Великолепно"
         }

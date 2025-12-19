@@ -330,6 +330,9 @@ export default function Home() {
         if (data.confidence_index.components.gaze_score !== undefined) {
           data.confidence_index.components.gaze_score = Math.min(100, Math.max(0, data.confidence_index.components.gaze_score));
         }
+        if (data.confidence_index.components.gesture_score !== undefined) {
+          data.confidence_index.components.gesture_score = Math.min(100, Math.max(0, data.confidence_index.components.gesture_score));
+        }
         if (data.confidence_index.components.tone_score !== undefined) {
           data.confidence_index.components.tone_score = Math.min(100, Math.max(0, data.confidence_index.components.tone_score));
         }
