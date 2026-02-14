@@ -13,9 +13,9 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
   const animationRef = useRef<number>(0);
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
-  
+
   const clamped = Math.min(1, Math.max(0, progress || 0));
-  const percent = Math.max(5, Math.round(clamped * 100));
+  const percent = Math.max(0, Math.round(clamped * 100));
 
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 50);
@@ -35,8 +35,8 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const size = 300;
-    const dpr = window.devicePixelRatio || 1;
+    const size = 400;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     canvas.style.width = `${size}px`;
@@ -45,116 +45,175 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
 
     const centerX = size / 2;
     const centerY = size / 2;
-    const sphereRadius = 70;
 
-    const spherePoints: { x: number; y: number; z: number }[] = [];
-    for (let i = 0; i < 1000; i++) {
-      const u = Math.random();
-      const v = Math.random();
-      const theta = 2 * Math.PI * u;
-      const phi = Math.acos(2 * v - 1);
-      spherePoints.push({
-        x: Math.sin(phi) * Math.cos(theta),
-        y: Math.sin(phi) * Math.sin(theta),
-        z: Math.cos(phi),
-      });
+    interface Dot {
+      angle: number;
+      radius: number;
+      baseRadius: number;
+      size: number;
+      opacity: number;
+      speed: number;
+      phase: number;
     }
 
-    const spirals: { x: number; y: number; z: number }[][] = [];
-    for (let s = 0; s < 5; s++) {
-      const spiral: { x: number; y: number; z: number }[] = [];
-      const phaseOffset = (s / 5) * Math.PI * 2;
-      for (let i = 0; i <= 100; i++) {
-        const t = i / 100;
-        const angle = t * Math.PI * 2 * 2.5 + phaseOffset;
-        const y = (t - 0.5) * 2 * 1.25 * 0.85;
-        const r = 1.25 * Math.sqrt(Math.max(0, 1 - Math.pow(y / 1.25, 2) * 0.6));
-        spiral.push({ x: Math.cos(angle) * r, y, z: Math.sin(angle) * r });
+    interface Ring {
+      radius: number;
+      rotation: number;
+      speed: number;
+      opacity: number;
+      dashArray: number[];
+    }
+
+    const dots: Dot[] = [];
+    const rings: Ring[] = [];
+
+    const dotLayers = [
+      { count: 8, radius: 85, speed: 0.4, size: 2 },
+      { count: 12, radius: 110, speed: -0.3, size: 1.5 },
+      { count: 16, radius: 140, speed: 0.2, size: 1 },
+      { count: 24, radius: 165, speed: -0.15, size: 0.8 },
+    ];
+
+    dotLayers.forEach((layer) => {
+      for (let i = 0; i < layer.count; i++) {
+        dots.push({
+          angle: (i / layer.count) * Math.PI * 2,
+          radius: layer.radius,
+          baseRadius: layer.radius,
+          size: layer.size,
+          opacity: 0.2 + Math.random() * 0.4,
+          speed: layer.speed,
+          phase: Math.random() * Math.PI * 2,
+        });
       }
-      spirals.push(spiral);
-    }
+    });
 
-    const orbitParticles: { x: number; y: number; z: number; speed: number }[] = [];
-    for (let i = 0; i < 120; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const y = (Math.random() - 0.5) * 2;
-      const r = 1.3 + Math.random() * 0.2;
-      orbitParticles.push({
-        x: Math.cos(angle) * r,
-        y,
-        z: Math.sin(angle) * r,
-        speed: 0.3 + Math.random() * 0.4,
+    const ringConfigs = [
+      { radius: 70, speed: 0.2, opacity: 0.15, dash: [2, 8] },
+      { radius: 100, speed: -0.15, opacity: 0.1, dash: [1, 12] },
+      { radius: 130, speed: 0.1, opacity: 0.08, dash: [3, 15] },
+      { radius: 160, speed: -0.08, opacity: 0.05, dash: [1, 20] },
+    ];
+
+    ringConfigs.forEach((config) => {
+      rings.push({
+        radius: config.radius,
+        rotation: 0,
+        speed: config.speed,
+        opacity: config.opacity,
+        dashArray: config.dash,
       });
-    }
+    });
+
+    const floatingParticles: { x: number; y: number; vx: number; vy: number; life: number; size: number }[] = [];
+
+    const spawnParticle = () => {
+      if (floatingParticles.length > 30) return;
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 80 + Math.random() * 80;
+      floatingParticles.push({
+        x: centerX + Math.cos(angle) * dist,
+        y: centerY + Math.sin(angle) * dist,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3 - 0.2,
+        life: 1,
+        size: 0.5 + Math.random() * 1,
+      });
+    };
 
     let time = 0;
 
-    const rotate3D = (p: { x: number; y: number; z: number }, ay: number, ax: number) => {
-      let x = p.x * Math.cos(ay) - p.z * Math.sin(ay);
-      let z = p.x * Math.sin(ay) + p.z * Math.cos(ay);
-      const newY = p.y * Math.cos(ax) - z * Math.sin(ax);
-      const newZ = p.y * Math.sin(ax) + z * Math.cos(ax);
-      return { x, y: newY, z: newZ };
-    };
-
-    const project = (p: { x: number; y: number; z: number }) => {
-      const perspective = 3;
-      const scale = perspective / (perspective + p.z);
-      return {
-        x: centerX + p.x * sphereRadius * scale,
-        y: centerY + p.y * sphereRadius * scale,
-        scale,
-        z: p.z,
-      };
-    };
-
     const animate = () => {
       time += 0.016;
-      ctx.fillStyle = "#000";
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
       ctx.fillRect(0, 0, size, size);
 
-      const rotY = time * 0.35;
-      const rotX = Math.sin(time * 0.25) * 0.12;
+      if (Math.random() > 0.92) spawnParticle();
 
-      ctx.lineCap = "round";
-      for (const spiral of spirals) {
-        ctx.beginPath();
-        for (let i = 0; i < spiral.length; i++) {
-          const p = rotate3D(spiral[i], rotY * 0.6, rotX * 0.5);
-          const proj = project(p);
-          if (i === 0) ctx.moveTo(proj.x, proj.y);
-          else ctx.lineTo(proj.x, proj.y);
+      for (let i = floatingParticles.length - 1; i >= 0; i--) {
+        const p = floatingParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.008;
+
+        if (p.life <= 0) {
+          floatingParticles.splice(i, 1);
+          continue;
         }
-        ctx.strokeStyle = `rgba(255,255,255,0.2)`;
-        ctx.lineWidth = 1.5;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${p.life * 0.3})`;
+        ctx.fill();
+      }
+
+      ctx.save();
+      ctx.translate(centerX, centerY);
+
+      for (const ring of rings) {
+        ring.rotation += ring.speed * 0.016;
+        ctx.save();
+        ctx.rotate(ring.rotation);
+
+        ctx.beginPath();
+        ctx.arc(0, 0, ring.radius, 0, Math.PI * 2);
+        ctx.setLineDash(ring.dashArray);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${ring.opacity})`;
+        ctx.lineWidth = 0.5;
         ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.restore();
       }
 
-      for (const p of spherePoints) {
-        const rot = rotate3D(p, rotY, rotX);
-        const proj = project(rot);
-        const depth = (rot.z + 1) / 2;
+      const breathe = Math.sin(time * 1.2) * 5;
+      const pulseRadius = 60 + breathe;
+
+      const coreGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, pulseRadius);
+      coreGradient.addColorStop(0, "rgba(255, 255, 255, 0.08)");
+      coreGradient.addColorStop(0.5, "rgba(255, 255, 255, 0.03)");
+      coreGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.beginPath();
+      ctx.arc(0, 0, pulseRadius, 0, Math.PI * 2);
+      ctx.fillStyle = coreGradient;
+      ctx.fill();
+
+      for (const dot of dots) {
+        dot.angle += dot.speed * 0.016;
+
+        const wobble = Math.sin(time * 2 + dot.phase) * 3;
+        const r = dot.baseRadius + wobble;
+
+        const x = Math.cos(dot.angle) * r;
+        const y = Math.sin(dot.angle) * r;
+
+        const flicker = 0.7 + Math.sin(time * 3 + dot.phase) * 0.3;
+
         ctx.beginPath();
-        ctx.arc(proj.x, proj.y, 1.5 * proj.scale, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${0.25 + depth * 0.55})`;
+        ctx.arc(x, y, dot.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${dot.opacity * flicker})`;
         ctx.fill();
       }
 
-      for (const p of orbitParticles) {
-        const angle = time * p.speed;
-        const rotP = {
-          x: p.x * Math.cos(angle) - p.z * Math.sin(angle),
-          y: p.y,
-          z: p.x * Math.sin(angle) + p.z * Math.cos(angle),
-        };
-        const rot = rotate3D(rotP, rotY * 0.4, rotX * 0.3);
-        const proj = project(rot);
-        const depth = (rot.z + 1.5) / 3;
+      const waveDots = 32;
+      for (let i = 0; i < waveDots; i++) {
+        const angle = (i / waveDots) * Math.PI * 2;
+        const wave = Math.sin(time * 2 + angle * 4) * 8;
+        const r = 85 + wave;
+
+        const x = Math.cos(angle) * r;
+        const y = Math.sin(angle) * r;
+
+        const alpha = 0.15 + Math.sin(time * 3 + i * 0.3) * 0.1;
+
         ctx.beginPath();
-        ctx.arc(proj.x, proj.y, 1.2 * proj.scale, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${0.15 + depth * 0.35})`;
+        ctx.arc(x, y, 1, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
         ctx.fill();
       }
+
+      ctx.restore();
 
       animationRef.current = requestAnimationFrame(animate);
     };
@@ -162,6 +221,9 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
     animate();
     return () => cancelAnimationFrame(animationRef.current);
   }, []);
+
+  const circumference = 2 * Math.PI * 70;
+  const strokeDashoffset = circumference - clamped * circumference;
 
   return (
     <div
@@ -172,7 +234,7 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#000",
+        background: "#000",
         opacity: isVisible && !isExiting ? 1 : 0,
         pointerEvents: isVisible && !isExiting ? "auto" : "none",
         transition: "opacity 0.5s ease-out",
@@ -181,73 +243,148 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
       <div
         style={{
           position: "relative",
-          width: 300,
-          height: 300,
-          borderRadius: 24,
-          overflow: "hidden",
-          backgroundColor: "#000",
-          border: "1px solid rgba(255,255,255,0.1)",
-          boxShadow: "0 40px 120px rgba(0,0,0,0.95)",
-          transform: isVisible && !isExiting ? "scale(1)" : "scale(0.9)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 48,
+          transform: isVisible && !isExiting ? "scale(1)" : "scale(0.95)",
           opacity: isVisible && !isExiting ? 1 : 0,
           transition: "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease-out",
         }}
       >
-        <canvas
-          ref={canvasRef}
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-        />
+        <div style={{ position: "relative", width: 400, height: 400 }}>
+          <canvas
+            ref={canvasRef}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+          />
+
+          <svg
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              transform: "rotate(-90deg)",
+            }}
+            viewBox="0 0 400 400"
+          >
+            <circle
+              cx="200"
+              cy="200"
+              r="70"
+              fill="none"
+              stroke="rgba(255, 255, 255, 0.08)"
+              strokeWidth="1"
+            />
+            <circle
+              cx="200"
+              cy="200"
+              r="70"
+              fill="none"
+              stroke="rgba(255, 255, 255, 0.7)"
+              strokeWidth="1"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              style={{
+                transition: "stroke-dashoffset 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                filter: "drop-shadow(0 0 6px rgba(255, 255, 255, 0.3))",
+              }}
+            />
+          </svg>
+
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span
+              style={{
+                fontSize: 48,
+                fontWeight: 200,
+                color: "rgba(255, 255, 255, 0.9)",
+                letterSpacing: "-0.02em",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {percent}
+            </span>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 500,
+                color: "rgba(255, 255, 255, 0.3)",
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+                marginTop: 4,
+              }}
+            >
+              percent
+            </span>
+          </div>
+        </div>
 
         <div
           style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: "28px 24px 24px",
-            background: "linear-gradient(to top, rgba(0,0,0,0.95) 60%, transparent)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 12,
-            transform: isVisible ? "translateY(0)" : "translateY(20px)",
-            opacity: isVisible ? 1 : 0,
-            transition: "transform 0.6s ease 0.2s, opacity 0.5s ease 0.2s",
+            gap: 16,
           }}
         >
           <div
             style={{
-              width: "100%",
-              height: 4,
-              borderRadius: 2,
-              backgroundColor: "rgba(255,255,255,0.1)",
-              overflow: "hidden",
+              display: "flex",
+              gap: 4,
             }}
           >
-            <div
-              style={{
-                height: "100%",
-                width: `${percent}%`,
-                borderRadius: 2,
-                backgroundColor: "rgba(255,255,255,0.8)",
-                transition: "width 0.5s ease-out",
-              }}
-            />
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                style={{
+                  width: 3,
+                  height: 3,
+                  borderRadius: "50%",
+                  backgroundColor: "rgba(255, 255, 255, 0.4)",
+                  animation: `pulse-dot 1.4s ease-in-out infinite`,
+                  animationDelay: `${i * 0.15}s`,
+                }}
+              />
+            ))}
           </div>
           <p
             style={{
               margin: 0,
-              fontSize: 11,
-              fontWeight: 500,
-              color: "rgba(255,255,255,0.75)",
+              fontSize: 12,
+              fontWeight: 400,
+              color: "rgba(255, 255, 255, 0.5)",
               textAlign: "center",
               letterSpacing: "0.02em",
+              maxWidth: 280,
             }}
           >
-            {percent}% • {statusText || "Обрабатываем видео..."}
+            {statusText || "Analyzing video..."}
           </p>
         </div>
       </div>
+
+      <style>{`
+        @keyframes pulse-dot {
+          0%, 100% {
+            opacity: 0.3;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.3);
+          }
+        }
+      `}</style>
     </div>
   );
 }
