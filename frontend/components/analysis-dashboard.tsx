@@ -272,131 +272,157 @@ export function AnalysisDashboard({ result, onBack }: Props) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-2 sm:px-4 md:px-6 py-6 overflow-x-hidden" style={{ maxWidth: 'calc(100vw - 16px)', boxSizing: 'border-box' }}>
+      <main className="mx-auto max-w-4xl px-4 sm:px-6 py-6 overflow-x-hidden">
+        {/* Compact player + stats section */}
         <div
           className={cn(
-            "grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]",
+            "flex flex-col lg:flex-row gap-4 lg:gap-6 items-start",
             "transform transition-all duration-700 delay-100",
             mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           )}
-          style={{ maxWidth: '100%', width: '100%' }}
         >
-          <div
+          {/* Video player - compact, not full width */}
+          <VideoPlayer
+            ref={playerRef}
+            src={videoSrc}
+            error={videoError}
+            onTimeUpdate={setCurrentTime}
+            onError={setVideoError}
+            compact
+            className="mx-auto lg:mx-0"
+          />
+
+          {/* Stats panel - inline with player on desktop */}
+          <div className="flex-1 w-full lg:w-auto">
+            {/* Main confidence score - prominent */}
+            <div
+              className={cn(
+                "rounded-xl border p-4 mb-3",
+                isEcoMode ? "border-white/8 bg-white/5" : "border-white/10 bg-white/5"
+              )}
+            >
+              <div className="flex items-center gap-4">
+                <div className="relative h-16 w-16 flex-shrink-0">
+                  <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="50" stroke="rgba(255,255,255,0.08)" strokeWidth="8" fill="none" />
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="50"
+                      stroke="#FFC700"
+                      strokeWidth="8"
+                      strokeDasharray={314}
+                      strokeDashoffset={314 * (1 - Math.min(100, Math.max(0, result.confidence_index.total)) / 100)}
+                      strokeLinecap="round"
+                      fill="none"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-lg font-bold">{Math.round(result.confidence_index.total)}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-white/50 uppercase tracking-wider">Общая оценка</p>
+                  <p className="text-xl font-semibold mt-0.5">
+                    {result.confidence_index.total >= 70 ? "Отлично" : result.confidence_index.total >= 50 ? "Хорошо" : "Есть над чем работать"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick stats row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2">
+              <QuickStat
+                icon={<IconTarget className="w-4 h-4" />}
+                label="Паразиты"
+                value={`${(result.fillers_summary.ratio * 100).toFixed(1)}%`}
+              />
+              <QuickStat
+                icon={<IconClock className="w-4 h-4" />}
+                label="Темп"
+                value={`${Math.round(result.tempo.reduce((sum, p) => sum + p.wpm, 0) / result.tempo.length)} wpm`}
+              />
+              {result.slide_analysis?.has_slides !== false && (
+                <QuickStat
+                  icon={<IconDoc className="w-4 h-4" />}
+                  label="Слайды"
+                  value={`${Math.round(result.slide_analysis?.text_density_score ?? result.slide_text_density ?? 0)}%`}
+                />
+              )}
+              <QuickStat
+                icon={<IconHand className="w-4 h-4" />}
+                label="Фрагментов"
+                value={result.transcript.length.toString()}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs - minimal style */}
+        <div
+          className={cn(
+            "mt-8 flex gap-1 p-1 rounded-full bg-white/5 w-fit",
+            mounted ? "opacity-100" : "opacity-0"
+          )}
+        >
+          <button
+            onClick={() => setActiveTab("transcript")}
             className={cn(
-              "relative overflow-hidden rounded-2xl border",
-              isEcoMode ? "border-white/8 bg-black" : "group border-white/10 bg-white/5"
+              "px-5 py-2 text-sm rounded-full transition-all duration-300",
+              activeTab === "transcript"
+                ? "bg-white text-black font-medium"
+                : "text-white/60 hover:text-white/90"
             )}
           >
-            {!isEcoMode && !videoError && (
-              <div className="absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-20 bg-gradient-to-tr from-white/30 via-white/10 to-transparent pointer-events-none" />
-            )}
-            <VideoPlayer
-              ref={playerRef}
-              src={videoSrc}
-              error={videoError}
-              onTimeUpdate={setCurrentTime}
-              onError={setVideoError}
-              className="aspect-video w-full object-contain bg-black"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
-            <GlassStat
-              icon={<IconTarget />}
-              label="Слова-паразиты"
-              value={result.fillers_summary.count}
-              suffix="шт"
-              delay={200}
-              mounted={mounted}
-              ecoMode={isEcoMode}
-            />
-            {result.slide_analysis?.has_slides === false ? (
-              <GlassTextStat
-                icon={<IconDoc />}
-                label="Слайды"
-                text="Не найдены"
-                delay={300}
-                mounted={mounted}
-                ecoMode={isEcoMode}
-              />
-            ) : (
-              <GlassStat
-                icon={<IconDoc />}
-                label="Плотность слайдов"
-                value={Math.min(100, Math.max(0, result.slide_analysis?.text_density_score ?? result.slide_text_density ?? 0))}
-                suffix="%"
-                delay={300}
-                mounted={mounted}
-                ecoMode={isEcoMode}
-              />
-            )}
-            <GlassStat
-              icon={<IconBolt />}
-              label="Уверенность"
-              value={Math.min(100, Math.max(0, result.confidence_index.total))}
-              suffix="/100"
-              delay={400}
-              mounted={mounted}
-              ecoMode={isEcoMode}
-            />
-            <GlassStat
-              icon={<IconClock />}
-              label="Темп речи"
-              value={Math.round(result.tempo.reduce((sum, p) => sum + p.wpm, 0) / result.tempo.length)}
-              suffix="wpm"
-              delay={500}
-              mounted={mounted}
-              ecoMode={isEcoMode}
-            />
-            <GlassStat
-              icon={<IconHand />}
-              label="Аудиофрагментов"
-              value={result.transcript.length}
-              suffix="шт"
-              delay={600}
-              mounted={mounted}
-              ecoMode={isEcoMode}
-            />
-          </div>
-        </div>
-
-        <div
-          className={cn(
-            "mt-6 flex gap-2",
-            isEcoMode ? "" : "transform transition-all duration-700 delay-200",
-            mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
-          )}
-        >
-          <TabButton active={activeTab === "transcript"} onClick={() => setActiveTab("transcript")}>
             Транскрипт
-          </TabButton>
-          <TabButton active={activeTab === "insights"} onClick={() => setActiveTab("insights")}>
+          </button>
+          <button
+            onClick={() => setActiveTab("insights")}
+            className={cn(
+              "px-5 py-2 text-sm rounded-full transition-all duration-300",
+              activeTab === "insights"
+                ? "bg-white text-black font-medium"
+                : "text-white/60 hover:text-white/90"
+            )}
+          >
             Инсайты
-          </TabButton>
+          </button>
         </div>
 
-        <div
-          className={cn(
-            "mt-4",
-            isEcoMode ? "" : "transform transition-all duration-700 delay-300",
-            mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
-          )}
-          style={{ maxWidth: '100%', width: '100%', overflow: 'hidden' }}
-        >
+        {/* Content */}
+        <div className="mt-6">
           {activeTab === "transcript" && (
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]" style={{ maxWidth: '100%', width: '100%' }}>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)]" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
-                <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
-                  <h2 className="text-sm font-semibold">Полный транскрипт</h2>
-                  <span className="text-[10px] sm:text-xs text-white/50">Клик по слову → перемотка</span>
+            <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+              {/* Transcript Panel - fluid design */}
+              <div className="relative">
+                {/* Subtle hint */}
+                <div className="flex items-center gap-2 mb-4 text-white/40">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4M12 8h.01"/>
+                  </svg>
+                  <span className="text-xs">Нажми на слово чтобы перемотать видео</span>
                 </div>
-                <div className="max-h-[400px] sm:max-h-[500px] space-y-2 sm:space-y-3 overflow-y-auto overflow-x-hidden pr-1 sm:pr-2 scroll-elegant" style={{ width: '100%' }} data-lenis-prevent>
+
+                {/* Transcript content */}
+                <div
+                  className="max-h-[480px] overflow-y-auto pr-4 -mr-4 transcript-scroll"
+                  data-lenis-prevent
+                  onWheel={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
+                >
                   {groupedTranscript.map((group, gi) => (
-                    <div key={gi} className="rounded-xl border border-white/5 bg-white/5 p-2 sm:p-3 transition hover:border-white/15 hover:bg-white/10" style={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
-                      <p className="mb-1.5 sm:mb-2 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider text-white/40">
-                        {group.label}
-                      </p>
-                      <div className="leading-[1.6] sm:leading-[1.5] text-[13px] sm:text-sm" style={{ width: '100%', maxWidth: '100%', wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'normal' }}>
+                    <div key={gi} className="relative mb-6 last:mb-0">
+                      {/* Time marker - subtle line */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-[11px] font-mono text-white/30 tabular-nums">
+                          {group.label.split(" - ")[0]}
+                        </span>
+                        <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
+                      </div>
+
+                      {/* Words - flowing text */}
+                      <div className="leading-relaxed text-[15px]">
                         {group.items.map((item, idx) => {
                           if (item.type === "pause") {
                             const isActive = currentTime + 0.02 >= item.pause.start && currentTime < item.pause.end - 0.02;
@@ -410,38 +436,41 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                                     setCurrentTime(item.pause.start);
                                   }
                                 }}
-                                className="inline-flex items-center cursor-pointer mx-0.5 sm:mx-1 align-middle group relative"
-                                title={`Пауза: ${item.pause.duration.toFixed(1)}с`}
+                                className="inline-flex items-center cursor-pointer mx-1 align-middle group"
                               >
                                 <span
                                   className={cn(
-                                    "inline-block w-6 sm:w-10 h-3.5 sm:h-4 rounded border-2 border-dashed transition-all duration-150",
-                                    "border-rose-500/60 bg-rose-500/10",
-                                    isActive && "border-rose-400 bg-rose-500/25 shadow-[0_0_12px_rgba(244,63,94,0.3)]",
-                                    "hover:border-rose-400 hover:bg-rose-500/20"
+                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all",
+                                    isActive
+                                      ? "bg-rose-500/20 text-rose-300"
+                                      : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60"
                                   )}
-                                />
-                                <span className="absolute -top-5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] text-rose-300 bg-black/80 px-1 py-0.5 rounded whitespace-nowrap pointer-events-none z-10">
+                                >
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M10 12h4M12 10v4"/>
+                                  </svg>
                                   {item.pause.duration.toFixed(1)}с
                                 </span>
                               </span>
                             );
                           }
-                          
+
                           const isActive = currentTime + 0.02 >= item.word.start && currentTime < item.word.end - 0.02;
                           const display = item.word.text.trim();
                           if (!display) return null;
+
                           return (
                             <span
                               key={`${item.word.start}-${display}-${idx}`}
                               onClick={() => handleWordClick(item.word)}
                               className={cn(
-                                "cursor-pointer rounded px-[2px] py-0.5 transition-all duration-150",
+                                "cursor-pointer transition-all duration-150 rounded px-0.5",
                                 item.word.is_filler
-                                  ? "text-rose-300 bg-rose-500/18 hover:bg-rose-500/28"
-                                  : "text-white/75 hover:bg-white/10",
-                                isActive && "bg-white/15 text-white shadow-[0_8px_30px_rgba(255,255,255,0.08)]",
-                                "hover:-translate-y-[1px]"
+                                  ? "text-rose-400/90 hover:text-rose-300"
+                                  : "text-white/80 hover:text-white",
+                                isActive && "bg-sky-500/25 text-white font-medium",
+                                "relative"
                               )}
                             >
                               {display}{" "}
@@ -452,12 +481,16 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                     </div>
                   ))}
                 </div>
+
+                {/* Fade gradient at bottom */}
+                <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#050505] to-transparent pointer-events-none" />
               </div>
 
+              {/* Right side charts */}
               <div className="space-y-4">
-                <div 
+                <div
                   ref={tempoChartRef}
-                  style={{ 
+                  style={{
                     opacity: tempoModal.open ? 0 : 1,
                     transition: "opacity 100ms ease-out",
                   }}
@@ -680,122 +713,21 @@ function TabButton({
   );
 }
 
-function GlassStat({
+function QuickStat({
   icon,
   label,
   value,
-  suffix,
-  delay,
-  mounted,
-  ecoMode = false,
 }: {
   icon: React.ReactNode;
   label: string;
-  value: number;
-  suffix: string;
-  delay: number;
-  mounted: boolean;
-  ecoMode?: boolean;
+  value: string;
 }) {
-  const [displayValue, setDisplayValue] = useState(0);
-  const [hovered, setHovered] = useState(false);
-
-  useEffect(() => {
-    if (!mounted) return;
-    if (ecoMode) {
-      setDisplayValue(value);
-      return;
-    }
-    const timer = setTimeout(() => {
-      const start = Date.now();
-      const duration = 1400;
-      const animate = () => {
-        const progress = Math.min((Date.now() - start) / duration, 1);
-        setDisplayValue(value * easeOutExpo(progress));
-        if (progress < 1) requestAnimationFrame(animate);
-      };
-      animate();
-    }, delay);
-    return () => clearTimeout(timer);
-  }, [mounted, value, delay, ecoMode]);
-
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-2xl border bg-white/5 p-3",
-        ecoMode ? "border-white/8" : "border-white/10",
-        ecoMode ? "" : "transition-all duration-500",
-        mounted ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
-        !ecoMode && hovered && "border-white/20 shadow-[0_20px_60px_rgba(255,255,255,0.08)]"
-      )}
-      style={{ transitionDelay: ecoMode ? undefined : `${delay}ms` }}
-      onMouseEnter={() => !ecoMode && setHovered(true)}
-      onMouseLeave={() => !ecoMode && setHovered(false)}
-    >
-      {!ecoMode && (
-        <div
-          className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/0 to-white/10 opacity-0 transition-opacity duration-500"
-          style={{ opacity: hovered ? 0.2 : 0 }}
-        />
-      )}
-      <div className="relative z-10 flex items-start gap-3">
-        <span className="text-lg">{icon}</span>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-white/45">{label}</p>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-2xl font-semibold tabular-nums">{(displayValue || 0).toFixed(suffix === "%" ? 1 : 0)}</span>
-            <span className="text-xs text-white/50">{suffix}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function GlassTextStat({
-  icon,
-  label,
-  text,
-  delay,
-  mounted,
-  ecoMode = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  text: string;
-  delay: number;
-  mounted: boolean;
-  ecoMode?: boolean;
-}) {
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-2xl border bg-white/5 p-3",
-        ecoMode ? "border-white/8" : "border-white/10",
-        ecoMode ? "" : "transition-all duration-500",
-        mounted ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
-        !ecoMode && hovered && "border-white/20 shadow-[0_20px_60px_rgba(255,255,255,0.08)]"
-      )}
-      style={{ transitionDelay: ecoMode ? undefined : `${delay}ms` }}
-      onMouseEnter={() => !ecoMode && setHovered(true)}
-      onMouseLeave={() => !ecoMode && setHovered(false)}
-    >
-      {!ecoMode && (
-        <div
-          className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/0 to-white/10 opacity-0 transition-opacity duration-500"
-          style={{ opacity: hovered ? 0.2 : 0 }}
-        />
-      )}
-      <div className="relative z-10 flex items-start gap-3">
-        <span className="text-lg">{icon}</span>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-white/45">{label}</p>
-          <div className="mt-1">
-            <span className="text-lg font-medium text-white/60">{text}</span>
-          </div>
-        </div>
+    <div className="flex items-center gap-2.5 rounded-lg border border-white/8 bg-white/5 px-3 py-2">
+      <span className="text-white/60">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-[10px] text-white/40 truncate">{label}</p>
+        <p className="text-sm font-medium tabular-nums">{value}</p>
       </div>
     </div>
   );
@@ -1025,36 +957,23 @@ function AnimatedConfidenceGauge({
     return () => clearTimeout(timer);
   }, [mounted, normalizedTotal]);
 
-  const radius = 50;
+  const radius = 45;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - animValue / 100);
 
   return (
-    <div
-      className={cn(
-        "rounded-2xl border border-white/10 bg-white/5 p-4 transition-all duration-500",
-        mounted ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-      )}
-      style={{ transitionDelay: "600ms" }}
-    >
-      <h3 className="mb-3 text-sm font-semibold">Уверенность</h3>
+    <div className="rounded-xl bg-white/[0.02] p-4">
+      <h3 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-4">Детали уверенности</h3>
       <div className="flex items-center gap-4">
-        <div className="relative h-28 w-28">
-          <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120">
-            <defs>
-              <linearGradient id="confidenceGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
-                <stop offset="70%" stopColor="#d1d5db" stopOpacity="0.7" />
-                <stop offset="100%" stopColor="#a3a3a3" stopOpacity="0.6" />
-              </linearGradient>
-            </defs>
-            <circle cx="60" cy="60" r={radius} stroke="rgba(255,255,255,0.08)" strokeWidth="10" fill="none" />
+        <div className="relative h-20 w-20 flex-shrink-0">
+          <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r={radius} stroke="rgba(255,255,255,0.06)" strokeWidth="6" fill="none" />
             <circle
-              cx="60"
-              cy="60"
+              cx="50"
+              cy="50"
               r={radius}
-              stroke="url(#confidenceGradient)"
-              strokeWidth="10"
+              stroke="#FFC700"
+              strokeWidth="6"
               strokeDasharray={circumference}
               strokeDashoffset={offset}
               strokeLinecap="round"
@@ -1063,10 +982,10 @@ function AnimatedConfidenceGauge({
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-2xl font-bold tabular-nums">{Math.round(animValue)}</span>
+            <span className="text-xl font-bold tabular-nums">{Math.round(animValue)}</span>
           </div>
         </div>
-        <div className="flex-1 space-y-2">
+        <div className="flex-1 space-y-3">
           <MiniBar label="Громкость" value={Math.min(100, Math.max(0, components.volume_score))} delay={700} mounted={mounted} />
           <MiniBar label="Чистота речи" value={Math.min(100, Math.max(0, components.filler_score))} delay={800} mounted={mounted} />
           <MiniBar label="Взгляд" value={Math.min(100, Math.max(0, components.gaze_score))} delay={900} mounted={mounted} />
@@ -1107,14 +1026,14 @@ function MiniBar({
 
   return (
     <div>
-      <div className="flex justify-between text-[10px] text-white/50">
-        <span>{label}</span>
-        <span>{Math.round(animValue)}%</span>
+      <div className="flex justify-between text-[11px] mb-1">
+        <span className="text-white/40">{label}</span>
+        <span className="text-white/70 tabular-nums">{Math.round(animValue)}</span>
       </div>
-      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
+      <div className="h-1 rounded-full bg-white/5 overflow-hidden">
         <div
-          className="h-full rounded-full bg-white/80"
-          style={{ width: `${Math.min(100, Math.max(0, animValue))}%`, transition: "width 0.1s linear" }}
+          className="h-full rounded-full bg-white/30 transition-all duration-100"
+          style={{ width: `${Math.min(100, Math.max(0, animValue))}%` }}
         />
       </div>
     </div>
@@ -1136,49 +1055,61 @@ function InsightCard({
   accent?: "red" | "amber";
   className?: string;
 }) {
-  const accentStyles = {
-    red: "border-red-500/30 bg-red-500/10",
-    amber: "border-amber-500/30 bg-amber-500/10",
-  };
-
   return (
     <div
       className={cn(
-        "rounded-2xl border p-4 transition-all duration-500",
-        accent ? accentStyles[accent] : "border-white/10 bg-white/5",
-        mounted ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
+        "group relative overflow-hidden rounded-xl p-5 transition-all duration-500",
+        accent === "red" && "bg-rose-500/5 hover:bg-rose-500/10",
+        accent === "amber" && "bg-amber-500/5 hover:bg-amber-500/10",
+        !accent && "bg-white/[0.02] hover:bg-white/[0.04]",
+        mounted ? "opacity-100" : "opacity-0",
         className
       )}
-      style={{ transitionDelay: `${delay + 400}ms` }}
     >
-      <h3 className={cn("text-sm font-semibold", accent === "amber" && "text-amber-200", accent === "red" && "text-red-300")}>
+      {/* Accent line */}
+      {accent && (
+        <div
+          className={cn(
+            "absolute left-0 top-0 bottom-0 w-0.5 rounded-full",
+            accent === "red" && "bg-rose-500/50",
+            accent === "amber" && "bg-amber-500/50"
+          )}
+        />
+      )}
+
+      <h3
+        className={cn(
+          "text-sm font-medium mb-2",
+          accent === "amber" && "text-amber-200/90",
+          accent === "red" && "text-rose-300/90",
+          !accent && "text-white/90"
+        )}
+      >
         {title}
       </h3>
-      <p className="mt-2 text-sm leading-relaxed text-white/70">{content}</p>
+      <p className="text-[13px] leading-relaxed text-white/60">{content}</p>
     </div>
   );
 }
 
 const globalStyles = (
   <style jsx global>{`
-    .scroll-elegant::-webkit-scrollbar {
-      width: 8px;
-    }
-    .scroll-elegant::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.04);
-      border-radius: 999px;
-    }
-    .scroll-elegant::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.15));
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    .scroll-elegant::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.25));
-    }
-    .scroll-elegant {
+    .transcript-scroll {
       scrollbar-width: thin;
-      scrollbar-color: rgba(255, 255, 255, 0.35) rgba(255, 255, 255, 0.05);
+      scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    }
+    .transcript-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .transcript-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .transcript-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+    .transcript-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
     }
   `}</style>
 );
