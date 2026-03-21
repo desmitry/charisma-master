@@ -31,7 +31,7 @@ export default function Home() {
   const [doSlides, setDoSlides] = useState<boolean>(false);
   const [fastRequestsCount, setFastRequestsCount] = useState<number>(3);
   const [isValidRuTubeUrl, setIsValidRuTubeUrl] = useState(false);
-  
+
   const [statusText, setStatusText] = useState("Готовим обработку...");
   const [progress, setProgress] = useState(0.15);
   const [error, setError] = useState<string | null>(null);
@@ -269,14 +269,14 @@ export default function Home() {
 
       {/* First Section Animated Background (ColorBends) */}
       {shouldShowGL && (
-        <div 
+        <div
           className="pointer-events-none absolute inset-x-0 top-0 h-[120svh] -z-10 w-full overflow-hidden"
           style={{
             maskImage: 'linear-gradient(to bottom, black 40%, transparent 90%)',
             WebkitMaskImage: 'linear-gradient(to bottom, black 40%, transparent 90%)',
           }}
         >
-          <div className="absolute inset-0 bg-[#060010]">
+          <div className="absolute inset-0 bg-[#020202]">
             <ColorBends
               rotation={0}
               speed={0.2}
@@ -411,7 +411,7 @@ export default function Home() {
                         </svg>
                       )}
                     </div>
-                    
+
                     <h3 className="mb-2 text-xl font-medium text-white text-center">
                       {selectedFile ? "Файл готов к анализу" : "Перетащите видео сюда"}
                     </h3>
@@ -536,7 +536,7 @@ export default function Home() {
                       {error && (
                         <p className="flex-1 text-xs font-medium text-rose-400">{error}</p>
                       )}
-                      
+
                       <MagneticButton
                         onClick={handleAnalyze}
                         disabled={!selectedFile && (!videoUrl || !isValidRuTubeUrl)}
