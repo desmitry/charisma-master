@@ -234,7 +234,8 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#000",
+        background: "rgba(0, 0, 0, 0.5)",
+        backdropFilter: "blur(24px)",
         opacity: isVisible && !isExiting ? 1 : 0,
         pointerEvents: isVisible && !isExiting ? "auto" : "none",
         transition: "opacity 0.5s ease-out",
@@ -281,14 +282,14 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
               cy="200"
               r="70"
               fill="none"
-              stroke="rgba(255, 255, 255, 0.7)"
-              strokeWidth="1"
+              stroke="rgba(255, 255, 255, 0.8)"
+              strokeWidth="1.5"
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
               style={{
                 transition: "stroke-dashoffset 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                filter: "drop-shadow(0 0 6px rgba(255, 255, 255, 0.3))",
+                filter: "drop-shadow(0 0 8px rgba(255, 255, 255, 0.4))",
               }}
             />
           </svg>
@@ -305,11 +306,12 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
           >
             <span
               style={{
-                fontSize: 48,
+                fontSize: 56,
                 fontWeight: 200,
-                color: "rgba(255, 255, 255, 0.9)",
+                color: "rgba(255, 255, 255, 0.95)",
                 letterSpacing: "-0.02em",
                 fontVariantNumeric: "tabular-nums",
+                textShadow: "0 0 20px rgba(255, 255, 255, 0.3)",
               }}
             >
               {percent}
@@ -318,10 +320,10 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
               style={{
                 fontSize: 10,
                 fontWeight: 500,
-                color: "rgba(255, 255, 255, 0.3)",
+                color: "rgba(255, 255, 255, 0.4)",
                 letterSpacing: "0.2em",
                 textTransform: "uppercase",
-                marginTop: 4,
+                marginTop: 2,
               }}
             >
               percent
@@ -340,17 +342,18 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
           <div
             style={{
               display: "flex",
-              gap: 4,
+              gap: 6,
             }}
           >
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
                 style={{
-                  width: 3,
-                  height: 3,
+                  width: 4,
+                  height: 4,
                   borderRadius: "50%",
-                  backgroundColor: "rgba(255, 255, 255, 0.4)",
+                  backgroundColor: "rgba(255, 255, 255, 0.6)",
+                  boxShadow: "0 0 10px rgba(255,255,255,0.4)",
                   animation: `pulse-dot 1.4s ease-in-out infinite`,
                   animationDelay: `${i * 0.15}s`,
                 }}
@@ -360,15 +363,15 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
           <p
             style={{
               margin: 0,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 400,
-              color: "rgba(255, 255, 255, 0.5)",
+              color: "rgba(255, 255, 255, 0.6)",
               textAlign: "center",
               letterSpacing: "0.02em",
               maxWidth: 280,
             }}
           >
-            {statusText || "Analyzing video..."}
+            {statusText || "Анализ видео..."}
           </p>
         </div>
       </div>
@@ -377,11 +380,11 @@ export function ProcessingOverlay({ progress, statusText }: Props) {
         @keyframes pulse-dot {
           0%, 100% {
             opacity: 0.3;
-            transform: scale(1);
+            transform: scale(0.8);
           }
           50% {
             opacity: 1;
-            transform: scale(1.3);
+            transform: scale(1.4);
           }
         }
       `}</style>

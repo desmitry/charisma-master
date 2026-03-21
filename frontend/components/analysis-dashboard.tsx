@@ -29,33 +29,33 @@ const easeOutExpo = (t: number) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 const easeOutQuint = (t: number) => 1 - Math.pow(1 - t, 5);
 
-const IconTarget = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+const IconTarget = ({ className }: { className?: string }) => (
+  <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
     <circle cx="12" cy="12" r="9" opacity="0.5" />
     <circle cx="12" cy="12" r="4" />
     <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
   </svg>
 );
-const IconDoc = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+const IconDoc = ({ className }: { className?: string }) => (
+  <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
     <path d="M7 3h7l4 4v14H7z" />
     <path d="M14 3v5h5" opacity="0.6" />
     <path d="M9 13h6M9 17h6" opacity="0.7" />
   </svg>
 );
-const IconBolt = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+const IconBolt = ({ className }: { className?: string }) => (
+  <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
     <path d="M13 2 6 13h5l-1 9 7-11h-5z" />
   </svg>
 );
-const IconClock = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+const IconClock = ({ className }: { className?: string }) => (
+  <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
     <circle cx="12" cy="12" r="9" />
     <path d="M12 7v6l4 2" />
   </svg>
 );
-const IconHand = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+const IconHand = ({ className }: { className?: string }) => (
+  <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
     <path d="M18 11v-1a2 2 0 0 0-2-2h-1" />
     <path d="M14 10V9a2 2 0 0 0-2-2h-1" />
     <path d="M10 9.5V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v7" />
@@ -181,26 +181,20 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   }, [result.transcript, result.long_pauses]);
 
   return (
-    <div className="relative z-10 min-h-screen bg-[#050505] text-white overflow-x-hidden w-full max-w-[100vw]">
+    <div className="relative z-10 min-h-screen text-white overflow-x-hidden w-full max-w-[100vw] bg-transparent">
       <SmoothScroll />
-      {!isEcoMode ? (
-        <div className="pointer-events-none fixed inset-0 blur-3xl opacity-20">
-          <div className="absolute -left-20 top-10 h-80 w-80 rounded-full bg-white/15" />
-          <div className="absolute right-0 bottom-0 h-96 w-96 rounded-full bg-white/10" />
-        </div>
-      ) : (
-        <div className="pointer-events-none fixed inset-0 -z-10 bg-gradient-to-b from-black via-[#0a0a0a] to-[#050505]" />
-      )}
+      {/* We rely on the ColorBends background from the parent app/page.tsx */}
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-black/20 backdrop-blur-[2px]" />
 
       <header
         className={cn(
-          "sticky top-0 z-40 border-b border-white/10 bg-black/80",
-          isEcoMode ? "backdrop-blur-sm" : "backdrop-blur-xl",
+          "sticky top-0 z-40 border-b border-white/10 bg-black/40 shadow-[0_4px_30px_rgba(0,0,0,0.5)]",
+          isEcoMode ? "backdrop-blur-md" : "backdrop-blur-2xl",
           isEcoMode ? "" : "transform transition-all duration-700",
           mounted ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0"
         )}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-4">
             <div className="hidden h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-lg font-bold sm:flex">
               C
@@ -297,60 +291,62 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             {/* Main confidence score - prominent */}
             <div
               className={cn(
-                "rounded-xl border p-4 mb-3",
-                isEcoMode ? "border-white/8 bg-white/5" : "border-white/10 bg-white/5"
+                "group relative overflow-hidden rounded-[2rem] border mb-4 transition-all duration-500 hover:border-white/20 hover:shadow-[0_8px_32px_0_rgba(255,255,255,0.05)] p-6 sm:p-8",
+                isEcoMode ? "border-white/8 bg-black/60" : "border-white/10 bg-black/40 backdrop-blur-3xl shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
               )}
             >
-              <div className="flex items-center gap-4">
-                <div className="relative h-16 w-16 flex-shrink-0">
-                  <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="50" stroke="rgba(255,255,255,0.08)" strokeWidth="8" fill="none" />
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+              <div className="relative z-10 flex items-center gap-6 sm:gap-8">
+                <div className="relative h-24 w-24 flex-shrink-0">
+                  <svg className="h-full w-full -rotate-90 drop-shadow-[0_0_20px_rgba(255,199,0,0.4)]" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="50" stroke="rgba(255,255,255,0.06)" strokeWidth="6" fill="none" />
                     <circle
                       cx="60"
                       cy="60"
                       r="50"
                       stroke="#FFC700"
-                      strokeWidth="8"
+                      strokeWidth="6"
                       strokeDasharray={314}
                       strokeDashoffset={314 * (1 - Math.min(100, Math.max(0, result.confidence_index.total)) / 100)}
                       strokeLinecap="round"
                       fill="none"
+                      style={{ transition: "stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1)" }}
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-lg font-bold">{Math.round(result.confidence_index.total)}</span>
+                    <span className="text-3xl font-bold tabular-nums drop-shadow-lg">{Math.round(result.confidence_index.total)}</span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-white/50 uppercase tracking-wider">Общая оценка</p>
-                  <p className="text-xl font-semibold mt-0.5">
-                    {result.confidence_index.total >= 70 ? "Отлично" : result.confidence_index.total >= 50 ? "Хорошо" : "Есть над чем работать"}
+                  <p className="text-xs font-semibold text-white/40 uppercase tracking-[0.2em] mb-1.5 shadow-sm">Общая оценка</p>
+                  <p className="text-2xl sm:text-3xl font-medium tracking-tight mt-0.5 text-white/95">
+                    {result.confidence_index.total >= 70 ? "Отлично" : result.confidence_index.total >= 50 ? "Хорошо" : "Нужно поработать"}
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Quick stats row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-3 sm:gap-4">
               <QuickStat
-                icon={<IconTarget className="w-4 h-4" />}
+                icon={<IconTarget className="w-5 h-5 text-emerald-400" />}
                 label="Паразиты"
                 value={`${(result.fillers_summary.ratio * 100).toFixed(1)}%`}
               />
               <QuickStat
-                icon={<IconClock className="w-4 h-4" />}
+                icon={<IconClock className="w-5 h-5 text-sky-400" />}
                 label="Темп"
                 value={`${Math.round(result.tempo.reduce((sum, p) => sum + p.wpm, 0) / result.tempo.length)} wpm`}
               />
               {result.slide_analysis?.has_slides !== false && (
                 <QuickStat
-                  icon={<IconDoc className="w-4 h-4" />}
+                  icon={<IconDoc className="w-5 h-5 text-amber-400" />}
                   label="Слайды"
                   value={`${Math.round(result.slide_analysis?.text_density_score ?? result.slide_text_density ?? 0)}%`}
                 />
               )}
               <QuickStat
-                icon={<IconHand className="w-4 h-4" />}
+                icon={<IconHand className="w-5 h-5 text-rose-400" />}
                 label="Фрагментов"
                 value={result.transcript.length.toString()}
               />
@@ -358,20 +354,20 @@ export function AnalysisDashboard({ result, onBack }: Props) {
           </div>
         </div>
 
-        {/* Tabs - minimal style */}
+        {/* Tabs - Glass Pill */}
         <div
           className={cn(
-            "mt-8 flex gap-1 p-1 rounded-full bg-white/5 w-fit",
+            "mt-8 flex gap-1 p-1.5 rounded-full border border-white/10 bg-black/40 backdrop-blur-2xl w-fit shadow-xl",
             mounted ? "opacity-100" : "opacity-0"
           )}
         >
           <button
             onClick={() => setActiveTab("transcript")}
             className={cn(
-              "px-5 py-2 text-sm rounded-full transition-all duration-300",
+              "px-6 py-2.5 text-sm rounded-full transition-all duration-300 font-medium",
               activeTab === "transcript"
-                ? "bg-white text-black font-medium"
-                : "text-white/60 hover:text-white/90"
+                ? "bg-white text-black shadow-md scale-100"
+                : "text-white/60 hover:text-white/90 hover:bg-white/5 scale-95"
             )}
           >
             Транскрипт
@@ -379,10 +375,10 @@ export function AnalysisDashboard({ result, onBack }: Props) {
           <button
             onClick={() => setActiveTab("insights")}
             className={cn(
-              "px-5 py-2 text-sm rounded-full transition-all duration-300",
+              "px-6 py-2.5 text-sm rounded-full transition-all duration-300 font-medium",
               activeTab === "insights"
-                ? "bg-white text-black font-medium"
-                : "text-white/60 hover:text-white/90"
+                ? "bg-white text-black shadow-md scale-100"
+                : "text-white/60 hover:text-white/90 hover:bg-white/5 scale-95"
             )}
           >
             Инсайты
@@ -394,23 +390,25 @@ export function AnalysisDashboard({ result, onBack }: Props) {
           {activeTab === "transcript" && (
             <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
               {/* Transcript Panel - fluid design */}
-              <div className="relative">
-                {/* Subtle hint */}
-                <div className="flex items-center gap-2 mb-4 text-white/40">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M12 16v-4M12 8h.01"/>
-                  </svg>
-                  <span className="text-xs">Нажми на слово чтобы перемотать видео</span>
-                </div>
+              <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/40 backdrop-blur-2xl p-6 shadow-xl w-full">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                <div className="relative z-10">
+                  {/* Subtle hint */}
+                  <div className="flex items-center gap-2 mb-5 text-white/40 bg-white/5 w-fit px-3 py-1.5 rounded-full border border-white/5">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M12 16v-4M12 8h.01"/>
+                    </svg>
+                    <span className="text-[11px] uppercase tracking-wider font-medium">Нажми на слово чтобы перемотать видео</span>
+                  </div>
 
-                {/* Transcript content */}
-                <div
-                  className="max-h-[480px] overflow-y-auto pr-4 -mr-4 transcript-scroll"
-                  data-lenis-prevent
-                  onWheel={(e) => e.stopPropagation()}
-                  onTouchMove={(e) => e.stopPropagation()}
-                >
+                  {/* Transcript content */}
+                  <div
+                    className="max-h-[440px] overflow-y-auto pr-4 -mr-4 transcript-scroll relative"
+                    data-lenis-prevent
+                    onWheel={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
+                  >
                   {groupedTranscript.map((group, gi) => (
                     <div key={gi} className="relative mb-6 last:mb-0">
                       {/* Time marker - subtle line */}
@@ -483,7 +481,8 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                 </div>
 
                 {/* Fade gradient at bottom */}
-                <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#050505] to-transparent pointer-events-none" />
+                <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none rounded-b-3xl" />
+                </div>
               </div>
 
               {/* Right side charts */}
@@ -523,7 +522,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                 content={typeof result.mistakes === "string" 
                   ? result.mistakes 
                   : Array.isArray(result.mistakes) 
-                    ? result.mistakes.join("\n") 
+                    ? (result.mistakes as string[]).join("\n") 
                     : String(result.mistakes || "")}
                 delay={100}
                 mounted={mounted}
@@ -723,11 +722,16 @@ function QuickStat({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-lg border border-white/8 bg-white/5 px-3 py-2">
-      <span className="text-white/60">{icon}</span>
-      <div className="min-w-0">
-        <p className="text-[10px] text-white/40 truncate">{label}</p>
-        <p className="text-sm font-medium tabular-nums">{value}</p>
+    <div className="group relative flex flex-col gap-2 rounded-3xl border border-white/10 bg-black/40 backdrop-blur-2xl p-5 transition-all duration-500 hover:border-white/20 hover:bg-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] hover:shadow-[0_12px_40px_rgba(255,255,255,0.05)]">
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none rounded-3xl" />
+      <div className="flex items-center gap-4 relative z-10 w-full overflow-hidden">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/5 shadow-inner border border-white/10 transition-transform duration-500 group-hover:scale-110 group-hover:bg-white/10">
+          <span className="drop-shadow-md">{icon}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold text-white/40 tracking-widest uppercase truncate">{label}</p>
+          <p className="text-[22px] font-medium tabular-nums tracking-tight mt-0.5 text-white drop-shadow-sm">{value}</p>
+        </div>
       </div>
     </div>
   );
@@ -867,19 +871,21 @@ function AnimatedTempoChart({ data, mounted }: { data: TempoPoint[]; mounted: bo
   return (
     <div
       className={cn(
-        "rounded-2xl border border-white/10 bg-white/5 p-4 transition-all duration-500",
+        "relative overflow-hidden rounded-3xl border border-white/10 bg-black/40 backdrop-blur-2xl p-6 transition-all duration-500 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] hover:shadow-[0_12px_40px_rgba(255,255,255,0.05)] hover:border-white/20",
         mounted ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
       )}
       style={{ transitionDelay: "500ms" }}
     >
-      <div className="mb-3 flex items-center justify-between">
-        <div className="space-y-0.5">
-          <h3 className="text-sm font-semibold">Темп речи</h3>
-          <p className="text-[11px] text-white/50">Гладкая линия + заливка</p>
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+      <div className="relative z-10">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="space-y-0.5">
+            <h3 className="text-sm font-semibold text-white/90">Темп речи</h3>
+            <p className="text-[11px] text-white/50 tracking-wide uppercase">Гладкая линия</p>
+          </div>
+          <span className="text-xs font-medium text-white/60 bg-white/10 px-3 py-1.5 rounded-full border border-white/10 drop-shadow-sm">max {maxWpm.toFixed(0)} wpm</span>
         </div>
-        <span className="text-xs text-white/40">max {maxWpm.toFixed(0)} wpm</span>
-      </div>
-      <div
+        <div
         className="relative"
         onMouseLeave={() => setHovered(null)}
         onMouseMove={(e) => {
@@ -926,6 +932,7 @@ function AnimatedTempoChart({ data, mounted }: { data: TempoPoint[]; mounted: bo
           </div>
         )}
       </div>
+      </div>
     </div>
   );
 }
@@ -962,33 +969,36 @@ function AnimatedConfidenceGauge({
   const offset = circumference * (1 - animValue / 100);
 
   return (
-    <div className="rounded-xl bg-white/[0.02] p-4">
-      <h3 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-4">Детали уверенности</h3>
-      <div className="flex items-center gap-4">
-        <div className="relative h-20 w-20 flex-shrink-0">
-          <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r={radius} stroke="rgba(255,255,255,0.06)" strokeWidth="6" fill="none" />
-            <circle
-              cx="50"
-              cy="50"
-              r={radius}
-              stroke="#FFC700"
-              strokeWidth="6"
-              strokeDasharray={circumference}
-              strokeDashoffset={offset}
-              strokeLinecap="round"
-              fill="none"
-              style={{ transition: "stroke-dashoffset 0.2s linear" }}
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-xl font-bold tabular-nums">{Math.round(animValue)}</span>
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/40 backdrop-blur-2xl p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] transition-all duration-500 hover:border-white/20">
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+      <div className="relative z-10">
+        <h3 className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-5">Детали уверенности</h3>
+        <div className="flex items-center gap-5">
+          <div className="relative h-20 w-20 flex-shrink-0 drop-shadow-[0_0_15px_rgba(255,199,0,0.3)]">
+            <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r={radius} stroke="rgba(255,255,255,0.06)" strokeWidth="6" fill="none" />
+              <circle
+                cx="50"
+                cy="50"
+                r={radius}
+                stroke="#FFC700"
+                strokeWidth="6"
+                strokeDasharray={circumference}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+                fill="none"
+                style={{ transition: "stroke-dashoffset 0.2s linear" }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-2xl font-bold tabular-nums drop-shadow-md">{Math.round(animValue)}</span>
+            </div>
           </div>
-        </div>
-        <div className="flex-1 space-y-3">
-          <MiniBar label="Громкость" value={Math.min(100, Math.max(0, components.volume_score))} delay={700} mounted={mounted} />
-          <MiniBar label="Чистота речи" value={Math.min(100, Math.max(0, components.filler_score))} delay={800} mounted={mounted} />
-          <MiniBar label="Взгляд" value={Math.min(100, Math.max(0, components.gaze_score))} delay={900} mounted={mounted} />
+          <div className="flex-1 space-y-4">
+            <MiniBar label="Громкость" value={Math.min(100, Math.max(0, components.volume_score))} delay={700} mounted={mounted} />
+            <MiniBar label="Чистота речи" value={Math.min(100, Math.max(0, components.filler_score))} delay={800} mounted={mounted} />
+            <MiniBar label="Взгляд" value={Math.min(100, Math.max(0, components.gaze_score))} delay={900} mounted={mounted} />
+          </div>
         </div>
       </div>
     </div>
@@ -1058,36 +1068,39 @@ function InsightCard({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-xl p-5 transition-all duration-500",
-        accent === "red" && "bg-rose-500/5 hover:bg-rose-500/10",
-        accent === "amber" && "bg-amber-500/5 hover:bg-amber-500/10",
-        !accent && "bg-white/[0.02] hover:bg-white/[0.04]",
-        mounted ? "opacity-100" : "opacity-0",
+        "group relative overflow-hidden rounded-3xl border transition-all duration-500 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] hover:shadow-[0_12px_40px_rgba(255,255,255,0.05)]",
+        accent === "red" ? "border-rose-500/20 bg-black/40 backdrop-blur-2xl hover:border-rose-500/40" : 
+        accent === "amber" ? "border-amber-500/20 bg-black/40 backdrop-blur-2xl hover:border-amber-500/40" : 
+        "border-white/10 bg-black/40 backdrop-blur-2xl hover:border-white/30",
+        mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
         className
       )}
     >
-      {/* Accent line */}
-      {accent && (
-        <div
-          className={cn(
-            "absolute left-0 top-0 bottom-0 w-0.5 rounded-full",
-            accent === "red" && "bg-rose-500/50",
-            accent === "amber" && "bg-amber-500/50"
-          )}
-        />
-      )}
-
-      <h3
-        className={cn(
-          "text-sm font-medium mb-2",
-          accent === "amber" && "text-amber-200/90",
-          accent === "red" && "text-rose-300/90",
-          !accent && "text-white/90"
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+      <div className="relative z-10 p-6">
+        {/* Accent line */}
+        {accent && (
+          <div
+            className={cn(
+              "absolute left-0 top-0 bottom-0 w-1",
+              accent === "red" && "bg-rose-500/50 shadow-[0_0_10px_rgba(244,63,94,0.5)]",
+              accent === "amber" && "bg-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+            )}
+          />
         )}
-      >
-        {title}
-      </h3>
-      <p className="text-[13px] leading-relaxed text-white/60">{content}</p>
+
+        <h3
+          className={cn(
+            "text-base font-semibold mb-3 tracking-tight drop-shadow-sm",
+            accent === "amber" && "text-amber-200/90",
+            accent === "red" && "text-rose-300/90",
+            !accent && "text-white"
+          )}
+        >
+          {title}
+        </h3>
+        <p className="text-[14px] leading-relaxed text-white/70 whitespace-pre-wrap">{content}</p>
+      </div>
     </div>
   );
 }
