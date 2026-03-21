@@ -10,7 +10,6 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY pnpm-lock.yaml ./
 
 # Install all dependencies (including dev dependencies for build)
 RUN npm ci --ignore-scripts

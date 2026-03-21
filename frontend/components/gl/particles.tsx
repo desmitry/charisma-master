@@ -7,8 +7,7 @@ import { DofPointsMaterial } from "./shaders/pointMaterial";
 import { SimulationMaterial } from "./shaders/simulationMaterial";
 import * as easing from "maath/easing";
 
-const MAX_WAVES_NORMAL = 50;
-const MAX_WAVES_ECO = 16;
+const MAX_WAVES = 50;
 const WAVE_DURATION = 2;
 const WAVE_FADE_TIME = 1;
 
@@ -34,7 +33,6 @@ export function Particles({
   useManualTime = false,
   manualTime = 0,
   introspect = false,
-  isEcoMode = false,
   ...props
 }: {
   speed: number;
@@ -50,10 +48,7 @@ export function Particles({
   useManualTime?: boolean;
   manualTime?: number;
   introspect?: boolean;
-  isEcoMode?: boolean;
 }) {
-  const MAX_WAVES = isEcoMode ? MAX_WAVES_ECO : MAX_WAVES_NORMAL;
-  const frameSkip = useRef(0);
   const mousePosition = useRef(new THREE.Vector2(0, 0));
   const targetMouseWorld = useRef(new THREE.Vector3(0, 0, 0));
   const currentMouseWorld = useRef(new THREE.Vector3(0, 0, 0));
@@ -63,7 +58,7 @@ export function Particles({
   const scrollTarget = useRef(0);
   const scrollCurrent = useRef(0);
   const waves = useRef<WaveState[]>(
-    Array.from({ length: MAX_WAVES_NORMAL }, () => ({
+    Array.from({ length: MAX_WAVES }, () => ({
       origin: new THREE.Vector2(0, 0),
       elapsed: WAVE_DURATION,
       progress: 1,
@@ -78,9 +73,8 @@ export function Particles({
 
   const spawnWave = useCallback((origin: THREE.Vector2) => {
     const pool = waves.current;
-    const maxWaves = isEcoMode ? MAX_WAVES_ECO : MAX_WAVES_NORMAL;
     let slot = -1;
-    for (let i = 0; i < maxWaves; i++) {
+    for (let i = 0; i < MAX_WAVES; i++) {
       if (!pool[i].active || pool[i].progress >= 1) {
         slot = i;
         break;
@@ -88,7 +82,7 @@ export function Particles({
     }
     if (slot === -1) {
       let maxProgress = -Infinity;
-      for (let i = 0; i < maxWaves; i++) {
+      for (let i = 0; i < MAX_WAVES; i++) {
         if (pool[i].progress > maxProgress) {
           maxProgress = pool[i].progress;
           slot = i;
@@ -101,7 +95,7 @@ export function Particles({
     wave.progress = 0;
     wave.intensity = 1;
     wave.active = true;
-  }, [isEcoMode]);
+  }, []);
 
   useEffect(() => {
     const canvas = gl.domElement;
@@ -162,11 +156,12 @@ export function Particles({
       window.removeEventListener("resize", updateScroll);
     };
   }, []);
+
   const revealStartTime = useRef<number | null>(null);
   const [isRevealing, setIsRevealing] = useState(true);
   const revealDuration = 3.5;
   const simulationMaterial = useMemo(() => {
-    return new SimulationMaterial(planeScale, MAX_WAVES_NORMAL);
+    return new SimulationMaterial(planeScale, MAX_WAVES);
   }, [planeScale]);
 
   const target = useFBO(size, size, {
@@ -177,7 +172,7 @@ export function Particles({
   });
 
   const dofPointsMaterial = useMemo(() => {
-    const m = new DofPointsMaterial(MAX_WAVES_NORMAL);
+    const m = new DofPointsMaterial(MAX_WAVES);
     m.uniforms.positions.value = target.texture;
     m.uniforms.initialPositions.value =
       simulationMaterial.uniforms.positions.value;
@@ -212,13 +207,6 @@ export function Particles({
   useFrame((state, delta) => {
     if (!dofPointsMaterial || !simulationMaterial) return;
 
-    if (isEcoMode) {
-      frameSkip.current++;
-      if (frameSkip.current % 2 !== 0) {
-        return;
-      }
-    }
-
     raycaster.setFromCamera(mousePosition.current, state.camera);
     const intersectPoint = new THREE.Vector3();
     raycaster.ray.intersectPlane(groundPlane, intersectPoint);
@@ -227,8 +215,7 @@ export function Particles({
       targetMouseWorld.current.copy(intersectPoint);
     }
 
-    const lerpFactor = isEcoMode ? 0.15 : 0.08;
-    currentMouseWorld.current.lerp(targetMouseWorld.current, lerpFactor);
+    currentMouseWorld.current.lerp(targetMouseWorld.current, 0.08);
 
     clickIntensity.current += (targetClickIntensity.current - clickIntensity.current) * 0.15;
 
@@ -238,12 +225,10 @@ export function Particles({
       0.08
     );
 
-    const waveLimit = isEcoMode ? MAX_WAVES_ECO : MAX_WAVES_NORMAL;
-    const effectiveDelta = isEcoMode ? delta * 2 : delta;
-    for (let i = 0; i < waveLimit; i++) {
+    for (let i = 0; i < MAX_WAVES; i++) {
       const wave = waves.current[i];
       if (!wave.active) continue;
-      wave.elapsed += effectiveDelta;
+      wave.elapsed += delta;
       wave.progress = Math.min(wave.elapsed / WAVE_DURATION, 1);
       const fadeRatio = Math.min(wave.elapsed / WAVE_FADE_TIME, 1);
       wave.intensity = Math.max(1 - fadeRatio, 0);
@@ -307,7 +292,7 @@ export function Particles({
     const simWaveIntensity =
       simulationMaterial.uniforms.uWaveIntensity.value as number[];
 
-    const maxShaderWaves = Math.min(waveLimit, simWaveOrigins.length);
+    const maxShaderWaves = Math.min(MAX_WAVES, simWaveOrigins.length);
     for (let idx = 0; idx < maxShaderWaves; idx++) {
       const wave = waves.current[idx];
       if (!simWaveOrigins[idx]) continue;
@@ -348,7 +333,7 @@ export function Particles({
     const pointWaveIntensity =
       dofPointsMaterial.uniforms.uWaveIntensity.value as number[];
 
-    const maxShaderWavesPoint = Math.min(waveLimit, pointWaveOrigins.length);
+    const maxShaderWavesPoint = Math.min(MAX_WAVES, pointWaveOrigins.length);
     for (let idx = 0; idx < maxShaderWavesPoint; idx++) {
       const wave = waves.current[idx];
       if (!pointWaveOrigins[idx]) continue;
