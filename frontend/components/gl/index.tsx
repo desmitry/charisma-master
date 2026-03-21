@@ -5,7 +5,6 @@ import { Canvas } from "@react-three/fiber";
 import { useControls } from "leva";
 import { Particles } from "./particles";
 import { VignetteShader } from "./shaders/vignetteShader";
-import { useEcoMode } from "@/lib/eco-mode-context";
 
 function checkWebGLSupport(): boolean {
   if (typeof window === "undefined") return false;
@@ -19,7 +18,6 @@ function checkWebGLSupport(): boolean {
 }
 
 export const GL = () => {
-  const { isEcoMode } = useEcoMode();
   const [contextLost, setContextLost] = useState(false);
   const [key, setKey] = useState(0);
   const [webglSupported, setWebglSupported] = useState(false);
@@ -131,12 +129,11 @@ export const GL = () => {
     useManualTime: { value: false },
     manualTime: { value: 0, min: 0, max: 50, step: 0.01 },
   });
-  const effectiveSize = isEcoMode ? Math.min(size, 256) : size;
 
   if (contextLost || !webglSupported) {
     return (
       <div id="webgl">
-        <div className="eco-bg w-full h-full" />
+        <div className="w-full h-full bg-black" />
       </div>
     );
   }
@@ -152,7 +149,7 @@ export const GL = () => {
           near: 0.01,
           far: 300,
         }}
-        dpr={isEcoMode ? [1, 1] : [1, 1.5]}
+        dpr={[1, 1.5]}
         gl={{ 
           powerPreference: "low-power",
           antialias: false,
@@ -171,17 +168,16 @@ export const GL = () => {
           speed={speed}
           aperture={aperture}
           focus={focus}
-          size={effectiveSize}
+          size={size}
           noiseScale={noiseScale}
           noiseIntensity={noiseIntensity}
           timeScale={timeScale}
-          pointSize={isEcoMode ? pointSize * 1.3 : pointSize}
+          pointSize={pointSize}
           opacity={opacity}
           planeScale={planeScale}
           useManualTime={useManualTime}
           manualTime={manualTime}
           introspect={false}
-          isEcoMode={isEcoMode}
         />
         <Effects multisamping={0} disableGamma>
           <shaderPass

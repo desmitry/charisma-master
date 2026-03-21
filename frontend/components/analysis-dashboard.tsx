@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import type { CSSProperties } from "react";
 import { AnalysisResult, TempoPoint, TranscriptWord, LongPause } from "@/types/analysis";
 import { resolveVideoUrl, getPdfUrl } from "@/lib/api";
-import { useEcoMode } from "@/lib/eco-mode-context";
+
 import { cn } from "@/lib/utils";
 import { SmoothScroll } from "./smooth-scroll";
 import { TempoChart } from "./analysis/tempo-chart";
@@ -73,8 +73,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
     return resolveVideoUrl(result.video_path);
   });
   const [videoError, setVideoError] = useState<string | null>(null);
-  const { isEcoMode } = useEcoMode();
-  
+
   const [tempoModal, setTempoModal] = useState<{
     open: boolean;
     phase: "closed" | "opening" | "open" | "closing";
@@ -188,9 +187,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
 
       <header
         className={cn(
-          "sticky top-0 z-40 border-b border-white/10 bg-black/40 shadow-[0_4px_30px_rgba(0,0,0,0.5)]",
-          isEcoMode ? "backdrop-blur-md" : "backdrop-blur-2xl",
-          isEcoMode ? "" : "transform transition-all duration-700",
+          "sticky top-0 z-40 border-b border-white/10 bg-black/40 shadow-[0_4px_30px_rgba(0,0,0,0.5)] backdrop-blur-2xl transform transition-all duration-700",
           mounted ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0"
         )}
       >
@@ -292,7 +289,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             <div
               className={cn(
                 "group relative overflow-hidden rounded-[2rem] border mb-4 transition-all duration-500 hover:border-white/20 hover:shadow-[0_8px_32px_0_rgba(255,255,255,0.05)] p-6 sm:p-8",
-                isEcoMode ? "border-white/8 bg-black/60" : "border-white/10 bg-black/40 backdrop-blur-3xl shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
+                "border-white/10 bg-black/40 backdrop-blur-3xl shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
               )}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />

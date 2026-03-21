@@ -25,6 +25,7 @@
     "maath": "latest",
     "next": "^16.2.1",
     "next-themes": "latest",
+    "ogl": "^1.0.11",
     "react": "^19",
     "react-dom": "^19",
     "tailwind-merge": "^3.5.0",

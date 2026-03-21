@@ -2,7 +2,7 @@
 
 import { TempoPoint } from "@/types/analysis";
 import { useMemo, useState, useRef, useCallback, useEffect } from "react";
-import { useEcoMode } from "@/lib/eco-mode-context";
+
 
 type Props = {
   data: TempoPoint[];
@@ -29,7 +29,6 @@ export function TempoChart({ data, currentTime, onExpand, expanded, inModal }: P
   const rafRef = useRef<number | null>(null);
   const throttleTimerRef = useRef<number | null>(null);
   const lastHoverPointRef = useRef<TempoPoint | null>(null);
-  const { isEcoMode } = useEcoMode();
   
   useEffect(() => {
     if (!hoverPoint) {
@@ -38,15 +37,9 @@ export function TempoChart({ data, currentTime, onExpand, expanded, inModal }: P
     }
     const newTarget = Math.round(hoverPoint.point.wpm);
     targetWpmRef.current = newTarget;
-    
-    if (isEcoMode) {
-      setDisplayedWpm(newTarget);
-    }
-  }, [hoverPoint, isEcoMode]);
-  
-  useEffect(() => {
-    if (isEcoMode) return;
+  }, [hoverPoint]);
 
+  useEffect(() => {
     const animate = () => {
       setDisplayedWpm((prev) => {
         const target = targetWpmRef.current || 0;
@@ -68,7 +61,8 @@ export function TempoChart({ data, currentTime, onExpand, expanded, inModal }: P
         rafRef.current = null;
       }
     };
-  }, [isEcoMode]);
+  }, []);
+
 
   const padding = { top: 20, right: 16, bottom: 28, left: 36 };
   const height = expanded ? 320 : 140;
