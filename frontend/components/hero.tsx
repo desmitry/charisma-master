@@ -43,7 +43,7 @@ export function Hero() {
             className="block h-auto"
           >
             <span className="bg-gradient-to-br from-white via-white/90 to-white/30 bg-clip-text text-transparent drop-shadow-sm">
-              AI-Анализ выступлений.
+              ИИ-Анализ выступлений.
             </span>
           </motion.span>
         </h1>
