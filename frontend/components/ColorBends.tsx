@@ -177,7 +177,7 @@ export default function ColorBends({
       alpha: true
     });
     rendererRef.current = renderer;
-    (renderer as any).outputColorSpace = (THREE as any).SRGBColorSpace;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, transparent ? 0 : 1);
     renderer.domElement.style.width = '100%';
@@ -185,7 +185,7 @@ export default function ColorBends({
     renderer.domElement.style.display = 'block';
     container.appendChild(renderer.domElement);
 
-    const clock = new THREE.Clock();
+    const timer = new (THREE as any).Timer();
 
     const handleResize = () => {
       const w = container.clientWidth || 1;
@@ -205,8 +205,9 @@ export default function ColorBends({
     }
 
     const loop = () => {
-      const dt = clock.getDelta();
-      const elapsed = clock.elapsedTime;
+      timer.update();
+      const dt = timer.getDelta();
+      const elapsed = timer.getElapsed();
       material.uniforms.uTime.value = elapsed;
 
       const deg = (rotationRef.current % 360) + autoRotateRef.current * elapsed;
