@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { MagneticButton } from "./magnetic-button";
+import { GetStartedButton } from "@/components/ui/get-started-button";
 
 export function Hero() {
   const [mounted, setMounted] = useState(false);
@@ -43,7 +43,7 @@ export function Hero() {
             className="block h-auto"
           >
             <span className="bg-gradient-to-br from-white via-white/90 to-white/30 bg-clip-text text-transparent drop-shadow-sm">
-              ИИ-нализ выступлений.
+              ИИ-анализ выступлений.
             </span>
           </motion.span>
         </h1>
@@ -65,29 +65,7 @@ export function Hero() {
           transition={{ duration: 1, delay: 0.8 }}
           className="pointer-events-auto relative mt-12"
         >
-          <MagneticButton
-            onClick={scrollToUpload}
-            intensity={0.2}
-            className="group overflow-hidden rounded-full bg-white px-8 py-4 text-black font-medium transition-transform duration-300 hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:shadow-[0_0_80px_rgba(255,255,255,0.3)]"
-          >
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,0,0,0.1),transparent_50%)] pointer-events-none" />
-            <span className="relative flex items-center justify-center gap-2 text-[15px]">
-              Начать анализ бесплатно
-              <svg
-                className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
-                />
-              </svg>
-            </span>
-          </MagneticButton>
+          <GetStartedButton onClick={scrollToUpload} />
         </motion.div>
       </div>
     </section>
