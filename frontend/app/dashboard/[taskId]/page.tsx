@@ -9,7 +9,7 @@ import { TempoChart } from "@/components/analysis/tempo-chart";
 import { ConfidenceGauge } from "@/components/analysis/confidence-gauge";
 import { Transcript } from "@/components/analysis/transcript";
 import { SummaryBlocks } from "@/components/analysis/summary-blocks";
-import { VideoPlayer, VideoPlayerRef } from "@/components/video-player";
+import { VideoPlayer, VideoPlayerRef } from "@/components/shared/video-player";
 
 export default function DashboardPage() {
   const { taskId } = useParams<{ taskId: string }>();

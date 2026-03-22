@@ -2,8 +2,8 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { ScrollReveal } from "./scroll-reveal";
-import { SpotlightCard } from "./spotlight-card";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 
 const features = [
   {

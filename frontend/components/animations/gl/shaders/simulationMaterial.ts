@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { periodicNoiseGLSL } from './utils'
+import { periodicNoiseGLSL } from '@/components/animations/gl/shaders/utils'
 
 function getPlane(count: number, components: number, size: number = 512, scale: number = 1.0) {
   const length = count * components
