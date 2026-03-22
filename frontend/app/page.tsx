@@ -24,7 +24,19 @@ import { useVideoAnalysis } from "@/hooks/use-video-analysis";
 
 type Stage = "landing" | "processing" | "result";
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+  return isMobile;
+}
+
 export default function Home() {
+  const isMobile = useIsMobile();
   const videoAnalysis = useVideoAnalysis();
   const { state, actions } = videoAnalysis;
   const { stage, progress, statusText, error, result, isExiting, showResult, isUploading, showErrorPopup, serverErrorText } = state;
@@ -39,14 +51,21 @@ export default function Home() {
 
       {/* Global Aurora Background */}
       {shouldShowGL && (
-        <div className="pointer-events-none fixed inset-0 -z-20 w-full h-full bg-black overflow-hidden opacity-40">
-          <Aurora
-            colorStops={["#ffffff", "#000000", "#ffffff"]}
-            blend={1.0}
-            amplitude={1.0}
-            speed={1.0}
-          />
-        </div>
+        <>
+          {/* Desktop Aurora */}
+          {!isMobile && (
+            <div className="pointer-events-none fixed inset-0 -z-20 w-full h-full bg-black overflow-hidden opacity-40">
+              <Aurora
+                colorStops={["#ffffff", "#000000", "#ffffff"]}
+                blend={1.0}
+                amplitude={1.0}
+                speed={1.0}
+              />
+            </div>
+          )}
+
+
+        </>
       )}
 
       {/* First Section Animated Background (ColorBends) */}
@@ -78,12 +97,53 @@ export default function Home() {
 
       {showLanding && (
         <div
-          className="transition-all duration-700 ease-[0.22,1,0.36,1]"
+          className="transition-all duration-700 ease-[0.22,1,0.36,1] relative"
           style={{
             opacity: isExiting ? 0 : 1,
             transform: isExiting ? "scale(0.97) translateY(-20px)" : "scale(1) translateY(0)",
           }}
         >
+          {/* Mobile Aurora Pieces (Absolute to scroll with content, completely avoiding Hero) */}
+          {isMobile && (
+            <>
+              {/* Top Left Horizontal Piece (Starts below Hero) */}
+              <div className="pointer-events-none absolute top-[110vh] left-0 w-full h-[60vh] -z-20 overflow-hidden">
+                <div 
+                  className="absolute top-0 left-[-20%] w-[140%] h-[100%] opacity-100 -rotate-12"
+                  style={{
+                    maskImage: 'radial-gradient(ellipse at center, black 0%, black 40%, transparent 80%)',
+                    WebkitMaskImage: 'radial-gradient(ellipse at center, black 0%, black 40%, transparent 80%)',
+                  }}
+                >
+                  <Aurora
+                    colorStops={["#ffffff", "#000000", "#ffffff"]}
+                    blend={0.8}
+                    amplitude={1.5}
+                    speed={1.0}
+                  />
+                </div>
+              </div>
+              
+              {/* Bottom Right Horizontal Piece */}
+              <div className="pointer-events-none absolute bottom-[5vh] right-0 w-full h-[60vh] -z-20 overflow-hidden">
+                <div 
+                  className="absolute bottom-0 right-[-20%] w-[140%] h-[100%] opacity-100 rotate-12"
+                  style={{
+                    maskImage: 'radial-gradient(ellipse at center, black 0%, black 40%, transparent 80%)',
+                    WebkitMaskImage: 'radial-gradient(ellipse at center, black 0%, black 40%, transparent 80%)',
+                  }}
+                >
+                  <Aurora
+                    colorStops={["#ffffff", "#000000", "#ffffff"]}
+                    blend={0.8}
+                    amplitude={1.5}
+                    speed={0.8}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
           <Hero />
           <FeaturesSection />
 
