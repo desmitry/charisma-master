@@ -104,6 +104,61 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                   </div>
                 </div>
 
+                {/* Presentation file upload */}
+                <div className="mb-8">
+                  <label className="mb-3 block text-xs font-mono uppercase tracking-widest text-white/40">
+                    Файл презентации
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="presentation-upload"
+                      type="file"
+                      className="hidden"
+                      accept=".pptx,.ppt,.pdf"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        actions.setPresentationFile(f || null);
+                      }}
+                    />
+                    <label
+                      htmlFor="presentation-upload"
+                      className={cn(
+                        "flex items-center gap-3 cursor-pointer rounded-xl border border-dashed px-4 py-3 transition-all duration-300",
+                        state.presentationFile
+                          ? "border-emerald-500/40 bg-emerald-500/5"
+                          : "border-white/15 bg-white/5 hover:border-white/30 hover:bg-white/[0.07]"
+                      )}
+                    >
+                      {state.presentationFile ? (
+                        <>
+                          <svg className="h-5 w-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                          </svg>
+                          <span className="text-sm text-emerald-400 truncate">{state.presentationFile.name}</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="h-5 w-5 text-white/40 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                          </svg>
+                          <span className="text-sm text-white/40">.pptx, .ppt, .pdf</span>
+                        </>
+                      )}
+                    </label>
+                    {state.presentationFile && (
+                      <button
+                        type="button"
+                        onClick={() => actions.setPresentationFile(null)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-white/30 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="mb-8">
                   <label className="mb-3 block text-xs font-mono uppercase tracking-widest text-white/40">
                     Режим анализа
@@ -176,6 +231,91 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                       >
                         Fast <span className="rounded bg-white/10 px-1 text-[10px]">{state.fastRequestsCount}</span>
                       </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Стандарт оценивания */}
+                <div className="mb-8">
+                  <label className="mb-3 block text-xs font-mono uppercase tracking-widest text-white/40">
+                    Стандарт оценивания
+                  </label>
+                  <div className="flex gap-1 p-1 rounded-xl border border-white/10 bg-black/30 mb-3">
+                    <button
+                      onClick={() => {
+                        actions.setStandardMode("preset");
+                        actions.setStandardFile(null);
+                      }}
+                      className={cn(
+                        "flex-1 rounded-lg py-2 text-center text-xs font-medium transition-all duration-300",
+                        state.standardMode === "preset"
+                          ? "bg-white text-black shadow-sm"
+                          : "text-white/50 hover:text-white/80"
+                      )}
+                    >
+                      Предустановленный (УрФУ)
+                    </button>
+                    <button
+                      onClick={() => actions.setStandardMode("custom")}
+                      className={cn(
+                        "flex-1 rounded-lg py-2 text-center text-xs font-medium transition-all duration-300",
+                        state.standardMode === "custom"
+                          ? "bg-white text-black shadow-sm"
+                          : "text-white/50 hover:text-white/80"
+                      )}
+                    >
+                      Загрузить свой (.docx)
+                    </button>
+                  </div>
+
+                  {state.standardMode === "custom" && (
+                    <div className="relative">
+                      <input
+                        id="standard-upload"
+                        type="file"
+                        className="hidden"
+                        accept=".docx"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          actions.setStandardFile(f || null);
+                        }}
+                      />
+                      <label
+                        htmlFor="standard-upload"
+                        className={cn(
+                          "flex items-center gap-3 cursor-pointer rounded-xl border border-dashed px-4 py-3 transition-all duration-300",
+                          state.standardFile
+                            ? "border-emerald-500/40 bg-emerald-500/5"
+                            : "border-white/15 bg-white/5 hover:border-white/30 hover:bg-white/[0.07]"
+                        )}
+                      >
+                        {state.standardFile ? (
+                          <>
+                            <svg className="h-5 w-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                            <span className="text-sm text-emerald-400 truncate">{state.standardFile.name}</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="h-5 w-5 text-white/40 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                            </svg>
+                            <span className="text-sm text-white/40">Выберите .docx файл стандарта</span>
+                          </>
+                        )}
+                      </label>
+                      {state.standardFile && (
+                        <button
+                          type="button"
+                          onClick={() => actions.setStandardFile(null)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-white/30 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

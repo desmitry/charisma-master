@@ -50,7 +50,8 @@ export async function uploadVideo(
   persona?: string,
   llmProvider?: string,
   modelType?: string,
-  doSlides?: boolean
+  presentationFile?: File | null,
+  standardFile?: File | null
 ): Promise<{ task_id: string }> {
   const formData = new FormData();
   if (file) {
@@ -68,8 +69,11 @@ export async function uploadVideo(
   if (modelType) {
     formData.append("model_type", modelType);
   }
-  if (doSlides !== undefined) {
-    formData.append("do_slides", doSlides ? "true" : "false");
+  if (presentationFile) {
+    formData.append("presentation_file", presentationFile);
+  }
+  if (standardFile) {
+    formData.append("standard_file", standardFile);
   }
 
   try {
@@ -128,11 +132,6 @@ export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse>
 export async function getAnalysis(taskId: string): Promise<AnalysisResult> {
   const response = await fetch(`${API_BASE_URL}/api/v1/analysis/${taskId}`);
   const data = await checkResponse<any>(response);
-  
-  // Маппинг slide_analysis.text_density_score в slide_text_density
-  if (data.slide_analysis?.text_density_score !== undefined && data.slide_text_density === undefined) {
-    data.slide_text_density = Math.min(100, Math.max(0, data.slide_analysis.text_density_score));
-  }
   
   // Ограничиваем все score значения до 100
   if (data.confidence_index) {

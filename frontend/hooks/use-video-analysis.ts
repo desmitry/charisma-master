@@ -12,7 +12,9 @@ export function useVideoAnalysis() {
   const [selectedPersona, setSelectedPersona] = useState<string>("");
   const [selectedLlmProvider, setSelectedLlmProvider] = useState<string>("default");
   const [selectedModel, setSelectedModel] = useState<string>("");
-  const [doSlides, setDoSlides] = useState<boolean>(false);
+  const [presentationFile, setPresentationFile] = useState<File | null>(null);
+  const [standardMode, setStandardMode] = useState<"preset" | "custom">("preset");
+  const [standardFile, setStandardFile] = useState<File | null>(null);
   const [fastRequestsCount, setFastRequestsCount] = useState<number>(3);
   const [isValidRuTubeUrl, setIsValidRuTubeUrl] = useState(false);
 
@@ -193,7 +195,8 @@ export function useVideoAnalysis() {
           selectedPersona || undefined,
           actualProvider || undefined,
           selectedModel || undefined,
-          doSlides
+          presentationFile,
+          standardMode === "custom" ? standardFile : null
         );
         if (!uploadResult?.task_id) throw new Error("Не получен task_id от сервера");
         task_id = uploadResult.task_id;
@@ -251,7 +254,9 @@ export function useVideoAnalysis() {
       selectedPersona,
       selectedLlmProvider,
       selectedModel,
-      doSlides,
+      presentationFile,
+      standardMode,
+      standardFile,
       fastRequestsCount,
       isValidRuTubeUrl,
       statusText,
@@ -273,7 +278,9 @@ export function useVideoAnalysis() {
       setSelectedPersona,
       setSelectedLlmProvider,
       setSelectedModel,
-      setDoSlides,
+      setPresentationFile,
+      setStandardMode,
+      setStandardFile,
       setFastRequestsCount,
       setIsValidRuTubeUrl,
       setStatusText,

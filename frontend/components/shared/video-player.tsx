@@ -36,6 +36,7 @@ interface VideoPlayerProps {
   onError?: (message: string, details?: VideoErrorDetails) => void;
   className?: string;
   compact?: boolean;
+  fullWidth?: boolean;
 }
 
 function formatTime(seconds: number): string {
@@ -124,6 +125,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       onError,
       className,
       compact = false,
+      fullWidth = false,
     },
     ref
   ) {
@@ -433,8 +435,8 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       <div
         ref={containerRef}
         className={cn(
-          "group relative rounded-xl overflow-hidden border border-white/10 bg-black shadow-lg",
-          compact ? "max-w-sm" : "max-w-md",
+          "group relative rounded-xl overflow-hidden border border-white/10 bg-black shadow-lg flex-shrink-0",
+          fullWidth ? "w-full max-w-none" : compact ? "max-w-sm" : "max-w-md",
           className
         )}
         onMouseEnter={() => {
