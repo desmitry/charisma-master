@@ -50,33 +50,9 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   const [videoSrc, setVideoSrc] = useState(() => resolveVideoUrl(result.video_path));
   const [videoError, setVideoError] = useState<string | null>(null);
 
-  const [tempoModal, setTempoModal] = useState<{
-    open: boolean;
-    phase: "closed" | "opening" | "open" | "closing";
-    originRect: DOMRect | null;
-  }>({ open: false, phase: "closed", originRect: null });
-
   const [showComingSoon, setShowComingSoon] = useState(false);
   const [showPdfDropdown, setShowPdfDropdown] = useState(false);
   const pdfButtonRef = useRef<HTMLButtonElement>(null);
-
-  const openTempoModal = useCallback(() => {
-    if (!tempoChartRef.current) return;
-    const rect = tempoChartRef.current.getBoundingClientRect();
-    setTempoModal({ open: true, phase: "opening", originRect: rect });
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setTempoModal(prev => ({ ...prev, phase: "open" }));
-      });
-    });
-  }, []);
-
-  const closeTempoModal = useCallback(() => {
-    setTempoModal(prev => ({ ...prev, phase: "closing" }));
-    setTimeout(() => {
-      setTempoModal({ open: false, phase: "closed", originRect: null });
-    }, 350);
-  }, []);
 
   useEffect(() => {
     const newSrc = resolveVideoUrl(result.video_path);
@@ -84,18 +60,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
     setVideoError(null);
   }, [result.video_path]);
 
-  useEffect(() => {
-    if (!tempoModal.open) return;
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeTempoModal();
-    };
-    document.addEventListener("keydown", handleEscape);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = "";
-    };
-  }, [tempoModal.open, closeTempoModal]);
+
 
   const handleWordClick = (word: TranscriptWord) => {
     if (!playerRef.current) return;
@@ -478,9 +443,8 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                 </motion.div>
               )}
 
-              {/* Tempo Chart Minimalist Card */}
               <motion.div variants={fadeUpAnim} className="rounded-xl border border-white/[0.08] bg-[#111] overflow-hidden p-6" ref={tempoChartRef}>
-                 <TempoChart data={result.tempo} currentTime={currentTime} onExpand={openTempoModal} />
+                 <TempoChart data={result.tempo} currentTime={currentTime} />
               </motion.div>
 
               {/* Presentation Summary Minimalist Card */}
@@ -521,58 +485,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
         </motion.div>
       </main>
 
-      {tempoModal.open && typeof document !== "undefined" && createPortal(
-        <div
-          className="fixed inset-0 z-[9999]"
-          style={{
-            backgroundColor: tempoModal.phase === "open" ? "rgba(0,0,0,0.8)" : "rgba(0,0,0,0)",
-            backdropFilter: tempoModal.phase === "open" ? "blur(8px)" : "blur(0px)",
-            transition: "all 300ms ease",
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeTempoModal();
-          }}
-        >
-          {(() => {
-            const origin = tempoModal.originRect;
-            const isExpanded = tempoModal.phase === "open";
-            const finalWidth = Math.min(window.innerWidth - 32, 1100);
-            const finalHeight = Math.min(window.innerHeight - 80, 640);
-            const finalLeft = (window.innerWidth - finalWidth) / 2;
-            const finalTop = (window.innerHeight - finalHeight) / 2;
-            const startLeft = origin?.left ?? finalLeft;
-            const startTop = origin?.top ?? finalTop;
-            const startWidth = origin?.width ?? finalWidth;
-            const startHeight = origin?.height ?? finalHeight;
-            
-            return (
-              <div
-                className={cn("border border-white/10 overflow-hidden flex flex-col", isExpanded ? "bg-[#0A0A0C] shadow-2xl rounded-2xl" : "bg-transparent")}
-                style={{
-                  position: "fixed",
-                  left: isExpanded ? finalLeft : startLeft,
-                  top: isExpanded ? finalTop : startTop,
-                  width: isExpanded ? finalWidth : startWidth,
-                  height: isExpanded ? finalHeight : startHeight,
-                  transition: "all 400ms cubic-bezier(0.16, 1, 0.3, 1)",
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {isExpanded && (
-                  <div className="flex items-center justify-between text-white px-5 pt-4 pb-2">
-                    <div className="text-[12px] font-mono uppercase tracking-widest text-white/50">Темп речи</div>
-                    <button onClick={closeTempoModal} className="text-[10px] font-mono text-white/40 hover:text-white px-2 py-1 uppercase tracking-widest">✕ Закрыть</button>
-                  </div>
-                )}
-                <div className={isExpanded ? "flex-1 px-4 pb-4 overflow-hidden" : "h-full"}>
-                  <TempoChart data={result.tempo} currentTime={currentTime} expanded={isExpanded} inModal={true} />
-                </div>
-              </div>
-            );
-          })()}
-        </div>,
-        document.body
-      )}
+
 
       {globalStyles}
     </div>
