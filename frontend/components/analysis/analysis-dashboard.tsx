@@ -8,7 +8,6 @@ import { resolveVideoUrl } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { cn } from "@/lib/utils";
-import { SmoothScroll } from "@/components/ui/smooth-scroll";
 import { TempoChart } from "@/components/analysis/tempo-chart";
 import { ComingSoonNotification } from "@/components/shared/coming-soon-notification";
 import { PdfExportDropdown } from "@/components/shared/pdf-export-modal";
@@ -155,7 +154,6 @@ export function AnalysisDashboard({ result, onBack }: Props) {
 
   return (
     <div className="relative z-10 min-h-screen text-white w-full max-w-[100vw] bg-[#0A0A0A] selection:bg-white/20">
-      <SmoothScroll />
 
       {/* Extreme Minimal Header */}
       <motion.header 
@@ -318,7 +316,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                   </div>
                 </div>
                 <div className="p-6">
-                  <div className="max-h-[400px] overflow-y-auto pr-4 -mr-4 transcript-scroll" data-lenis-prevent onWheel={e => e.stopPropagation()}>
+                  <div className="max-h-[400px] overflow-y-auto pr-4 -mr-4 transcript-scroll">
                     {groupedTranscript.map((group, gi) => (
                       <div key={gi} className="mb-6 last:mb-0">
                         <div className="text-[10px] font-mono text-white/20 mb-3">{group.label}</div>
@@ -372,7 +370,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                 <div className="px-6 py-4 border-b border-white/[0.04] bg-[#141414]">
                   <h3 className="text-xs font-mono uppercase tracking-widest text-white/50">Идеальный текст</h3>
                 </div>
-                <div className="p-6 max-h-[300px] overflow-y-auto transcript-scroll" data-lenis-prevent onWheel={e => e.stopPropagation()}>
+                <div className="p-6 max-h-[300px] overflow-y-auto transcript-scroll">
                   <p className="text-[14px] leading-relaxed text-white/70 whitespace-pre-line">{result.ideal_text}</p>
                 </div>
               </motion.div>
@@ -383,7 +381,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                   <div className="px-6 py-4 border-b border-amber-500/10 bg-amber-500/[0.02]">
                     <h3 className="text-xs font-mono uppercase tracking-widest text-amber-500/60">Фидбек от эксперта</h3>
                   </div>
-                  <div className="p-6 max-h-[300px] overflow-y-auto transcript-scroll" data-lenis-prevent onWheel={e => e.stopPropagation()}>
+                  <div className="p-6 max-h-[300px] overflow-y-auto transcript-scroll">
                     <p className="text-[14px] leading-relaxed text-amber-500/80 whitespace-pre-line">{result.persona_feedback}</p>
                   </div>
                 </motion.div>
