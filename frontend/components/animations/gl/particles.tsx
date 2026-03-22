@@ -3,8 +3,8 @@ import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { createPortal, useFrame, useThree } from "@react-three/fiber";
 import { useFBO } from "@react-three/drei";
 
-import { DofPointsMaterial } from "./shaders/pointMaterial";
-import { SimulationMaterial } from "./shaders/simulationMaterial";
+import { DofPointsMaterial } from "@/components/animations/gl/shaders/pointMaterial";
+import { SimulationMaterial } from "@/components/animations/gl/shaders/simulationMaterial";
 import * as easing from "maath/easing";
 
 const MAX_WAVES = 50;

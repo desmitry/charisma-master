@@ -3,8 +3,8 @@ import * as THREE from "three";
 import { Effects } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { useControls } from "leva";
-import { Particles } from "./particles";
-import { VignetteShader } from "./shaders/vignetteShader";
+import { Particles } from "@/components/animations/gl/particles";
+import { VignetteShader } from "@/components/animations/gl/shaders/vignetteShader";
 
 function checkWebGLSupport(): boolean {
   if (typeof window === "undefined") return false;
