@@ -1,4 +1,4 @@
-import React from "react";
+
 
 export const IconTarget = ({ className }: { className?: string }) => (
   <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">

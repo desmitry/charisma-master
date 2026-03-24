@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { createPortal } from "react-dom";
-import type { CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnalysisResult, TranscriptWord, LongPause } from "@/types/analysis";
 import { resolveVideoUrl } from "@/lib/api";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 import { TempoChart } from "@/components/analysis/tempo-chart";
-import { ComingSoonNotification } from "@/components/shared/coming-soon-notification";
 import { PdfExportDropdown } from "@/components/shared/pdf-export-modal";
 import { VideoPlayer, VideoPlayerRef } from "@/components/shared/video-player";
 import { IconBolt } from "@/components/ui/icons";
@@ -51,8 +48,6 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   const [currentTime, setCurrentTime] = useState(0);
   const [videoSrc, setVideoSrc] = useState(() => resolveVideoUrl(result.video_path));
   const [videoError, setVideoError] = useState<string | null>(null);
-
-  const [showComingSoon, setShowComingSoon] = useState(false);
 
   useEffect(() => {
     const newSrc = resolveVideoUrl(result.video_path);

@@ -1,29 +1,20 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Hero } from "@/components/landing/hero";
 import { Leva } from "leva";
 import { ProcessingOverlay } from "@/components/upload/processing-overlay";
 import { AnalysisDashboard } from "@/components/analysis/analysis-dashboard";
-import { AnalysisResult } from "@/types/analysis";
-import { pollForAnalysis, uploadVideo } from "@/lib/api";
 
 import ColorBends from "@/components/animations/color-bends";
 import Aurora from "@/components/animations/aurora";
-import { cn } from "@/lib/utils";
 import { ComingSoonNotification } from "@/components/shared/coming-soon-notification";
-import { getFastRequestsCount, decrementFastRequests, hasFastRequestsAvailable } from "@/lib/cookie-utils";
 import { SmoothScroll } from "@/components/ui/smooth-scroll";
 import { FeaturesSection } from "@/components/landing/features-section";
-import { SpotlightCard } from "@/components/ui/spotlight-card";
-import { MagneticButton } from "@/components/ui/magnetic-button";
-import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { UploadHub } from "@/components/upload/upload-hub";
 import { DemoVideoSection } from "@/components/landing/demo-video-section";
 import { useVideoAnalysis } from "@/hooks/use-video-analysis";
 import GradualBlur from "@/components/GradualBlur";
-
-type Stage = "landing" | "processing" | "result";
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);

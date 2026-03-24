@@ -21,7 +21,7 @@ export function SpotlightCard({
   const smoothX = useSpring(mouseX, { stiffness: 500, damping: 50 });
   const smoothY = useSpring(mouseY, { stiffness: 500, damping: 50 });
 
-  function onMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
+  function onMouseMove({ clientX, clientY }: React.MouseEvent) {
     if (!boundingBox.current) return;
     const { left, top } = boundingBox.current.getBoundingClientRect();
     mouseX.set(clientX - left);

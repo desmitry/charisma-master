@@ -1,5 +1,4 @@
 import { AnalysisResult, TaskStatusResponse } from "@/types/analysis";
-import { uploadVideoAction } from "@/app/actions/upload";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || 
