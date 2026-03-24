@@ -12,7 +12,6 @@ import { ComingSoonNotification } from "@/components/shared/coming-soon-notifica
 import { SmoothScroll } from "@/components/ui/smooth-scroll";
 import { FeaturesSection } from "@/components/landing/features-section";
 import { UploadHub } from "@/components/upload/upload-hub";
-import { DemoVideoSection } from "@/components/landing/demo-video-section";
 import { useVideoAnalysis } from "@/hooks/use-video-analysis";
 import GradualBlur from "@/components/GradualBlur";
 
@@ -141,9 +140,7 @@ export default function Home() {
           )}
 
           <Hero />
-          <FeaturesSection />
-
-          <DemoVideoSection onStartDemo={actions.startMockFlow} />
+          <FeaturesSection onStartDemo={actions.startMockFlow} />
 
           <UploadHub videoAnalysis={videoAnalysis} />
         </div>
