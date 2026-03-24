@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useMemo } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { Popover, PopoverButton, PopoverPanel, Checkbox } from "@headlessui/react";
 import { AnalysisResult } from "@/types/analysis";
 import { cn } from "@/lib/utils";
 
 type PdfExportDropdownProps = {
-  isOpen: boolean;
-  onClose: () => void;
   result: AnalysisResult;
-  buttonRef: React.RefObject<HTMLButtonElement | null>;
 };
 
 type ExportOptions = {
@@ -35,7 +33,7 @@ function formatPdfTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExportDropdownProps) {
+export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
   const [options, setOptions] = useState<ExportOptions>({
     summary: true,
     transcript: true,
@@ -51,7 +49,6 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const pdfContentRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const transcriptChunks = useMemo(() => {
     const words = result.transcript?.flatMap((seg) => seg.words) ?? [];
@@ -63,29 +60,11 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
     return chunks;
   }, [result.transcript]);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current && 
-        !dropdownRef.current.contains(e.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(e.target as Node)
-      ) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, onClose, buttonRef]);
-
   const toggleOption = (key: keyof ExportOptions) => {
     setOptions(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const generatePdf = async () => {
+  const generatePdf = async (close: () => void) => {
     if (!pdfContentRef.current) return;
     setIsGenerating(true);
 
@@ -176,7 +155,7 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
       }
 
       pdf.save(`charisma-report-${result.task_id.slice(0, 8)}.pdf`);
-      onClose();
+      close();
     } finally {
       setIsGenerating(false);
     }
@@ -197,78 +176,79 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
   ];
 
   return (
-    <>
-      <div
-        ref={dropdownRef}
-        className={cn(
-          "absolute right-0 top-full mt-2 z-50 w-[260px] rounded-xl border border-white/15 bg-[#0c0c0c]/95 backdrop-blur-xl shadow-2xl overflow-hidden transition-all duration-200",
-          isOpen ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 -translate-y-2 pointer-events-none"
-        )}
-      >
-        <div className="p-3 space-y-1">
-          {optionsList.map((opt) => (
-            <button
-              key={opt.key}
-              onClick={() => !opt.disabled && toggleOption(opt.key)}
-              disabled={opt.disabled}
-              className={cn(
-                "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all",
-                opt.disabled && "opacity-30 cursor-not-allowed",
-                options[opt.key]
-                  ? "bg-white/10 text-white"
-                  : "text-white/60 hover:bg-white/5 hover:text-white/80"
-              )}
-            >
-              <span>{opt.label}</span>
-              <div className={cn(
-                "w-4 h-4 rounded border flex items-center justify-center transition-all",
-                options[opt.key] 
-                  ? "bg-white border-white" 
-                  : "border-white/30"
-              )}>
-                {options[opt.key] && (
-                  <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
+    <Popover className="relative z-50">
+      <PopoverButton className="rounded-md border border-white/[0.08] bg-[#111] hover:bg-white/5 px-4 py-1.5 text-xs font-medium text-white/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20">
+        Экспорт PDF
+      </PopoverButton>
 
-        <div className="flex items-center justify-between px-4 py-3 border-t border-white/10 bg-white/[0.02]">
-          <span className="text-xs text-white/40">
-            {Object.values(options).filter(Boolean).length} из {optionsList.length} выбрано
-          </span>
-          <button
-            onClick={generatePdf}
-            disabled={isGenerating || Object.values(options).every(v => !v)}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all",
-              isGenerating || Object.values(options).every(v => !v)
-                ? "bg-white/10 text-white/30 cursor-not-allowed"
-                : "bg-white text-black hover:bg-white/90 shadow-lg"
-            )}
-          >
-            {isGenerating ? (
-              <>
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                <span>Генерация...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                </svg>
-                <span>Скачать PDF</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+      <PopoverPanel
+        transition
+        className="absolute right-0 top-full mt-2 w-[260px] rounded-xl border border-white/15 bg-[#0c0c0c]/95 backdrop-blur-xl shadow-2xl overflow-hidden transition duration-200 ease-out data-[closed]:scale-95 data-[closed]:opacity-0"
+      >
+        {({ close }) => (
+          <>
+            <div className="p-3 space-y-1">
+              {optionsList.map((opt) => (
+                <div
+                  key={opt.key}
+                  onClick={() => !opt.disabled && toggleOption(opt.key)}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all select-none",
+                    opt.disabled ? "opacity-30 cursor-not-allowed" : "cursor-pointer hover:bg-white/5",
+                    options[opt.key] && !opt.disabled ? "bg-white/10 text-white" : "text-white/60 hover:text-white/80"
+                  )}
+                >
+                  <span>{opt.label}</span>
+                  <Checkbox
+                    checked={options[opt.key]}
+                    disabled={opt.disabled}
+                    onChange={() => {}}
+                    className="group block h-4 w-4 rounded border border-white/30 bg-transparent transition-all data-[checked]:bg-white data-[checked]:border-white"
+                  >
+                    <svg className="h-3 w-3 stroke-black opacity-0 group-data-[checked]:opacity-100 mx-auto mt-0.5" fill="none" viewBox="0 0 14 14">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 8L6 11L11 3.5" />
+                    </svg>
+                  </Checkbox>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between px-4 py-3 border-t border-white/10 bg-white/[0.02]">
+              <span className="text-xs text-white/40">
+                {Object.values(options).filter(Boolean).length} из {optionsList.length} выбрано
+              </span>
+              <button
+                onClick={() => generatePdf(close)}
+                disabled={isGenerating || Object.values(options).every(v => !v)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all",
+                  isGenerating || Object.values(options).every(v => !v)
+                    ? "bg-white/10 text-white/30 cursor-not-allowed"
+                    : "bg-white text-black hover:bg-white/90 shadow-lg"
+                )}
+              >
+                {isGenerating ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>Генерация...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    <span>Скачать PDF</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </>
+        )}
+      </PopoverPanel>
+
 
       <div className="fixed left-[-9999px] top-0">
         <div 
@@ -713,7 +693,7 @@ export function PdfExportDropdown({ isOpen, onClose, result, buttonRef }: PdfExp
 
         </div>
       </div>
-    </>
+    </Popover>
   );
 }
 

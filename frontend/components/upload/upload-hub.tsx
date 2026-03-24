@@ -2,6 +2,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { MagneticButton } from "@/components/ui/magnetic-button";
+import { Field, Label, RadioGroup, Radio } from "@headlessui/react";
 import { hasFastRequestsAvailable } from "@/lib/cookie-utils";
 import { useVideoAnalysis } from "@/hooks/use-video-analysis";
 
@@ -159,114 +160,91 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                   </div>
                 </div>
 
-                <div className="mb-8">
-                  <label className="mb-3 block text-xs font-mono uppercase tracking-widest text-white/40">
+                <Field className="mb-8">
+                  <Label className="mb-3 block text-xs font-mono uppercase tracking-widest text-white/40">
                     Режим анализа
-                  </label>
-                  <div className="flex flex-wrap gap-2">
+                  </Label>
+                  <RadioGroup value={state.selectedPersona} onChange={actions.setSelectedPersona} className="flex flex-wrap gap-2">
                     {[
                       { id: "", label: "Классика" },
                       { id: "strict_critic", label: "Критик" },
                       { id: "kind_mentor", label: "Ментор" },
                       { id: "steve_jobs_style", label: "Инноватор" },
                     ].map((p) => (
-                      <button
+                      <Radio
                         key={p.id}
-                        onClick={() => actions.setSelectedPersona(p.id)}
-                        className={cn(
-                          "rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-300",
-                          state.selectedPersona === p.id
-                            ? "bg-white text-black shadow-sm"
-                            : "border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
-                        )}
+                        value={p.id}
+                        className="rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-300 border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white data-[checked]:bg-white data-[checked]:text-black data-[checked]:shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-white/20 cursor-pointer"
                       >
                         {p.label}
-                      </button>
+                      </Radio>
                     ))}
-                  </div>
-                </div>
+                  </RadioGroup>
+                </Field>
 
-                <div className="mb-8">
-                  <label className="mb-3 block text-xs font-mono uppercase tracking-widest text-white/40">
+                <Field className="mb-8">
+                  <Label className="mb-3 block text-xs font-mono uppercase tracking-widest text-white/40">
                     Нейросеть
-                  </label>
-                  <div className="flex gap-2">
+                  </Label>
+                  <RadioGroup value={state.selectedLlmProvider} onChange={actions.setSelectedLlmProvider} className="flex gap-2">
                     {[
                       { id: "default", label: "Auto" },
                       { id: "gigachat", label: "GigaChat" },
                       { id: "openai", label: "OpenAI" },
                     ].map((m) => (
-                      <button
+                      <Radio
                         key={m.id}
-                        onClick={() => actions.setSelectedLlmProvider(m.id)}
-                        className={cn(
-                          "flex-1 rounded-lg py-2 text-center text-xs font-medium transition-all duration-300",
-                          state.selectedLlmProvider === m.id
-                            ? "bg-white/10 text-white shadow-inner border border-white/20"
-                            : "border border-transparent text-white/40 hover:text-white"
-                        )}
+                        value={m.id}
+                        className="flex-1 rounded-lg py-2 text-center text-xs font-medium transition-all duration-300 border border-transparent text-white/40 hover:text-white data-[checked]:bg-white/10 data-[checked]:text-white data-[checked]:shadow-inner data-[checked]:border-white/20 outline-none focus-visible:ring-2 focus-visible:ring-white/20 cursor-pointer"
                       >
                         {m.label}
-                      </button>
+                      </Radio>
                     ))}
-                  </div>
+                  </RadioGroup>
                   {state.selectedLlmProvider === "openai" && (
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        onClick={() => actions.setSelectedModel("whisper_local")}
-                        className={cn(
-                          "flex-1 rounded-lg border border-white/10 px-3 py-1.5 text-xs transition-colors",
-                          state.selectedModel === "whisper_local" ? "bg-white/10 text-white" : "text-white/40"
-                        )}
+                    <RadioGroup value={state.selectedModel} onChange={actions.setSelectedModel} className="mt-3 flex gap-2">
+                      <Radio
+                        value="whisper_local"
+                        className="flex-1 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-center transition-colors text-white/40 hover:bg-white/5 cursor-pointer data-[checked]:bg-white/10 data-[checked]:text-white outline-none focus-visible:ring-2 focus-visible:ring-white/20"
                       >
                         Long
-                      </button>
-                      <button
-                        onClick={() => hasFastRequestsAvailable() && actions.setSelectedModel("whisper_openai")}
-                        className={cn(
-                          "flex-1 rounded-lg border border-white/10 px-3 py-1.5 text-xs transition-colors flex items-center justify-center gap-1.5",
-                          state.selectedModel === "whisper_openai" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "text-white/40",
-                          !hasFastRequestsAvailable() && "opacity-30 cursor-not-allowed"
-                        )}
+                      </Radio>
+                      <Radio
+                        value="whisper_openai"
+                        disabled={!hasFastRequestsAvailable()}
+                        className="flex-1 rounded-lg border border-white/10 px-3 py-1.5 text-xs transition-colors flex items-center justify-center gap-1.5 text-white/40 data-[checked]:bg-emerald-500/10 data-[checked]:text-emerald-400 data-[checked]:border-emerald-500/20 data-[disabled]:opacity-30 data-[disabled]:cursor-not-allowed cursor-pointer hover:bg-white/5 outline-none focus-visible:ring-2 focus-visible:ring-white/20"
                       >
-                        Fast <span className="rounded bg-white/10 px-1 text-[10px]">{state.fastRequestsCount}</span>
-                      </button>
-                    </div>
+                        Fast <span className="rounded bg-white/10 px-1 text-[10px] text-white">{state.fastRequestsCount}</span>
+                      </Radio>
+                    </RadioGroup>
                   )}
-                </div>
+                </Field>
 
-                {/* Стандарт оценивания */}
-                <div className="mb-8">
-                  <label className="mb-3 block text-xs font-mono uppercase tracking-widest text-white/40">
+                <Field className="mb-8">
+                  <Label className="mb-3 block text-xs font-mono uppercase tracking-widest text-white/40">
                     Стандарт оценивания
-                  </label>
-                  <div className="flex gap-1 p-1 rounded-xl border border-white/10 bg-black/30 mb-3">
-                    <button
-                      onClick={() => {
-                        actions.setStandardMode("preset");
-                        actions.setStandardFile(null);
-                      }}
-                      className={cn(
-                        "flex-1 rounded-lg py-2 text-center text-xs font-medium transition-all duration-300",
-                        state.standardMode === "preset"
-                          ? "bg-white text-black shadow-sm"
-                          : "text-white/50 hover:text-white/80"
-                      )}
+                  </Label>
+                  <RadioGroup
+                    value={state.standardMode}
+                    onChange={(v) => {
+                      actions.setStandardMode(v);
+                      if (v === "preset") actions.setStandardFile(null);
+                    }}
+                    className="flex gap-1 p-1 rounded-xl border border-white/10 bg-black/30 mb-3"
+                  >
+                    <Radio
+                      value="preset"
+                      className="flex-1 rounded-lg py-2 text-center text-xs font-medium transition-all duration-300 text-white/50 hover:text-white/80 data-[checked]:bg-white data-[checked]:text-black data-[checked]:shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-white/50 cursor-pointer"
                     >
                       Предустановленный (УрФУ)
-                    </button>
-                    <button
-                      onClick={() => actions.setStandardMode("custom")}
-                      className={cn(
-                        "flex-1 rounded-lg py-2 text-center text-xs font-medium transition-all duration-300",
-                        state.standardMode === "custom"
-                          ? "bg-white text-black shadow-sm"
-                          : "text-white/50 hover:text-white/80"
-                      )}
+                    </Radio>
+                    <Radio
+                      value="custom"
+                      className="flex-1 rounded-lg py-2 text-center text-xs font-medium transition-all duration-300 text-white/50 hover:text-white/80 data-[checked]:bg-white data-[checked]:text-black data-[checked]:shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-white/50 cursor-pointer"
                     >
                       Загрузить свой (.docx)
-                    </button>
-                  </div>
+                    </Radio>
+                  </RadioGroup>
 
                   {state.standardMode === "custom" && (
                     <div className="relative">
@@ -318,7 +296,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                       )}
                     </div>
                   )}
-                </div>
+                </Field>
               </div>
 
               <div className="flex items-center gap-4">

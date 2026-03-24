@@ -21,6 +21,7 @@ import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { UploadHub } from "@/components/upload/upload-hub";
 import { DemoVideoSection } from "@/components/landing/demo-video-section";
 import { useVideoAnalysis } from "@/hooks/use-video-analysis";
+import GradualBlur from "@/components/GradualBlur";
 
 type Stage = "landing" | "processing" | "result";
 
@@ -96,6 +97,10 @@ export default function Home() {
       )}
 
       {showLanding && (
+        <>
+        <GradualBlur target="page" position="top" height="7rem" strength={1.5} divCount={3} curve="bezier" exponential opacity={1} />
+        <GradualBlur target="page" position="bottom" height="7rem" strength={1.5} divCount={3} curve="bezier" exponential opacity={1} />
+        
         <div
           className="transition-all duration-700 ease-[0.22,1,0.36,1] relative"
           style={{
@@ -151,6 +156,7 @@ export default function Home() {
 
           <UploadHub videoAnalysis={videoAnalysis} />
         </div>
+        </>
       )}
 
       {showProcessing && !error && (
