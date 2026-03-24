@@ -28,6 +28,7 @@ async def get_task_status(task_id: str):
         if isinstance(info, dict):
             response.stage = info.get("stage")
             response.progress = info.get("progress", 0.0)
+            response.hint = info.get("hint", response.hint)
 
     elif task_result.state == TaskState.finished:
         response.state = TaskState.finished
