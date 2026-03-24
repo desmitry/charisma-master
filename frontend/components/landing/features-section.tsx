@@ -1,61 +1,93 @@
 "use client";
 
-
+import { Safari } from "@/components/ui/safari-browser";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
-import { SpotlightCard } from "@/components/ui/spotlight-card";
 
-const features = [
-  {
-    title: "Транскрипция речи",
-    desc: "Полная расшифровка аудиодорожки с выделением слов-паразитов, пауз и ключевых фрагментов.",
-    icon: (
-      <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
-      </svg>
-    ),
-  },
-  {
-    title: "Метрики уверенности",
-    desc: "Контроль тембра, громкости и зрительного контакта. Система вычисляет ваш индекс уверенности.",
-    icon: (
-      <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-      </svg>
-    ),
-  },
-  {
-    title: "AI-рекомендации",
-    desc: "Персональные советы и исправленный текст выступления от выбранного AI-наставника.",
-    icon: (
-      <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
-      </svg>
-    ),
-  },
-];
-
-export function FeaturesSection() {
+export function FeaturesSection({ onStartDemo }: { onStartDemo?: () => void }) {
   return (
-    <section className="relative z-10 w-full py-16 px-4 sm:px-6">
-      <div className="mx-auto max-w-5xl">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature, i) => (
-            <ScrollReveal key={feature.title} delay={i * 0.1} distance={20}>
-              <SpotlightCard className="h-full rounded-3xl border border-white/10 bg-white/[0.02] p-6 shadow-2xl backdrop-blur-md">
-                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-white/80">
-                  {feature.icon}
+    <section className="relative z-10 w-full py-12 sm:py-20 px-0">
+      <div className="mx-auto w-full max-w-[100vw]">
+        <ScrollReveal distance={40}>
+          {/* Outer glow wrapper */}
+          <div className="relative mx-auto w-full max-w-7xl px-2 sm:px-4">
+            {/* Ambient glow behind browser */}
+            <div
+              className="absolute -inset-8 sm:-inset-16 rounded-[40px] opacity-40 blur-3xl pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(ellipse 70% 50% at 50% 30%, rgba(56,189,248,0.12) 0%, rgba(56,189,248,0) 70%), radial-gradient(ellipse 50% 60% at 50% 50%, rgba(168,85,247,0.08) 0%, transparent 70%)",
+              }}
+            />
+
+            {/* Browser window */}
+            <div className="relative">
+              {/* Safari SVG frame */}
+              <Safari
+                url="charisma-master"
+                src="/macview.png"
+                className="w-full h-auto drop-shadow-[0_40px_100px_rgba(0,0,0,0.7)]"
+              />
+
+              {/* Gradient overlay — fades from ~30% top to fully opaque bottom */}
+              <div
+                className="absolute bottom-0 left-0 right-0 pointer-events-none"
+                style={{
+                  height: "70%",
+                  background:
+                    "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 30%, rgba(0,0,0,0.75) 55%, rgba(0,0,0,0.92) 80%, rgba(0,0,0,0.98) 100%)",
+                  borderRadius: "0 0 12px 12px",
+                }}
+              />
+
+              {/* Bottom CTA overlay */}
+              <div className="absolute bottom-[6%] sm:bottom-[10%] left-0 right-0 flex flex-col items-center gap-5 sm:gap-8 px-4">
+                <div className="flex flex-col items-center gap-2">
+                  <p className="text-[10px] sm:text-xs font-semibold tracking-[0.2em] text-white/50 uppercase">
+                    Инструмент для уверенной речи
+                  </p>
+                  <h3 className="text-center text-2xl sm:text-4xl md:text-5xl font-medium tracking-tight text-white/95">
+                    Посмотри, как это будет выглядеть
+                  </h3>
                 </div>
-                <h3 className="mb-2 text-lg font-medium tracking-tight text-white/90">
-                  {feature.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-white/50">
-                  {feature.desc}
-                </p>
-              </SpotlightCard>
-            </ScrollReveal>
-          ))}
-        </div>
+
+                {/* Demo button */}
+                <DemoButton onClick={onStartDemo} />
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
       </div>
     </section>
+  );
+}
+
+function DemoButton({ onClick }: { onClick?: () => void }) {
+  return (
+    <button onClick={onClick} className="bg-slate-800 no-underline group cursor-pointer relative shadow-3xl shadow-zinc-900 rounded-full p-px text-xs font-semibold leading-6 text-white inline-block">
+      <span className="absolute inset-0 overflow-hidden rounded-full">
+        <span className="absolute inset-0 rounded-full bg-[image:radial-gradient(75%_100%_at_50%_0%,rgba(56,189,248,0.6)_0%,rgba(56,189,248,0)_75%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+      </span>
+      <div className="relative flex space-x-3 items-center z-10 rounded-full bg-zinc-950 py-1 px-10 ring-1 ring-white/10 transition-colors group-hover:bg-zinc-900">
+        <span className="text-base sm:text-lg tracking-tight">
+          Демо версия
+        </span>
+        <svg
+          fill="none"
+          height="20"
+          viewBox="0 0 24 24"
+          width="20"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M10.75 8.75L14.25 12L10.75 15.25"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+          />
+        </svg>
+      </div>
+      <span className="absolute -bottom-0 left-[1.125rem] h-px w-[calc(100%-2.25rem)] bg-gradient-to-r from-emerald-400/0 via-emerald-400/90 to-emerald-400/0 transition-opacity duration-500 group-hover:opacity-40" />
+    </button>
   );
 }
