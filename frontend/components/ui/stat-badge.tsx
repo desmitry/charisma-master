@@ -1,4 +1,4 @@
-import React from "react";
+
 import { cn } from "@/lib/utils";
 
 export function StatBadge({ label, value, accent }: { label: string; value: string; accent?: boolean }) {

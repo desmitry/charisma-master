@@ -4,9 +4,10 @@ import path from "path";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const segments = params.path || [];
+  const resolvedParams = await params;
+  const segments = resolvedParams.path || [];
   const mediaRoot = path.resolve(process.cwd(), "..", "media");
   const filePath = path.resolve(mediaRoot, ...segments);
 

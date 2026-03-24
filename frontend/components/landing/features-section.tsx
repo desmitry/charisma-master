@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import { motion } from "framer-motion";
+
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 

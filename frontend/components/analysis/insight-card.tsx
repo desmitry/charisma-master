@@ -1,17 +1,15 @@
-import React from "react";
+
 import { cn } from "@/lib/utils";
 
 export function InsightCard({
   title,
   content,
-  delay,
   mounted,
   accent,
   className,
 }: {
   title: string;
   content: string;
-  delay: number;
   mounted: boolean;
   accent?: "red" | "amber";
   className?: string;

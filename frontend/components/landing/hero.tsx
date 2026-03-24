@@ -1,15 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+
 import { motion } from "framer-motion";
 import { GetStartedButton } from "@/components/ui/get-started-button";
 
 export function Hero() {
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const scrollToUpload = () => {
     const el = document.getElementById("upload-hub");

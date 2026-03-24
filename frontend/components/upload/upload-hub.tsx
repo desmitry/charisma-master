@@ -1,4 +1,4 @@
-import React from "react";
+
 import { cn } from "@/lib/utils";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { MagneticButton } from "@/components/ui/magnetic-button";

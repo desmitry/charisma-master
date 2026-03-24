@@ -72,6 +72,8 @@ export interface AnalysisResult {
   standard_criteria_scores?: StandardCriterionScore[];
   analyze_provider?: string;
   analyze_model?: string;
+  slide_analysis?: any;
+  slide_text_density?: any;
   raw_metrics?: {
     gaze_score?: number;
     gesture_score?: number;

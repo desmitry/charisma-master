@@ -120,7 +120,6 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     {
       src,
       error: externalError,
-      errorDetails: externalErrorDetails,
       onTimeUpdate,
       onError,
       className,
@@ -139,15 +138,13 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     const [buffered, setBuffered] = useState(0);
     const [volume, setVolume] = useState(1);
     const [isMuted, setIsMuted] = useState(false);
-    const [isHovering, setIsHovering] = useState(false);
+    const [, setIsHovering] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [internalError, setInternalError] = useState<string | null>(null);
-    const [internalErrorDetails, setInternalErrorDetails] = useState<VideoErrorDetails | undefined>();
     const [showControls, setShowControls] = useState(true);
     const hideControlsTimeout = useRef<NodeJS.Timeout | null>(null);
 
     const displayError = externalError || internalError;
-    const displayErrorDetails = externalErrorDetails || internalErrorDetails;
 
     useImperativeHandle(ref, () => ({
       play: () => {
@@ -364,7 +361,6 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       }
 
       setInternalError(errorMessage);
-      setInternalErrorDetails(details);
       onError?.(errorMessage, details);
     }, [src, onError]);
 
