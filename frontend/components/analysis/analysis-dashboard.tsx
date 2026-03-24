@@ -121,7 +121,6 @@ export function AnalysisDashboard({ result, onBack }: Props) {
         <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-white/40 font-mono text-xs uppercase tracking-widest hidden sm:inline-block border border-white/10 rounded px-2 py-1">v0</span>
               <h1 className="text-[15px] font-medium tracking-tight text-white/90">Разбор выступления</h1>
             </div>
             {(result.analyze_provider || result.analyze_model) && (
