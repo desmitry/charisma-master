@@ -51,18 +51,23 @@ class TaskState(str, Enum):
 
 
 class TaskStage(Enum):
-    transcription = ("transcription", 0.1)
-    video_analisis = ("video_analysis", 0.25)
-    audio_analisis = ("audio_analisis", 0.4)
-    llm_personal_report = ("llm_personal_report", 0.7)
+    transcription = ("transcription", 0.1, "Транскрибация аудио...")
+    video_analisis = ("video_analysis", 0.25, "Анализ видео...")
+    audio_analisis = ("audio_analisis", 0.4, "Анализ аудио...")
+    llm_personal_report = ("llm_personal_report", 0.7, "Формирование отчёта...")
 
-    def __init__(self, stage_name: str, stage_percent: float):
+    def __init__(self, stage_name: str, stage_percent: float, stage_hint: str):
         self.__stage_name = stage_name
         self.__stage_percent = stage_percent
+        self.__stage_hint = stage_hint
 
     @property
     def meta(self) -> dict:
-        return {"stage": self.__stage_name, "progress": self.__stage_percent}
+        return {
+            "stage": self.__stage_name,
+            "progress": self.__stage_percent,
+            "hint": self.__stage_hint,
+        }
 
 
 class TranscriptWord(BaseModel):
