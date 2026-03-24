@@ -1,16 +1,18 @@
-from app.models.schemas import PersonaEnum
+# ruff: noqa: E501
+from app.models.schemas import PersonaRoles
 
 
-def get_persona_prompt(persona: PersonaEnum | None) -> str:
+# TODO: Update prompts schemes.
+def get_persona_prompt(persona: PersonaRoles) -> str:
     match persona:
-        case PersonaEnum.strict_critic:
+        case PersonaRoles.strict_critic:
             return "строгий критик, указывает на все недостатки жестко"
-        case PersonaEnum.kind_mentor:
+        case PersonaRoles.kind_mentor:
             return "добрый наставник, поддерживает и дает мягкие советы"
-        case PersonaEnum.steve_jobs_style:
+        case PersonaRoles.steve_jobs_style:
             return "Стив Джобс, оценивает выступление с точки зрения минимализма, страсти и подачи"
-        case None:
-            return "эксперт по публичным выступлениям с многолетним опытом"
+        case PersonaRoles.speech_review_specialist:
+            return "Эксперт по публичным выступлениям с многолетним опытом"
 
 
 def get_system_prompt(persona_prompt: str) -> str:
@@ -19,7 +21,7 @@ def get_system_prompt(persona_prompt: str) -> str:
 
         Тебе даны:
         1. Текст выступления (транскрипция). ВНИМАНИЕ: Транскрипция получена автоматически, в ней могут отсутствовать знаки препинания и заглавные буквы. Игнорируй отсутствие пунктуации, оценивай только смысл, структуру речи и подбор слов. Не критикуй спикера за орфографию или странные словоформы, оценивай только смысл и структуру.
-        2. Текст, распознанный со слайдов презентации (OCR).
+        2. Текст, распознанный со слайдов презентации.
     
         Твоя задача проанализировать это и вернуть JSON.
         ВАЖНО: Верни результат СТРОГО в формате чистого JSON без лишнего текста.
@@ -29,9 +31,11 @@ def get_system_prompt(persona_prompt: str) -> str:
         ЗАДАЧА 1: Найди "Динамические слова-паразиты" (dynamic_filters).
         Это слова, которые спикер повторяет слишком часто (например: "собственно", "как бы", "вот", "значит"). Верни список из 3-5 таких слов.
 
-        ЗАДАЧА 2: Оцени слайды.
-        - Если в разделе СЛАЙДЫ написано "СЛАЙДЫ НЕ ОБНАРУЖЕНИ" или текст пуст: в поле "slides_feedback" напиши строго: "Слайды не используются".
+        ЗАДАЧА 2: Оцени презентацию.
+        - Если в разделе СЛАЙДЫ написано "Текст отсутствует", пустое поле или что-то в этом роде: в поле "slides_feedback" напиши строго: "Текст презентации не обнаружен".
         - Если текст есть: оцени его качество. Если текста слишком много, напиши, что слайды перегружены.
+
+        ЗАДАЧА 3: Оценить всё выступление.
 
         Формат JSON ответа (все поля обязательны)::
         - "summary": краткое содержание (2-3 предложения)
@@ -40,7 +44,7 @@ def get_system_prompt(persona_prompt: str) -> str:
         - "ideal_text": напиши лаконичный и чистый текст, отражающий главную мысль выступления, которые необходимо было донести выступающему до своей аудитории (первые 3-4 предложения)
         - "persona_feedback": обратная связь именно в твоем стиле ({}),
         - "dynamic_fillers": ["слово1", "слово2", "слово3"],
-        - "slides_feedback": "Отзыв о слайдах"
+        - "presentation_feedback": "Отзыв о слайдах"
         """
 
     return system_prompt.format(persona_prompt, persona_prompt)

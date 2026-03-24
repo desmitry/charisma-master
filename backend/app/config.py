@@ -1,59 +1,79 @@
-import os
 from pathlib import Path
-from typing import Optional
+from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    # App
-    debug: bool = True
-    host: str = "0.0.0.0"  # noqa: S104
-    port: int = 8000
+    service_host: str = Field(
+        key="SERVICE_HOST",
+        default="0.0.0.0",  # noqa: S104
+        validate_default=True,
+        frozen=True,
+    )
+    service_port: int = Field(
+        key="SERVICE_PORT",
+        default=8000,
+        validate_default=True,
+        frozen=True,
+    )
+    origin_url: str = Field(
+        key="ORIGIN_URL",
+        default="*",
+        validate_default=True,
+        frozen=True,
+    )
+    mode: Literal["prod"] | Literal["dev"] = Field(
+        key="MODE",
+        default="prod",
+        validate_default=True,
+        frozen=True,
+    )
 
-    environment: str = os.getenv("ENVIRONMENT", "development")
-    backend_origin_url: str = os.getenv("BACKEND_ORIGIN_URL", "*")
+    redis_url: str = Field(
+        key="REDIS_URL",
+        default="redis://localhost:6379/0",
+        validate_default=True,
+        frozen=True,
+    )
+    celery_broker_url: str = Field(
+        key="CELERY_BROKER_URL",
+        default="redis://localhost:6379/0",
+        validate_default=True,
+        frozen=True,
+    )
+    celery_result_backend: str = Field(
+        key="CELERY_RESULT_BACKEND",
+        default="redis://localhost:6379/0",
+        validate_default=True,
+        frozen=True,
+    )
 
-    # Paths
     base_dir: Path = Path(__file__).parent.parent.resolve() / "app"
     media_root: Path = base_dir / "media"
     results_dir: Path = media_root / "results"
 
-    # Redis & Celery
-    redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    celery_broker_url: str = os.getenv(
-        "CELERY_BROKER_URL",
-        "redis://localhost:6379/0",
-    )
-    celery_result_backend: str = os.getenv(
-        "CELERY_RESULT_BACKEND",
-        "redis://localhost:6379/0",
-    )
+    whisper_model_name: str = Field(key="WHISPER_MODEL_NAME", default="whisper-1")
+    whisper_model_type: str = Field(key="WHISPER_MODEL_TYPE", default="medium")
+    whisper_device: str = Field(key="WHISPER_DEVICE", default="cuda")
+    whisper_compute_type: str = Field(key="WHISPER_COMPUTE_TYPE", default="float16")
 
-    # ML Models
-    whisper_provider: str = os.getenv("WHISPER_PROVIDER", "local")
-    whisper_model_path: str = os.getenv("WHISPER_MODEL_PATH", "medium")
-    whisper_device: str = os.getenv("WHISPER_DEVICE", "cuda")
-    whisper_compute_type: str = os.getenv("WHISPER_COMPUTE_TYPE", "float16")
+    openai_api_base: str = Field(key="OPENAI_API_BASE", default="https://api.openai.com/v1")
+    openai_api_key: str = Field(key="OPENAI_API_KEY", default="")
+    openai_model_name: str = Field(key="OPENAI_MODEL_NAME", default="gpt-4o-mini")
 
-    # LLM
-    openai_api_base: str = os.getenv("OPENAI_API_BASE", "https://api.openai.com/v1")
-    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
-    openai_model_name: str = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
+    gigachat_credentials: str = Field(key="GIGACHAT_CREDENTIALS", default="")
+    gigachat_scope: str = Field(key="GIGACHAT_SCOPE", default="GIGACHAT_API_PERS")
+    gigachat_model_name: str = Field(key="GIGACHAT_MODEL_NAME", default="GigaChat")
+    gigachat_verify_ssl: bool = Field(key="GIGACHAT_VERIFY_SSL", default=False)
 
-    # GigaChat
-    gigachat_credentials: Optional[str] = os.getenv("GIGACHAT_CREDENTIALS")
-    gigachat_scope: str = os.getenv("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")
-    gigachat_model_name: str = os.getenv("GIGACHAT_MODEL_NAME", "GigaChat")
-    gigachat_verify_ssl: bool = False
+    sber_speech_scope: str = Field(key="SBER_SPEECH_SCOPE", default="SALUTE_SPEECH_B2B")
 
-    # Sber Speech
-    sber_speech_scope: str = os.getenv("SBER_SPEECH_SCOPE", "SALUTE_SPEECH_B2B")
+    # TODO: Remove this lines.
+    # hf_token: Optional[str] = Field(key="HF_TOKEN", default=None)
 
-    # HuggingFace
-    hf_token: Optional[str] = os.getenv("HF_TOKEN")
-
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env")
 
 
 settings = Settings()

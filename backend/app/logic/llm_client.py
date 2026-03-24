@@ -1,12 +1,13 @@
 import json
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import openai
+from gigachat import GigaChat
+
 from app.config import settings
 from app.logic import prompts
-from app.models.schemas import PersonaEnum
-from gigachat import GigaChat
+from app.models.schemas import AnalyzeProvider, PersonaRoles
 
 logger = logging.getLogger(__name__)
 
@@ -17,47 +18,44 @@ class LLMClient:
     Allows runtime selection of the provider and model.
     """
 
+    TRANSCRIPTION_LIMIT = 7_000
+    PRESENTATION_TEXT_LIMIT = 5_000
+
     def __init__(self):
         self.openai_client = openai.AsyncOpenAI(
-            base_url=settings.openai_api_base, api_key=settings.openai_api_key
+            base_url=settings.openai_api_base,
+            api_key=settings.openai_api_key,
         )
-
-        # Initialize GigaChat client if credentials are present
-        self.gigachat_client: Optional[GigaChat] = None
-        if getattr(settings, "gigachat_credentials", None):
-            self.gigachat_client = GigaChat(
-                credentials=settings.gigachat_credentials,
-                verify_ssl_certs=getattr(settings, "gigachat_verify_ssl", False),
-                scope=getattr(settings, "gigachat_scope", "GIGACHAT_API_PERS"),
-            )
+        self.gigachat_client = GigaChat(
+            credentials=settings.gigachat_credentials,
+            verify_ssl_certs=settings.gigachat_verify_ssl,
+            scope=settings.gigachat_scope,
+        )
 
     async def analyze_speech(
         self,
         transcript_text: str,
-        slides_text: str,
-        provider: str,
-        model: str,
-        persona: PersonaEnum | None = None,
+        presentation_text: str,
+        provider: AnalyzeProvider,
+        persona: PersonaRoles,
     ) -> dict[str, Any]:
         """
         Analyze the speech text using the specified provider and model.
 
         :param transcript_text: Transcript of the speech.
-        :param slides_text: Text from slides.
-        :param persona: Persona identifier for the system prompt.
-        :param provider: 'openai' or 'gigachat'. Defaults to settings if None.
-        :param model: Specific model name (e.g., 'gpt-4', 'GigaChat-Pro').
+        :param presentation_text: Text from presentation file.
+        :param persona: PersonaRoles, persona identifier for the system prompt.
+        :param provider: AnalyzeProvider.
         """
 
         persona_prompt = prompts.get_persona_prompt(persona)
         system_prompt = prompts.get_system_prompt(persona_prompt)
 
-        if not slides_text or not slides_text.strip():
-            slides_content = "СЛАЙДЫ НЕ ОБНАРУЖЕНИ (ТЕКСТ ОТСУТСТВУЕТ)"
-        else:
-            slides_content = slides_text[:1000]
-
-        user_content = f"ТРАНСКРИПЦИЯ:\n{transcript_text[:3000]}\n\nСЛАЙДЫ:\n{slides_content}"
+        user_content = (
+            f"ТРАНСКРИПЦИЯ:\n"
+            f"{transcript_text[: LLMClient.TRANSCRIPTION_LIMIT]}\n\n"
+            f"ТЕКСТ ПРЕЗЕНТАЦИИ:\n{presentation_text[: LLMClient.PRESENTATION_TEXT_LIMIT]}"
+        )
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -65,20 +63,19 @@ class LLMClient:
         ]
 
         try:
-            if provider == "gigachat":
-                content = await self._call_gigachat(messages, model)
+            if provider == AnalyzeProvider.gigachat:
+                content = await self._call_gigachat(messages, provider.model_name)
             else:
-                content = await self._call_openai(messages, model)
+                content = await self._call_openai(messages, provider.model_name)
 
             return self._parse_json_response(content)
 
         except Exception as error_msg:
             logger.error(
-                f"LLM Analysis Error ({provider}/{model}): {str(error_msg)}",
+                f"LLM analysis error ({provider}/{provider.model_name}): {str(error_msg)}",
                 exc_info=True,
             )
-
-            return self._error_response(error_msg)
+            return self._error_response(str(error_msg))
 
     async def _call_openai(self, messages: list, model: str) -> str:
         response = await self.openai_client.chat.completions.create(
@@ -103,16 +100,16 @@ class LLMClient:
             result = json.loads(cleaned)
             return result
         except Exception as error_msg:
-            return self._error_response(error_msg)
+            return self._error_response(str(error_msg))
 
     @staticmethod
     def _error_response(error_msg: str):
         return {
-            "summary": "Ошибка анализа",
-            "structure": "-",
-            "mistakes": error_msg,
-            "ideal_text": "-",
-            "persona_feedback": "Ошибка LLM",
+            "summary": error_msg,
+            "structure": "Ошибка анализа",
+            "mistakes": "Ошибка анализа",
+            "ideal_text": "Ошибка анализа",
+            "persona_feedback": "Ошибка анализа",
             "dynamic_fillers": [],
-            "slides_feedback": "-",
+            "slides_feedback": "Ошибка анализа",
         }
