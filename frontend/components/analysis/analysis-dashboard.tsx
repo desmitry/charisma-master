@@ -12,7 +12,9 @@ import { TempoChart } from "@/components/analysis/tempo-chart";
 import { ComingSoonNotification } from "@/components/shared/coming-soon-notification";
 import { PdfExportDropdown } from "@/components/shared/pdf-export-modal";
 import { VideoPlayer, VideoPlayerRef } from "@/components/shared/video-player";
-import { IconTarget, IconClock, IconHand, IconBolt } from "@/components/ui/icons";
+import { IconBolt } from "@/components/ui/icons";
+import { ActivityRingsCard } from "@/components/analysis/activity-rings-card";
+import { StandardCriteriaTable } from "@/components/analysis/standard-criteria-table";
 
 type Props = {
   result: AnalysisResult;
@@ -96,7 +98,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
     const longPauses = result.long_pauses || [];
     const allWords: TimelineItem[] = result.transcript.flatMap(seg => seg.words.map(word => ({ type: "word", word })));
     const allPauses: TimelineItem[] = longPauses.map(pause => ({ type: "pause", pause }));
-    
+
     const timeline = [...allWords, ...allPauses].sort((a, b) => {
       const startA = a.type === "word" ? a.word.start : a.pause.start;
       const startB = b.type === "word" ? b.word.start : b.pause.start;
@@ -113,15 +115,13 @@ export function AnalysisDashboard({ result, onBack }: Props) {
     return groups.filter(Boolean);
   }, [result.transcript, result.long_pauses]);
 
-  const criteriaPercentage = result.standard_criteria_max && result.standard_criteria_max > 0
-    ? Math.round((result.standard_criteria_result ?? 0) / result.standard_criteria_max * 100)
-    : null;
+ 
 
   return (
     <div className="relative z-10 min-h-screen text-white w-full max-w-[100vw] bg-[#0A0A0A] selection:bg-white/20">
 
       {/* Extreme Minimal Header */}
-      <motion.header 
+      <motion.header
         initial="hidden" animate="show" variants={fadeInAnim}
         className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#0A0A0A]/80 backdrop-blur-md"
       >
@@ -166,15 +166,15 @@ export function AnalysisDashboard({ result, onBack }: Props) {
       </motion.header>
 
       <main className="mx-auto max-w-[1600px] px-6 py-6 pb-24">
-        <motion.div 
-          variants={staggerContainer} 
-          initial="hidden" 
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
           animate="show"
           className="flex flex-col gap-6"
         >
           {/* HERO SECTION - MASSIVE VIDEO */}
           <motion.div variants={fadeUpAnim} className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-            
+
             {/* Primary Video Canvas */}
             <div className="relative rounded-xl border border-white/[0.08] bg-black overflow-hidden aspect-video flex-grow shadow-[0_0_40px_rgba(0,0,0,0.5)] flex justify-center items-center">
               <VideoPlayer
@@ -188,89 +188,16 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               />
             </div>
 
-            {/* Top Level Summary Stats beside Video */}
-            <div className="flex flex-col gap-3 min-w-[320px]">
-              {/* Total Score Card */}
-              <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.05] to-transparent p-6 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none translate-x-4 -translate-y-4">
-                  <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="12" cy="12" r="10" />
-                  </svg>
-                </div>
-                <div className="relative z-10">
-                  <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-3">Общая оценка</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-7xl font-semibold tracking-tighter text-white drop-shadow-md">
-                      {Math.round(result.confidence_index.total)}
-                    </span>
-                    <span className="text-white/20 text-2xl font-light">/ 100</span>
-                  </div>
-                  <div className="mt-5 flex items-center gap-2.5">
-                    <div className={cn(
-                      "w-2 h-2 rounded-full",
-                      result.confidence_index.total >= 70 ? "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]" : 
-                      result.confidence_index.total >= 50 ? "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.8)]" : 
-                      "bg-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.8)]"
-                    )} />
-                    <span className={cn(
-                      "text-sm font-medium tracking-wide",
-                      result.confidence_index.total >= 70 ? "text-emerald-400" : 
-                      result.confidence_index.total >= 50 ? "text-amber-400" : 
-                      "text-rose-400"
-                    )}>
-                      {result.confidence_index.total >= 70 ? "Отличный результат" : result.confidence_index.total >= 50 ? "Хороший результат" : "Требует доработки"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Minimal Quick Stats Stack */}
-              <div className="flex flex-col gap-3 mt-1">
-                <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] hover:bg-white/[0.04] transition-colors p-4 flex items-center justify-between group">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
-                      <IconTarget className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-0.5">Слова-паразиты</div>
-                      <div className="text-xl font-semibold text-white tracking-tight">{Number(result.fillers_summary.ratio * 100).toFixed(1)}%</div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] hover:bg-white/[0.04] transition-colors p-4 flex items-center justify-between group">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-sky-500/10 text-sky-400 group-hover:scale-110 transition-transform">
-                      <IconClock className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-0.5">Темп речи</div>
-                      <div className="text-xl font-semibold text-white tracking-tight">{Math.round(result.tempo.reduce((sum, p) => sum + p.wpm, 0) / result.tempo.length)} <span className="text-white/30 text-[12px] font-normal uppercase tracking-widest">wpm</span></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] hover:bg-white/[0.04] transition-colors p-4 flex items-center justify-between group">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-rose-500/10 text-rose-400 group-hover:scale-110 transition-transform">
-                      <IconHand className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-0.5">Фрагменты речи</div>
-                      <div className="text-xl font-semibold text-white tracking-tight">{result.transcript.length}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Apple Health Activity Rings Style Score Block */}
+            <ActivityRingsCard result={result} />
           </motion.div>
 
           {/* MAIN CONTENT GRID */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 items-start">
-            
+
             {/* LEFT COLUMN: Transcript & Content Texts */}
             <div className="flex flex-col gap-6">
-              
+
               {/* Transcript Block */}
               <motion.div variants={fadeUpAnim} className="rounded-xl border border-white/[0.08] bg-[#111] overflow-hidden flex flex-col">
                 <div className="px-6 py-4 border-b border-white/[0.04] flex items-center justify-between bg-[#141414]">
@@ -375,76 +302,15 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             {/* RIGHT COLUMN: Criteria Table & Other Insights */}
             <div className="flex flex-col gap-6">
 
-              {/* Strict Data Table for Criteria */}
-              {result.standard_criteria_scores && result.standard_criteria_scores.length > 0 && (
-                <motion.div variants={fadeUpAnim} className="rounded-xl border border-white/[0.08] bg-[#111] overflow-hidden flex flex-col">
-                  <div className="px-6 py-4 border-b border-white/[0.04] bg-[#141414]">
-                    <h3 className="text-xs font-mono uppercase tracking-widest text-white/50">Соответствие стандарту</h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-white/[0.04]">
-                          <th className="px-4 py-3 text-[10px] font-mono uppercase tracking-widest text-white/30 font-normal">Критерий</th>
-                          <th className="px-4 py-3 text-[10px] font-mono uppercase tracking-widest text-white/30 font-normal text-right">Балл</th>
-                          <th className="px-4 py-3 text-[10px] font-mono uppercase tracking-widest text-white/30 font-normal">Анализ ИИ</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/[0.02]">
-                        {result.standard_criteria_scores.map((c, i) => {
-                           const pct = c.criterion_max_value > 0 ? (c.criterion_current_value / c.criterion_max_value) * 100 : 0;
-                           return (
-                             <tr key={i} className="hover:bg-white/[0.01] transition-colors group">
-                               <td className="px-4 py-4 align-top w-1/3">
-                                 <div className="text-[13px] text-white/90 font-medium mb-1">{c.criterion_name}</div>
-                                 <div className="text-[11px] text-white/40 leading-relaxed">{c.criterion_description}</div>
-                               </td>
-                               <td className="px-4 py-4 align-top w-[90px] text-right">
-                                 <div className="text-[14px] font-mono text-white/90">
-                                   {c.criterion_current_value}<span className="text-white/30">/{c.criterion_max_value}</span>
-                                 </div>
-                                 <div className="mt-2 w-full h-[3px] bg-white/10 rounded-full overflow-hidden flex">
-                                   <div 
-                                      className={cn("h-full rounded-full transition-all duration-1000", pct >= 70 ? "bg-emerald-400" : pct >= 40 ? "bg-amber-400" : "bg-rose-400")}
-                                      style={{ width: `${pct}%` }}
-                                    />
-                                 </div>
-                               </td>
-                               <td className="px-4 py-4 align-top">
-                                 <div className="text-[12px] leading-relaxed text-white/60">
-                                   {c.criterion_feetback}
-                                 </div>
-                               </td>
-                             </tr>
-                           );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  {/* Summary Footer */}
-                  <div className="px-6 py-4 border-t border-white/[0.04] bg-[#141414] flex justify-between items-center">
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-white/40">Итоговый результат</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg font-mono text-white">
-                        {result.standard_criteria_result ?? 0}<span className="text-white/30 text-sm"> / {result.standard_criteria_max ?? 0}</span>
-                      </span>
-                      {criteriaPercentage !== null && (
-                        <span className={cn(
-                          "text-[11px] font-mono px-2 py-0.5 rounded border",
-                          criteriaPercentage >= 70 ? "text-emerald-400 border-emerald-400/20 bg-emerald-400/10" : 
-                          criteriaPercentage >= 40 ? "text-amber-400 border-amber-400/20 bg-amber-400/10" : 
-                          "text-rose-400 border-rose-400/20 bg-rose-400/10"
-                        )}>
-                          {criteriaPercentage}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+              {/* Criteria Table */}
+              <StandardCriteriaTable
+                scores={result.standard_criteria_scores}
+                max={result.standard_criteria_max}
+                resultVal={result.standard_criteria_result}
+              />
 
               <motion.div variants={fadeUpAnim} className="rounded-xl border border-white/[0.08] bg-[#111] overflow-hidden p-6" ref={tempoChartRef}>
-                 <TempoChart data={result.tempo} currentTime={currentTime} />
+                <TempoChart data={result.tempo} currentTime={currentTime} />
               </motion.div>
 
               {/* Presentation Summary Minimalist Card */}
@@ -463,7 +329,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               <motion.div variants={fadeUpAnim} className="grid grid-cols-1 gap-6">
                 <div className="rounded-xl border border-white/[0.08] bg-[#111] overflow-hidden">
                   <div className="px-6 py-4 border-b border-white/[0.04] bg-[#141414]">
-                     <h3 className="text-xs font-mono uppercase tracking-widest text-white/50">Краткое содержание</h3>
+                    <h3 className="text-xs font-mono uppercase tracking-widest text-white/50">Краткое содержание</h3>
                   </div>
                   <div className="p-6 text-[13px] leading-relaxed text-white/60 whitespace-pre-line px-6 py-5">
                     {result.summary}
@@ -472,7 +338,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
 
                 <div className="rounded-xl border border-rose-500/20 bg-[#111] overflow-hidden">
                   <div className="px-6 py-4 border-b border-rose-500/10 bg-rose-500/[0.02]">
-                     <h3 className="text-xs font-mono uppercase tracking-widest text-rose-500/60">Ключевые ошибки</h3>
+                    <h3 className="text-xs font-mono uppercase tracking-widest text-rose-500/60">Ключевые ошибки</h3>
                   </div>
                   <div className="p-6 text-[13px] leading-relaxed text-rose-400/80 whitespace-pre-line">
                     {typeof result.mistakes === "string" ? result.mistakes : Array.isArray(result.mistakes) ? (result.mistakes as string[]).join("\n") : String(result.mistakes || "")}
