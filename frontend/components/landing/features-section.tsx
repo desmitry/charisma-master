@@ -28,16 +28,7 @@ export function FeaturesSection({ onStartDemo }: { onStartDemo?: () => void }) {
                 className="w-full h-auto drop-shadow-[0_40px_100px_rgba(0,0,0,0.7)]"
               />
 
-              {/* Gradient overlay — fades from ~30% top to fully opaque bottom */}
-              <div
-                className="absolute bottom-0 left-0 right-0 pointer-events-none"
-                style={{
-                  height: "70%",
-                  background:
-                    "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 30%, rgba(0,0,0,0.75) 55%, rgba(0,0,0,0.92) 80%, rgba(0,0,0,0.98) 100%)",
-                  borderRadius: "0 0 12px 12px",
-                }}
-              />
+
 
               {/* Bottom CTA overlay */}
               <div className="absolute bottom-[6%] sm:bottom-[10%] left-0 right-0 flex flex-col items-center gap-5 sm:gap-8 px-4">

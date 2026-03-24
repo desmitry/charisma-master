@@ -55,12 +55,36 @@ export function useVideoAnalysis() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    setSelectedFile(file || null);
-    if (file) {
-      setError(null);
-      setVideoUrl("");
-      setIsValidRuTubeUrl(false);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      let isVideoSet = false;
+      Array.from(files).forEach((file) => {
+        const name = file.name.toLowerCase();
+        if (file.type === "video/mp4" || name.endsWith(".mp4")) {
+          setSelectedFile(file);
+          setError(null);
+          setVideoUrl("");
+          setIsValidRuTubeUrl(false);
+          isVideoSet = true;
+        } else if (
+          name.endsWith(".pptx") ||
+          name.endsWith(".ppt") ||
+          name.endsWith(".pdf") ||
+          file.type.includes("presentation") ||
+          file.type.includes("pdf")
+        ) {
+          setPresentationFile(file);
+        } else if (
+          name.endsWith(".docx") ||
+          file.type.includes("wordprocessingml")
+        ) {
+          setStandardFile(file);
+          setStandardMode("custom");
+        }
+      });
+      if (!isVideoSet && !selectedFile) {
+        // Option to just let them upload docx without error if video is already set
+      }
     }
   };
 
@@ -94,14 +118,33 @@ export function useVideoAnalysis() {
 
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      const file = files[0];
-      if (file.type === "video/mp4" || file.name.endsWith(".mp4")) {
-        setSelectedFile(file);
-        setError(null);
-        setVideoUrl("");
-        setIsValidRuTubeUrl(false);
-      } else {
-        setError("Только файлы MP4");
+      let isVideoSet = false;
+      Array.from(files).forEach((file) => {
+        const name = file.name.toLowerCase();
+        if (file.type === "video/mp4" || name.endsWith(".mp4")) {
+          setSelectedFile(file);
+          setError(null);
+          setVideoUrl("");
+          setIsValidRuTubeUrl(false);
+          isVideoSet = true;
+        } else if (
+          name.endsWith(".pptx") ||
+          name.endsWith(".ppt") ||
+          name.endsWith(".pdf") ||
+          file.type.includes("presentation") ||
+          file.type.includes("pdf")
+        ) {
+          setPresentationFile(file);
+        } else if (
+          name.endsWith(".docx") ||
+          file.type.includes("wordprocessingml")
+        ) {
+          setStandardFile(file);
+          setStandardMode("custom");
+        }
+      });
+      if (!isVideoSet && !selectedFile) {
+        setError("Пожалуйста, добавьте видео в формате MP4");
       }
     }
   };
