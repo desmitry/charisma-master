@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: headers,
       body: request.body as any,
+      // @ts-ignore - 'duplex' is required for streaming request body in Node.js
       duplex: 'half',
     });
 

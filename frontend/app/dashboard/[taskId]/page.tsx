@@ -9,7 +9,7 @@ import { TempoChart } from "@/components/analysis/tempo-chart";
 import { ConfidenceGauge } from "@/components/analysis/confidence-gauge";
 import { Transcript } from "@/components/analysis/transcript";
 import { SummaryBlocks } from "@/components/analysis/summary-blocks";
-import { VideoPlayer, VideoPlayerRef } from "@/components/video-player";
+import { VideoPlayer, VideoPlayerRef } from "@/components/shared/video-player";
 
 export default function DashboardPage() {
   const { taskId } = useParams<{ taskId: string }>();
@@ -101,44 +101,42 @@ export default function DashboardPage() {
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[1.4fr,1fr]">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
-            <div className="aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
-              <VideoPlayer
-                ref={playerRef}
-                src={videoSrc}
-                error={videoError}
-                onTimeUpdate={setCurrentTime}
-                onError={setVideoError}
-                className="h-full w-full object-contain"
-              />
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-3 text-center text-sm text-white/70">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-white/50">
+          <div className="space-y-4">
+            <VideoPlayer
+              ref={playerRef}
+              src={videoSrc}
+              error={videoError}
+              onTimeUpdate={setCurrentTime}
+              onError={setVideoError}
+              className="mx-auto"
+            />
+            <div className="grid grid-cols-3 gap-2 text-center text-sm text-white/70">
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">
                   Паразиты
                 </p>
-                <p className="mt-1 text-lg font-semibold text-white">
+                <p className="mt-0.5 text-base font-semibold text-white">
                   {analysis.fillers_summary.count}
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-white/50">
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">
                   Ratio
                 </p>
-                <p className="mt-1 text-lg font-semibold text-white">
+                <p className="mt-0.5 text-base font-semibold text-white">
                   {(analysis.fillers_summary.ratio * 100).toFixed(1)}%
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-white/50">
-                  {analysis.slide_analysis?.has_slides === false ? "Слайды" : "Плотность слайдов"}
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">
+                  {analysis.slide_analysis?.has_slides === false ? "Слайды" : "Плотность"}
                 </p>
-                <p className="mt-1 text-lg font-semibold text-white">
-                  {analysis.slide_analysis?.has_slides === false 
-                    ? "Не найдены"
-                    : (analysis.slide_analysis?.text_density_score ?? analysis.slide_text_density) !== undefined 
-                      ? `${Math.min(100, Math.max(0, analysis.slide_analysis?.text_density_score ?? analysis.slide_text_density ?? 0)).toFixed(1)}%`
-                      : "-"}
+                <p className="mt-0.5 text-base font-semibold text-white">
+                  {analysis.slide_analysis?.has_slides === false
+                    ? "—"
+                    : (analysis.slide_analysis?.text_density_score ?? analysis.slide_text_density) !== undefined
+                      ? `${Math.min(100, Math.max(0, analysis.slide_analysis?.text_density_score ?? analysis.slide_text_density ?? 0)).toFixed(0)}%`
+                      : "—"}
                 </p>
               </div>
             </div>

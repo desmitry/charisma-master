@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { EcoModeProvider } from "@/lib/eco-mode-context";
-import { EcoModeToggle } from "@/components/eco-mode-toggle";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -41,10 +39,7 @@ export default function RootLayout({
         className={`${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        <EcoModeProvider>
-          {children}
-          <EcoModeToggle />
-        </EcoModeProvider>
+        {children}
       </body>
     </html>
   );

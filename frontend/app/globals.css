@@ -316,6 +316,16 @@ html, body {
     inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
+/* Demo Button Shimmer */
+@keyframes demo-shimmer {
+  0% { left: -60%; }
+  100% { left: 140%; }
+}
+
+.demo-btn:hover .shimmer-line {
+  animation: demo-shimmer 0.65s ease forwards;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -326,3 +336,4 @@ html, body {
     transform: translateY(0);
   }
 }
+
