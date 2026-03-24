@@ -1,21 +1,26 @@
-import difflib
 import logging
 import os
 import subprocess
 import time
 import uuid
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import cv2
-import easyocr
 import librosa
 import mediapipe as mp
 import numpy as np
 import openai
 import requests
 import urllib3
+
 from app.config import settings
-from app.models.schemas import PauseInterval, TranscriptSegment, TranscriptWord
+from app.models.schemas import (
+    PauseInterval,
+    TempoPoint,
+    TranscribeProvider,
+    TranscriptSegment,
+    TranscriptWord,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +28,11 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class MLEngine:
-    _whisper_model = None
-    _ocr_reader = None
+    _whisper_local_model = None
 
+    VISUAL_DEVIATION = 0.25
+    TARGET_FRAME_WIDTH = 480
+    MOVEMENT_THRESHOLD = 0.002
     BASE_FILLER_WORDS = {
         "ну",
         "короче",
@@ -49,25 +56,23 @@ class MLEngine:
     }
 
     @classmethod
-    def load_model(cls, model_type="whisper"):
-        if model_type == "sber":
-            return None
+    def load_model(
+        cls,
+        model_name: Optional[str] = None,
+    ):
+        if model_name == TranscribeProvider.whisper_local:
+            if cls._whisper_local_model is None:
+                logger.info(f"Load local Whisper model ({settings.whisper_compute_type})...")
 
-        if model_type == "whisper":
-            if settings.whisper_provider == "local" and cls._whisper_model is None:
-                logger.info(f"Загрузка local Whisper ({settings.whisper_compute_type})...")
                 from faster_whisper import WhisperModel
 
-                cls._whisper_model = WhisperModel(
-                    settings.whisper_model_path,
+                cls._whisper_local_model = WhisperModel(
+                    settings.whisper_model_type,
                     device=settings.whisper_device,
                     compute_type=settings.whisper_compute_type,
                 )
-            return cls._whisper_model
 
-        if cls._ocr_reader is None:
-            logger.info("Загрузка EasyOCR...")
-            cls._ocr_reader = easyocr.Reader(["ru", "en"], gpu=settings.whisper_device == "cuda")
+            return cls._whisper_local_model
 
         return None
 
@@ -88,7 +93,11 @@ class MLEngine:
             output_path,
         ]
         try:
-            subprocess.run(
+            # README:
+            # The 'command' variable cannot contain an embedded injection.
+            # The input data consists of a string containing the UUID.
+            # The `command` variable must not contain strings that are vulnerable to injection.
+            subprocess.run(  # noqa: S603
                 command,
                 capture_output=True,
                 text=True,
@@ -116,26 +125,31 @@ class MLEngine:
             "1",
             temp_path,
         ]
-        subprocess.run(command, capture_output=True, check=True)
+
+        # README:
+        # The 'command' variable cannot contain an embedded injection.
+        # The input data consists of a string containing the UUID.
+        # The `command` variable must not contain strings that are vulnerable to injection.
+        subprocess.run(command, capture_output=True, check=True)  # noqa: S603
         return temp_path
 
     @staticmethod
-    def transcribe(audio_path: str, provider: str = "local") -> List[TranscriptSegment]:
-        if provider == "sber":
-            logger.info("Используем Sber SaluteSpeech API (Async)...")
-            try:
-                sber_audio_path = MLEngine._convert_to_sber_format(audio_path)
-                try:
-                    return MLEngine._transcribe_sber_api_async(sber_audio_path)
-                finally:
-                    if os.path.exists(sber_audio_path):
-                        os.remove(sber_audio_path)
-            except Exception as e:
-                logger.error(f"Sber API ASR failed: {e}. Fallback to local Whisper.")
-                return MLEngine.transcribe(audio_path, provider="local")
+    def transcribe(
+        audio_path: str,
+        provider: TranscribeProvider,
+    ) -> List[TranscriptSegment]:
+        if provider == TranscribeProvider.sber_gigachat:
+            logger.info("Using Sber SaluteSpeech API...")
 
-        elif provider == "openai":
-            logger.info("Используем OpenAI Whisper API...")
+            sber_audio_path = MLEngine._convert_to_sber_format(audio_path)
+            try:
+                return MLEngine._transcribe_sber_api_async(sber_audio_path)
+            finally:
+                if os.path.exists(sber_audio_path):
+                    os.remove(sber_audio_path)
+
+        elif provider == TranscribeProvider.whisper_openai:
+            logger.info("Using OpenAI Whisper API...")
             client = openai.OpenAI(
                 api_key=settings.openai_api_key,
                 base_url=settings.openai_api_base,
@@ -143,30 +157,38 @@ class MLEngine:
 
             with open(audio_path, "rb") as audio_file:
                 transcript = client.audio.transcriptions.create(
-                    model="whisper-1",
+                    model=settings.whisper_model_name,
                     file=audio_file,
                     response_format="verbose_json",
-                    timestamp_granularities=["segment"],
+                    timestamp_granularities=["word", "segment"],
                 )
-
-            segments = []
+            # FIXME: Added list of words
+            # timestamp_granularities=["segment", "words"]
+            # Maybe, doesn't work, can't test.
+            segments: list[TranscriptSegment] = []
             for seg in transcript.segments:
+                words = []
+                if seg.words:
+                    for w in seg.words:
+                        clean = w.word.strip().lower().replace(",", "").replace(".", "")
+                        is_filler = clean in MLEngine.BASE_FILLER_WORDS
+                        words.append(
+                            TranscriptWord(
+                                start=w.start,
+                                end=w.end,
+                                text=w.word,
+                                is_filler=is_filler,
+                            )
+                        )
                 segments.append(
-                    TranscriptSegment(start=seg.start, end=seg.end, text=seg.text, words=[])
+                    TranscriptSegment(start=seg.start, end=seg.end, text=seg.text, words=words)
                 )
             return segments
 
-        else:
-            model = MLEngine.load_model("whisper")
-            if model is None:
-                from faster_whisper import WhisperModel
+        elif provider == TranscribeProvider.whisper_local:
+            logger.info("Using Whisper local...")
 
-                model = WhisperModel(
-                    settings.whisper_model_path,
-                    device=settings.whisper_device,
-                    compute_type=settings.whisper_compute_type,
-                )
-                MLEngine._whisper_model = model
+            model = MLEngine.load_model(provider)
 
             segments_gen, _ = model.transcribe(audio_path, language="ru", word_timestamps=True)
             segments = []
@@ -189,6 +211,9 @@ class MLEngine:
                 )
             return segments
 
+        return []
+
+    # TODO: Refactor this function.
     @staticmethod
     def _transcribe_sber_api_async(audio_path: str) -> List[TranscriptSegment]:
         if not settings.gigachat_credentials:
@@ -372,7 +397,8 @@ class MLEngine:
 
     @staticmethod
     def get_long_pauses(
-        transcript: List[TranscriptSegment], threshold: float = 2.0
+        transcript: List[TranscriptSegment],
+        threshold: float = 2.0,
     ) -> List[PauseInterval]:
         pauses = []
         if not transcript:
@@ -388,7 +414,10 @@ class MLEngine:
         return pauses
 
     @staticmethod
-    def calculate_tempo(transcript: List[TranscriptSegment], window_sec=5.0) -> List[dict]:
+    def calculate_tempo(
+        transcript: List[TranscriptSegment],
+        window_sec=5.0,
+    ) -> List[TempoPoint]:
         words = []
         for seg in transcript:
             if seg.words:
@@ -421,7 +450,13 @@ class MLEngine:
                 zone = "red"
             elif wpm > 140 or wpm < 100:
                 zone = "yellow"
-            points.append({"time": float(t), "wpm": float(round(wpm, 1)), "zone": zone})
+            points.append(
+                TempoPoint(
+                    time=float(t),
+                    wpm=float(round(wpm, 1)),
+                    zone=zone,
+                )
+            )
         return points
 
     @staticmethod
@@ -439,7 +474,7 @@ class MLEngine:
         return "Требует внимания"
 
     @staticmethod
-    def analyze_audio_features(audio_path: str) -> Dict:
+    def analyze_audio(audio_path: str) -> Dict:
         try:
             y, sr = librosa.load(audio_path, sr=None)
 
@@ -467,62 +502,45 @@ class MLEngine:
             pitch_std = np.std(valid_f0) if len(valid_f0) > 0 else 0
 
             tone_score_val = min((pitch_std / 35) * 100, 100)
-            return {
-                "volume_level": vol_label,
-                "volume_score": float(volume_score_val),
-                "tone_score": float(tone_score_val),
-            }
+
+            audio_metrics = MLEngine.get_empty_audio_metrics()
+
+            audio_metrics["volume_score"] = float(volume_score_val)
+            audio_metrics["volume_level"] = vol_label
+            audio_metrics["volume_label"] = MLEngine.get_score_label(float(volume_score_val))
+            audio_metrics["tone_score"] = float(tone_score_val)
+            audio_metrics["tone_label"] = MLEngine.get_score_label(float(tone_score_val))
+
+            return audio_metrics
         except Exception as e:
             logger.error(f"Audio analysis failed: {e}")
-            return {
-                "volume_level": "Ошибка",
-                "volume_score": 0.0,
-                "tone_score": 0.0,
-                "tone_label": "Нет данных",
-            }
+            return MLEngine.get_empty_audio_metrics()
 
     @staticmethod
-    def analyze_slides_and_video(video_path: str, do_slides: bool) -> Dict:
-        logger.info(f"--- START DEBUG CV: {video_path} ---")
+    def analyze_video(video_path: str) -> Dict:
+        logger.debug(f"Video Analysis: {video_path}")
 
-        # 1. ПРОВЕРКА ФАЙЛА
         if not os.path.exists(video_path):
-            logger.critical(f"CRITICAL: File does not exist at path: {video_path}")
-            return MLEngine._get_empty_cv_metrics()
+            logger.critical(f"File does not exist at path: {video_path}")
+            return MLEngine.get_empty_video_metrics()
 
         file_size = os.path.getsize(video_path)
-        logger.info(f"File size: {file_size / (1024 * 1024):.2f} MB")
+        logger.debug(f"File size: {file_size / (1024 * 1024):.2f} MB")
 
-        # 2. ПРОВЕРКА OPENCV
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
-            logger.critical("CRITICAL: OpenCV could not open the video. Check codecs/path.")
-            return MLEngine._get_empty_cv_metrics()
+            logger.critical("OpenCV could not open the video")
+            return MLEngine.get_empty_video_metrics()
 
         fps = cap.get(cv2.CAP_PROP_FPS) or 25
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        logger.info(f"Video Metadata: {width}x{height}, {fps} FPS, {frame_count} frames")
-
-        reader = None
+        logger.debug(f"Video Metadata: {width}x{height}, {fps=}, {frame_count=}")
 
         mp_holistic = mp.solutions.holistic
-        if do_slides:
-            # Инициализация OCR
-            reader = MLEngine._ocr_reader
-            if reader is None:
-                logger.info("Initializing EasyOCR...")
-                try:
-                    reader = easyocr.Reader(["ru", "en"], gpu=settings.whisper_device == "cuda")
-                except Exception as e:
-                    logger.error(f"EasyOCR init failed: {e}")
-                    # Продолжаем без OCR, чтобы хоть жесты посчитать
 
-            mp_holistic = mp.solutions.holistic
-
-        # Счетчики
         total_frames_processed = 0
         frames_with_face = 0
         frames_with_pose = 0
@@ -531,65 +549,27 @@ class MLEngine:
         movement_accum = 0.0
         prev_wrist = {"left": None, "right": None}
 
-        unique_slides_text = []
-        last_slide_text = ""
-
         try:
-            # ВАЖНО: static_image_mode=False для видео (быстрее и стабильнее трекинг)
             with mp_holistic.Holistic(
                 min_detection_confidence=0.5,
                 min_tracking_confidence=0.5,
                 model_complexity=1,
-                static_image_mode=False,
+                static_image_mode=False,  # For stable and faster tracking
             ) as holistic:
                 while True:
                     ret, frame = cap.read()
                     if not ret:
-                        logger.info("End of video stream (ret=False).")
+                        logger.debug("End of video stream")
                         break
 
                     total_frames_processed += 1
 
-                    # --- DEBUG: Проверяем первые 5 кадров ---
-                    if total_frames_processed <= 5:
-                        logger.info(f"Processing frame {total_frames_processed}...")
-
-                    # Оптимизация: обрабатываем каждый 5-й кадр
+                    # Processed every 5th frame for optimisation
                     if total_frames_processed % 5 != 0:
                         continue
 
-                    # OCR (раз в 2 секунды)
-                    if reader and total_frames_processed % int(fps * 2) == 0:
-                        try:
-                            # Для OCR берем кадр побольше, но не 4K
-                            scale_ocr = 1.0
-                            if width > 1280:
-                                scale_ocr = 1280 / width
-
-                            ocr_frame = cv2.resize(frame, (0, 0), fx=scale_ocr, fy=scale_ocr)
-                            # detail=0 -> просто список строк
-                            res_txt = reader.readtext(ocr_frame, detail=0)
-                            txt_joined = " ".join(res_txt).strip()
-
-                            if len(txt_joined) > 15:
-                                # Проверка на дубликаты
-                                sim = 0.0
-                                if last_slide_text:
-                                    sim = difflib.SequenceMatcher(
-                                        None, last_slide_text, txt_joined
-                                    ).ratio()
-
-                                if sim < 0.8:
-                                    unique_slides_text.append(txt_joined)
-                                    last_slide_text = txt_joined
-                        except Exception as e_ocr:
-                            logger.warning(f"OCR step error: {e_ocr}")
-
-                    # MediaPipe
                     try:
-                        # Ресайз для скорости
-                        target_w = 480
-                        scale_mp = target_w / width
+                        scale_mp = MLEngine.TARGET_FRAME_WIDTH / width
                         small_frame = cv2.resize(frame, (0, 0), fx=scale_mp, fy=scale_mp)
 
                         img_rgb = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
@@ -597,33 +577,32 @@ class MLEngine:
                         results = holistic.process(img_rgb)
                         img_rgb.flags.writeable = True
 
-                        # --- Логика Взгляда ---
                         if results.face_landmarks:
                             frames_with_face += 1
+
                             face = results.face_landmarks.landmark
                             nose_x = face[1].x
                             left_ear = face[234].x
-                            right_ear = face[454].x  # Используем уши/скулы для ширины
+                            right_ear = face[454].x
 
                             face_width = abs(right_ear - left_ear)
                             face_center = (left_ear + right_ear) / 2
 
                             if face_width > 0:
                                 deviation = abs(nose_x - face_center) / face_width
-                                if deviation < 0.25:  # Чуть поднял порог
+                                if deviation < MLEngine.VISUAL_DEVIATION:
                                     looking_at_camera_frames += 1
 
-                        # --- Логика Жестов ---
                         if results.pose_landmarks:
                             frames_with_pose += 1
                             pl = results.pose_landmarks.landmark
 
-                            # Индексы: 15=Left Wrist, 16=Right Wrist
+                            # 15: Left Wrist
+                            # 16: Right Wrist
                             lw = (pl[15].x, pl[15].y)
                             rw = (pl[16].x, pl[16].y)
 
                             if prev_wrist["left"] is not None:
-                                # Считаем евклидово расстояние
                                 d_left = (
                                     (lw[0] - prev_wrist["left"][0]) ** 2
                                     + (lw[1] - prev_wrist["left"][1]) ** 2
@@ -635,8 +614,7 @@ class MLEngine:
 
                                 delta = d_left + d_right
 
-                                # Фильтр шума
-                                if delta > 0.002:
+                                if delta > MLEngine.MOVEMENT_THRESHOLD:
                                     movement_accum += delta
 
                             prev_wrist = {"left": lw, "right": rw}
@@ -653,22 +631,16 @@ class MLEngine:
         finally:
             cap.release()
 
-        # --- ЛОГИРУЕМ ИТОГИ ПЕРЕД РАСЧЕТОМ ---
-        logger.info("--- DEBUG STATS ---")
-        logger.info(f"Total processed frames: {total_frames_processed}")
-        logger.info(f"Frames with Face detected: {frames_with_face}")
-        logger.info(f"Frames with Pose detected: {frames_with_pose}")
-        logger.info(f"Accumulated Movement: {movement_accum}")
-        logger.info(f"Unique Slides Count: {len(unique_slides_text)}")
+        logger.debug("Analyze video debug stats")
+        logger.debug(f"Total processed frames: {total_frames_processed}")
+        logger.debug(f"Frames with Face detected: {frames_with_face}")
+        logger.debug(f"Frames with Pose detected: {frames_with_pose}")
+        logger.debug(f"Accumulated Movement: {movement_accum}")
 
-        # --- РАСЧЕТ БАЛЛОВ ---
-
-        # 1. Взгляд
         gaze_score = 0
         if frames_with_face > 10:
             gaze_score = (looking_at_camera_frames / frames_with_face) * 100
 
-        # 2. Жесты
         gesture_score = 0
         gesture_advice = "Анализ не удался (мало данных)"
 
@@ -683,32 +655,32 @@ class MLEngine:
             else:
                 gesture_advice = "Отличная, естественная жестикуляция."
 
-        # 3. Слайды
-        full_text = " ".join(unique_slides_text)
-        has_slides = len(unique_slides_text) > 0
-        density_score = 100
+        video_metrics = MLEngine.get_empty_video_metrics()
 
-        if has_slides:
-            avg_len = len(full_text) / len(unique_slides_text)
-            if avg_len > 600:
-                density_score = max(0, 100 - (avg_len - 600) / 10)
+        video_metrics["gaze_score"] = int(gaze_score)
+        video_metrics["gaze_label"] = MLEngine.get_score_label(int(gaze_score))
+        video_metrics["gesture_score"] = int(gesture_score)
+        video_metrics["gesture_label"] = MLEngine.get_score_label(int(gesture_score))
+        video_metrics["gesture_advice"] = gesture_advice
 
+        return video_metrics
+
+    @staticmethod
+    def get_empty_video_metrics() -> dict:
         return {
-            "gaze_score": int(gaze_score),
-            "gesture_score": int(gesture_score),
-            "gesture_advice": gesture_advice,
-            "ocr_text": full_text,
-            "slide_density": int(density_score),
-            "has_slides": has_slides,
+            "gaze_score": 0,
+            "gaze_label": "Нет данных",
+            "gesture_score": 0,
+            "gesture_label": "Нет данных",
+            "gesture_advice": "Нет данных",
         }
 
     @staticmethod
-    def _get_empty_cv_metrics():
+    def get_empty_audio_metrics() -> dict:
         return {
-            "gaze_score": 0,
-            "gesture_score": 0,
-            "gesture_advice": "Ошибка чтения видео",
-            "ocr_text": "",
-            "slide_density": 0,
-            "has_slides": False,
+            "volume_score": 0,
+            "volume_level": "Нет данных",
+            "volume_label": "Нет данных",
+            "tone_score": 0,
+            "tone_label": "Нет данных",
         }

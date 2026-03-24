@@ -1,9 +1,10 @@
 import json
 
-from app.config import settings
-from app.models.schemas import AnalysisResult
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
+
+from app.config import settings
+from app.models.schemas import AnalysisResult
 
 router = APIRouter()
 

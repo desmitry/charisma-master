@@ -3,29 +3,66 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
+from app.config import settings
 
-class PersonaEnum(str, Enum):
+
+class TranscribeProvider(str, Enum):
+    "Модели для транскрибации"
+
+    sber_gigachat = "sber_gigachat"
+    whisper_local = "whisper_local"
+    whisper_openai = "whisper_openai"
+
+
+class AnalyzeProvider(str, Enum):
+    "Провайдеры для анализа текста"
+
+    gigachat = "gigachat"
+    openai = "openai"
+
+    @property
+    def model_name(self) -> str:
+        return {
+            AnalyzeProvider.gigachat.value: settings.gigachat_model_name,
+            AnalyzeProvider.openai.value: settings.openai_model_name,
+        }[self.value]
+
+
+class PersonaRoles(str, Enum):
+    """
+    Модель для выбора роли ИИ оценщика.
+    """
+
     strict_critic = "strict_critic"
     kind_mentor = "kind_mentor"
     steve_jobs_style = "steve_jobs_style"
+    speech_review_specialist = "speech_review_specialist"
 
 
-class LLMProviderEnum(str, Enum):
-    openai = "openai"
-    gigachat = "gigachat"
+class TaskState(str, Enum):
+    queued = "PENDING"
+    processing = "PROCESSING"
+    finished = "SUCCESS"
+    failed = "FAILURE"
+
+    @property
+    def hint(self) -> str:
+        return self.value
 
 
-class ProcessingState(str, Enum):
-    queued = "queued"
-    processing = "processing"
-    finished = "finished"
-    failed = "failed"
+class TaskStage(Enum):
+    transcription = ("transcription", 0.1)
+    video_analisis = ("video_analysis", 0.25)
+    audio_analisis = ("audio_analisis", 0.4)
+    llm_personal_report = ("llm_personal_report", 0.7)
 
+    def __init__(self, stage_name: str, stage_percent: float):
+        self.__stage_name = stage_name
+        self.__stage_percent = stage_percent
 
-class ProcessingStage(str, Enum):
-    listening = "listening"
-    gestures = "gestures"
-    analyzing = "analyzing"
+    @property
+    def meta(self) -> dict:
+        return {"stage": self.__stage_name, "progress": self.__stage_percent}
 
 
 class TranscriptWord(BaseModel):
@@ -55,23 +92,33 @@ class PauseInterval(BaseModel):
 
 
 class SlideAnalysis(BaseModel):
-    has_slides: bool
-    text_density_score: float
-    ocr_summary: str = ""
+    presentation_summary: str
 
 
 class ConfidenceComponents(BaseModel):
     volume_level: str
-    volume_score: float
-    filler_score: float
-    gaze_score: float
+    volume_score: int
+    volume_label: str
+    filler_score: int
+    filler_label: str
+    gaze_score: int
+    gaze_label: str
+    gesture_score: int
+    gesture_label: str
     gesture_advice: str
-    tone_score: float
+    tone_score: int
+    tone_label: str
 
 
 class ConfidenceIndex(BaseModel):
     total: float
+    total_label: str
     components: ConfidenceComponents
+
+
+class FillersSummary(BaseModel):
+    count: int
+    ratio: int | float
 
 
 class AnalysisResult(BaseModel):
@@ -80,7 +127,7 @@ class AnalysisResult(BaseModel):
     transcript: List[TranscriptSegment]
     tempo: List[TempoPoint]
     long_pauses: List[PauseInterval]
-    fillers_summary: dict
+    fillers_summary: FillersSummary
     dynamic_fillers: List[str]
     slide_analysis: SlideAnalysis
     confidence_index: ConfidenceIndex
@@ -89,21 +136,23 @@ class AnalysisResult(BaseModel):
     mistakes: str
     ideal_text: str
     persona_feedback: str
-    transcribe_provider: Optional[str] = None
-    transcribe_model: Optional[str] = None
-    analyze_provider: Optional[str] = None
-    analyze_model: Optional[str] = None
-    raw_metrics: Optional[dict] = None
+    analyze_provider: str
+    analyze_model: str
+    transcribe_model: str
 
 
 class TaskStatusResponse(BaseModel):
-    state: ProcessingState
-    stage: Optional[ProcessingStage] = None
-    progress: float = 0.0
-    error: Optional[str] = None
     task_id: str
+    state: TaskState
+    hint: str
+    progress: float = 0.0
+    stage: Optional[TaskStage] = None
+    error: Optional[str] = None
 
 
 class UploadResponse(BaseModel):
+    """
+    Модель данных, которые возращает /process
+    """
+
     task_id: str
-    status: str = "queued"

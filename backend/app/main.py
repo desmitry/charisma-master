@@ -1,14 +1,14 @@
-from app.config import settings
-from app.logic.endpoints import analysis, status, upload
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
-# Base configurations
-if settings.environment == "production" and settings.backend_origin_url == "*":
+from app.config import settings
+from app.logic.endpoints import analysis, status, upload
+
+if settings.mode == "prod" and settings.origin_url == "*":
     raise Exception("You need to specify a specific url for production!")
 
-origins = [settings.backend_origin_url]
+origins = [settings.origin_url]
 
 
 app = FastAPI(
