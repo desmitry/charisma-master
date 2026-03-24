@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { periodicNoiseGLSL } from './utils'
+import { periodicNoiseGLSL } from '@/components/animations/gl/shaders/utils'
 
 export class DofPointsMaterial extends THREE.ShaderMaterial {
   constructor(maxWaves: number = 4) {

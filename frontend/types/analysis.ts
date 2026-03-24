@@ -41,6 +41,14 @@ export interface ConfidenceIndex {
   components: ConfidenceComponents;
 }
 
+export interface StandardCriterionScore {
+  criterion_name: string;
+  criterion_description: string;
+  criterion_current_value: number;
+  criterion_max_value: number;
+  criterion_feetback: string;
+}
+
 export interface AnalysisResult {
   task_id: string;
   video_path: string;
@@ -58,16 +66,14 @@ export interface AnalysisResult {
   mistakes: string;
   ideal_text: string;
   persona_feedback?: string | null;
-  slide_text_density?: number;
-  slide_analysis?: {
-    has_slides: boolean;
-    text_density_score: number;
-    text_density_label?: string;
-    ocr_summary?: string;
-    acr_summary?: string;
-  };
+  presentation_summary?: string;
+  standard_criteria_result?: number;
+  standard_criteria_max?: number;
+  standard_criteria_scores?: StandardCriterionScore[];
   analyze_provider?: string;
   analyze_model?: string;
+  slide_analysis?: any;
+  slide_text_density?: any;
   raw_metrics?: {
     gaze_score?: number;
     gesture_score?: number;
@@ -85,4 +91,3 @@ export interface TaskStatusResponse {
   error?: string | null;
   task_id: string;
 }
-
