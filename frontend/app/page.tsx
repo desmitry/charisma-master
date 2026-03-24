@@ -91,6 +91,7 @@ export default function Home() {
         <GradualBlur target="page" position="top" height="7rem" strength={1.5} divCount={3} curve="bezier" exponential opacity={1} />
         <GradualBlur target="page" position="bottom" height="7rem" strength={1.5} divCount={3} curve="bezier" exponential opacity={1} />
         
+        
         <div
           className="transition-all duration-700 ease-[0.22,1,0.36,1] relative"
           style={{
