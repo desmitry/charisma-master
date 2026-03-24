@@ -53,8 +53,6 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   const [videoError, setVideoError] = useState<string | null>(null);
 
   const [showComingSoon, setShowComingSoon] = useState(false);
-  const [showPdfDropdown, setShowPdfDropdown] = useState(false);
-  const pdfButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const newSrc = resolveVideoUrl(result.video_path);
@@ -142,16 +140,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <button
-                ref={pdfButtonRef}
-                onClick={() => setShowPdfDropdown(!showPdfDropdown)}
-                className="rounded-md border border-white/[0.08] bg-[#111] hover:bg-white/5 px-4 py-1.5 text-xs font-medium text-white/80 transition-colors"
-              >
-                Экспорт PDF
-              </button>
-              <PdfExportDropdown isOpen={showPdfDropdown} onClose={() => setShowPdfDropdown(false)} result={result} buttonRef={pdfButtonRef} />
-            </div>
+            <PdfExportDropdown result={result} />
 
             {onBack && (
               <button

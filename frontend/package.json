@@ -9,8 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@radix-ui/react-dialog": "latest",
-    "@radix-ui/react-slot": "latest",
+    "@headlessui/react": "^2.2.9",
     "@react-three/drei": "latest",
     "@react-three/fiber": "latest",
     "class-variance-authority": "^0.7.1",
@@ -23,6 +22,7 @@
     "leva": "^0.10.1",
     "lucide-react": "^0.577.0",
     "maath": "latest",
+    "mathjs": "^14.9.1",
     "next": "^16.2.1",
     "next-themes": "latest",
     "ogl": "^1.0.11",
