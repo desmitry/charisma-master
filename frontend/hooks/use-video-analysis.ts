@@ -138,7 +138,7 @@ export function useVideoAnalysis() {
     setStage("processing");
     setStatusText("Анализируем видео...");
     setProgress(0.2);
-    await new Promise((res) => setTimeout(res, 800));
+    await new Promise((res) => setTimeout(res, 5000));
     const mock = await loadMockResponse();
     setResult(mock);
     setProgress(1);
