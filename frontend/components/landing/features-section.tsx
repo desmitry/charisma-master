@@ -5,7 +5,7 @@ import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
 export function FeaturesSection({ onStartDemo }: { onStartDemo?: () => void }) {
   return (
-    <section className="relative z-10 w-full py-12 sm:py-20 px-0">
+    <section className="relative z-10 w-full pt-20 pb-12 sm:pt-36 sm:pb-20 px-0">
       <div className="mx-auto w-full max-w-[100vw]">
         <ScrollReveal distance={40}>
           {/* Outer glow wrapper */}
