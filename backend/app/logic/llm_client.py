@@ -1,13 +1,12 @@
 import json
 import logging
-from typing import Any
 
 import openai
 from gigachat import GigaChat
 
 from app.config import settings
 from app.logic import prompts
-from app.models.schemas import AnalyzeProvider, PersonaRoles
+from app.models.schemas import AnalyzeProvider, EvaluationCriterion, PersonaRoles, SpeechReport
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +42,7 @@ class LLMClient:
         presentation_text: str,
         provider: AnalyzeProvider,
         persona: PersonaRoles,
-    ) -> dict[str, Any]:
+    ) -> SpeechReport:
         """Analyze the speech text using the specified provider and model.
 
         Args:
@@ -53,11 +52,9 @@ class LLMClient:
             persona (PersonaRoles): AI persona role for the analysis.
 
         Returns:
-            dict[str, Any]: Dictionary containing analysis results.
+            SpeechReport: Response containing analysis results.
         """
-
-        persona_prompt = prompts.get_persona_prompt(persona)
-        system_prompt = prompts.get_system_prompt(persona_prompt)
+        system_prompt = prompts.get_analyze_speech_system_prompt(persona)
 
         user_content = (
             f"ТРАНСКРИПЦИЯ:\n"
@@ -76,14 +73,34 @@ class LLMClient:
             else:
                 content = await self._call_openai(messages, provider.model_name)
 
-            return self._parse_json_response(content)
+            return SpeechReport(**self._parse_json_response(content))
 
         except Exception as error_msg:
             logger.error(
                 f"LLM analysis error ({provider}/{provider.model_name}): {str(error_msg)}",
                 exc_info=True,
             )
-            return self._error_response(str(error_msg))
+            response = LLMClient._get_empty_speech_analysis_response()
+            response.summary = str(error_msg)
+            return response
+
+    # TODO: Realize LLM evaluation criteria report.
+    async def get_evaluation_criteria(
+        self, evaluation_criteria_path: str
+    ) -> list[EvaluationCriterion]:
+        system_prompt = prompts.get_evaluation_criteria_identity_prompt()  # noqa: F841
+        return list()
+
+    # TODO: Realize criteria analisis for LLMClient.
+    async def analyze_with_evalution_criteria(
+        self,
+        transcript_text: str,
+        presentation_text: str,
+        provider: AnalyzeProvider,
+        evaluation_criteria: list[EvaluationCriterion],
+    ) -> list[EvaluationCriterion]:
+        system_prompt = prompts.get_evaluation_criteria_rate_prompt()  # noqa: F841
+        return list()
 
     async def _call_openai(self, messages: list, model: str) -> str:
         """Send a chat completion request to OpenAI API.
@@ -136,24 +153,21 @@ class LLMClient:
             result = json.loads(cleaned)
             return result
         except Exception as error_msg:
-            return self._error_response(str(error_msg))
+            raise error_msg
 
     @staticmethod
-    def _error_response(error_msg: str):
-        """Return a standardized error response dictionary.
-
-        Args:
-            error_msg (str): Error message to include in the response.
+    def _get_empty_speech_analysis_response() -> SpeechReport:
+        """Get empty speech analysis report.
 
         Returns:
-            dict: Dictionary with error placeholders for all LLM analysis fields.
+            SpeechAnalysis: Response containing empty analysis results.
         """
-        return {
-            "summary": error_msg,
-            "structure": "Ошибка анализа",
-            "mistakes": "Ошибка анализа",
-            "ideal_text": "Ошибка анализа",
-            "persona_feedback": "Ошибка анализа",
-            "dynamic_fillers": [],
-            "slides_feedback": "Ошибка анализа",
-        }
+        return SpeechReport(
+            summary="",
+            structure="",
+            mistakes="",
+            ideal_text="",
+            persona_feedback="",
+            dynamic_fillers=list(),
+            presentation_feedback="",
+        )

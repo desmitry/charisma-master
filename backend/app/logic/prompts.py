@@ -15,7 +15,7 @@ def _get_persona_prompt(persona: PersonaRoles) -> str:
             return "Эксперт по публичным выступлениям с многолетним опытом"
 
 
-def get_system_prompt(persona: PersonaRoles) -> str:
+def get_analyze_speech_system_prompt(persona: PersonaRoles) -> str:
     persona_prompt = _get_persona_prompt(persona)
 
     system_prompt = """
@@ -50,3 +50,13 @@ def get_system_prompt(persona: PersonaRoles) -> str:
         """
 
     return system_prompt.format(persona_prompt, persona_prompt)
+
+
+# TODO: Add prompt for evalution criteria identity.
+def get_evaluation_criteria_identity_prompt() -> str:
+    return ""
+
+
+# TODO: Add prompt for evalution criteria identity.
+def get_evaluation_criteria_rate_prompt() -> str:
+    return ""

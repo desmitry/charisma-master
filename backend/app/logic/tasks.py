@@ -17,13 +17,25 @@ from app.models.schemas import (
     ConfidenceIndex,
     FillersSummary,
     PersonaRoles,
-    SlideAnalysis,
     TaskStage,
     TaskState,
     TranscribeProvider,
 )
 
 logger = logging.getLogger(__name__)
+
+
+# TODO: Realize presentation parser
+def _get_presentation_text(presentation_path: str) -> list[str]:
+    """Obtaining the presentation text by slides.
+
+    Args:
+        presentation_path (str): path to the .pptx file.
+
+    Returns:
+        list[str]: Text on the slides
+    """
+    return [""]
 
 
 @worker_process_init.connect
@@ -96,22 +108,48 @@ def process_video_pipeline(
     except Exception as e:
         logger.warning(f"Audio features failed: {e}")
 
+    # TODO: Realize presentation text parser.
     self.update_state(
         state=TaskState.processing.value,
-        meta=TaskStage.llm_personal_report.meta,
+        meta=TaskStage.presentation_text_parsing.meta,
+    )
+    presentation_text = _get_presentation_text(presentation_path) if presentation_path else ["NaN"]
+    presentation_text = "\n\n".join(
+        f"[Слайд: {idx + 1}]\n{text}" for idx, text in enumerate(presentation_text)
     )
 
-    # TODO: Realize presentation text parser.
-    presentation_text = ""
+    # TODO: Realize LLM evaluation criteria report.
+    self.update_state(
+        state=TaskState.processing.value,
+        meta=TaskStage.evaluation_criteria_report.meta,
+    )
+    evaluation_criteria_report = list()
+    try:
+        llm_client = LLMClient()
 
-    llm_personal_report = {}
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        evaluation_criteria_report = loop.run_until_complete(
+            llm_client.get_evaluation_criteria(
+                evaluation_criteria_path,
+            )
+        )
+        loop.close()
+    except Exception as e:
+        logger.error(f"LLM Client error: {e}")
+
+    self.update_state(
+        state=TaskState.processing.value,
+        meta=TaskStage.llm_speech_report.meta,
+    )
+    llm_speech_report = LLMClient._get_empty_speech_analysis_response()
 
     try:
         llm_client = LLMClient()
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        llm_personal_report = loop.run_until_complete(
+        llm_speech_report = loop.run_until_complete(
             llm_client.analyze_speech(
                 transcript_text=full_text,
                 presentation_text=presentation_text,
@@ -124,6 +162,24 @@ def process_video_pipeline(
         logger.error(f"LLM Client error: {e}")
 
     # TODO: Realize criteria analisis for LLMClient.
+    self.update_state(
+        state=TaskState.processing.value,
+        meta=TaskStage.llm_criteria_report.meta,
+    )
+    try:
+        llm_client = LLMClient()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        evaluation_criteria_report = loop.run_until_complete(
+            llm_client.analyze_with_evalution_criteria(
+                transcript_text=full_text,
+                presentation_text=presentation_text,
+                provider=analyze_provider,
+                evaluation_criteria=evaluation_criteria_report,
+            )
+        )
+    except Exception as e:
+        logger.error(f"LLM Client error: {e}")
 
     # TODO: Document and verify these coefficients.
     total_words = len(full_text.split()) if full_text else 1
@@ -133,7 +189,6 @@ def process_video_pipeline(
     filler_ratio = base_filler_count / total_words if total_words > 0 else 0
     filler_score = max(0, 100 - (filler_ratio * 750))
 
-    # TODO: Document and verify these coefficients.
     total_conf = (
         (filler_score * 0.35)
         + (audio_metrics["tone_score"] * 0.25)
@@ -152,10 +207,6 @@ def process_video_pipeline(
         tempo=tempo_data,
         long_pauses=long_pauses,
         fillers_summary=FillersSummary(count=base_filler_count, ratio=round(filler_ratio, 4)),
-        dynamic_fillers=llm_personal_report.get("dynamic_fillers", []),
-        slide_analysis=SlideAnalysis(
-            presentation_summary=llm_personal_report.get("presentation_feedback", "")
-        ),
         confidence_index=ConfidenceIndex(
             total=total_conf,
             total_label=total_conf_label,
@@ -174,11 +225,8 @@ def process_video_pipeline(
                 tone_label=audio_metrics["tone_label"],
             ),
         ),
-        summary=llm_personal_report.get("summary", "Нет данных"),
-        structure=llm_personal_report.get("structure", "Нет данных"),
-        mistakes=llm_personal_report.get("mistakes", "Нет данных"),
-        ideal_text=llm_personal_report.get("ideal_text", "Нет данных"),
-        persona_feedback=llm_personal_report.get("persona_feedback", "Нет данных"),
+        speech_report=llm_speech_report,
+        evaluation_criteria_report=evaluation_criteria_report,
         analyze_provider=analyze_provider.value,
         analyze_model=analyze_provider.model_name,
         transcribe_model=transcribe_provider.value,

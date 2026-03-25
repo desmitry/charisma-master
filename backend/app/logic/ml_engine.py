@@ -782,10 +782,10 @@ class MLEngine:
         """
         return {
             "gaze_score": 0,
-            "gaze_label": "Нет данных",
+            "gaze_label": "",
             "gesture_score": 0,
-            "gesture_label": "Нет данных",
-            "gesture_advice": "Нет данных",
+            "gesture_label": "",
+            "gesture_advice": "",
         }
 
     @staticmethod
@@ -797,8 +797,8 @@ class MLEngine:
         """
         return {
             "volume_score": 0,
-            "volume_level": "Нет данных",
-            "volume_label": "Нет данных",
+            "volume_level": "",
+            "volume_label": "",
             "tone_score": 0,
-            "tone_label": "Нет данных",
+            "tone_label": "",
         }

@@ -65,10 +65,41 @@ class TaskStage(Enum):
         meta: a dict containing the name, completion percentage, and UI text.
     """
 
-    transcription = ("transcription", 0.1, "Транскрибация аудио...")
-    video_analisis = ("video_analysis", 0.25, "Анализ видео...")
-    audio_analisis = ("audio_analisis", 0.4, "Анализ аудио...")
-    llm_personal_report = ("llm_personal_report", 0.7, "Формирование отчёта...")
+    transcription = (
+        "transcription",
+        0.1,
+        "Транскрибация аудио...",
+    )
+    video_analisis = (
+        "video_analysis",
+        0.25,
+        "Анализ видео...",
+    )
+    audio_analisis = (
+        "audio_analisis",
+        0.4,
+        "Анализ аудио...",
+    )
+    presentation_text_parsing = (
+        "presentation_text_parsing",
+        0.45,
+        "Просмотр презентации... ",
+    )
+    evaluation_criteria_report = (
+        "evaluation_criteria_report",
+        0.5,
+        "Изучение критериев оценивания...",
+    )
+    llm_speech_report = (
+        "llm_speech_report",
+        0.7,
+        "Формирование отчёта по выступлению...",
+    )
+    llm_criteria_report = (
+        "llm_criteria_report",
+        0.9,
+        "Оценка выступления по критериям...",
+    )
 
     def __init__(self, stage_name: str, stage_percent: float, stage_hint: str):
         self.__stage_name = stage_name
@@ -118,12 +149,6 @@ class PauseInterval(BaseModel):
     duration: float
 
 
-class SlideAnalysis(BaseModel):
-    """A model that stores about user presentation analysis."""
-
-    presentation_summary: str
-
-
 class ConfidenceComponents(BaseModel):
     """A model that stores about analysis user gestures and voice."""
 
@@ -156,6 +181,28 @@ class FillersSummary(BaseModel):
     ratio: int | float
 
 
+class SpeechReport(BaseModel):
+    """A model that stores info about LLM speech analisys."""
+
+    summary: str
+    structure: str
+    mistakes: str
+    ideal_text: str
+    persona_feedback: str
+    dynamic_fillers: list[str]
+    presentation_feedback: str
+
+
+class EvaluationCriterion(BaseModel):
+    """A model that stores info about evaluation criterion."""
+
+    name: str
+    description: str
+    max_value: int
+    current_value: int = 0
+    feedback: str = ""
+
+
 class AnalysisResult(BaseModel):
     """A model for sending the final results of the analysis."""
 
@@ -165,14 +212,9 @@ class AnalysisResult(BaseModel):
     tempo: List[TempoPoint]
     long_pauses: List[PauseInterval]
     fillers_summary: FillersSummary
-    dynamic_fillers: List[str]
-    slide_analysis: SlideAnalysis
     confidence_index: ConfidenceIndex
-    summary: str
-    structure: str
-    mistakes: str
-    ideal_text: str
-    persona_feedback: str
+    speech_report: SpeechReport
+    evaluation_criteria_report: list[EvaluationCriterion]
     analyze_provider: str
     analyze_model: str
     transcribe_model: str
