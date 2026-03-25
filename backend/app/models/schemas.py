@@ -203,6 +203,12 @@ class EvaluationCriterion(BaseModel):
     feedback: str = ""
 
 
+class EvaluationCriteriaReport(BaseModel):
+    total_score: int
+    max_score: int
+    criteria: list[EvaluationCriterion]
+
+
 class AnalysisResult(BaseModel):
     """A model for sending the final results of the analysis."""
 
@@ -214,7 +220,7 @@ class AnalysisResult(BaseModel):
     fillers_summary: FillersSummary
     confidence_index: ConfidenceIndex
     speech_report: SpeechReport
-    evaluation_criteria_report: list[EvaluationCriterion]
+    evaluation_criteria_report: EvaluationCriteriaReport
     analyze_provider: str
     analyze_model: str
     transcribe_model: str
