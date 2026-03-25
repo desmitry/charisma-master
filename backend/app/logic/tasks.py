@@ -15,6 +15,7 @@ from app.models.schemas import (
     AnalyzeProvider,
     ConfidenceComponents,
     ConfidenceIndex,
+    EvaluationCriteriaReport,
     FillersSummary,
     PersonaRoles,
     TaskStage,
@@ -123,13 +124,15 @@ def process_video_pipeline(
         state=TaskState.processing.value,
         meta=TaskStage.evaluation_criteria_report.meta,
     )
-    evaluation_criteria_report = list()
+    evaluation_criteria = list()
+    evaluation_criteria_total_score = 0
+    evaluation_criteria_max_score = 0
     try:
         llm_client = LLMClient()
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        evaluation_criteria_report = loop.run_until_complete(
+        evaluation_criteria = loop.run_until_complete(
             llm_client.get_evaluation_criteria(
                 evaluation_criteria_path,
             )
@@ -170,12 +173,12 @@ def process_video_pipeline(
         llm_client = LLMClient()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        evaluation_criteria_report = loop.run_until_complete(
+        evaluation_criteria = loop.run_until_complete(
             llm_client.analyze_with_evalution_criteria(
                 transcript_text=full_text,
                 presentation_text=presentation_text,
                 provider=analyze_provider,
-                evaluation_criteria=evaluation_criteria_report,
+                evaluation_criteria=evaluation_criteria,
             )
         )
     except Exception as e:
@@ -226,7 +229,11 @@ def process_video_pipeline(
             ),
         ),
         speech_report=llm_speech_report,
-        evaluation_criteria_report=evaluation_criteria_report,
+        evaluation_criteria_report=EvaluationCriteriaReport(
+            total_score=evaluation_criteria_total_score,
+            max_score=evaluation_criteria_max_score,
+            criteria=evaluation_criteria,
+        ),
         analyze_provider=analyze_provider.value,
         analyze_model=analyze_provider.model_name,
         transcribe_model=transcribe_provider.value,
