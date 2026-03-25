@@ -7,7 +7,7 @@ from app.config import settings
 
 
 class TranscribeProvider(str, Enum):
-    "Модели для транскрибации"
+    """Enum of speech transcription providers for the ML engine."""
 
     sber_gigachat = "sber_gigachat"
     whisper_local = "whisper_local"
@@ -15,7 +15,11 @@ class TranscribeProvider(str, Enum):
 
 
 class AnalyzeProvider(str, Enum):
-    "Провайдеры для анализа текста"
+    """Enum of providers for analyzing speech text for the ML engine.
+
+    Attrs:
+        model_name: full name of the model to be used for the analysis.
+    """
 
     gigachat = "gigachat"
     openai = "openai"
@@ -29,9 +33,7 @@ class AnalyzeProvider(str, Enum):
 
 
 class PersonaRoles(str, Enum):
-    """
-    Модель для выбора роли ИИ оценщика.
-    """
+    """Enum of the critic's roles in text analysis."""
 
     strict_critic = "strict_critic"
     kind_mentor = "kind_mentor"
@@ -40,6 +42,12 @@ class PersonaRoles(str, Enum):
 
 
 class TaskState(str, Enum):
+    """Enum of Celery task states.
+
+    Attrs:
+        hint: default task information
+    """
+
     queued = "PENDING"
     processing = "PROCESSING"
     finished = "SUCCESS"
@@ -51,6 +59,12 @@ class TaskState(str, Enum):
 
 
 class TaskStage(Enum):
+    """Enum of all MLEngine task stages with metadata for Celery & frontend.
+
+    Attrs:
+        meta: a dict containing the name, completion percentage, and UI text.
+    """
+
     transcription = ("transcription", 0.1, "Транскрибация аудио...")
     video_analisis = ("video_analysis", 0.25, "Анализ видео...")
     audio_analisis = ("audio_analisis", 0.4, "Анализ аудио...")
@@ -71,6 +85,8 @@ class TaskStage(Enum):
 
 
 class TranscriptWord(BaseModel):
+    """A model that stores about transcribed words."""
+
     start: float
     end: float
     text: str
@@ -78,6 +94,8 @@ class TranscriptWord(BaseModel):
 
 
 class TranscriptSegment(BaseModel):
+    """A model that stores about transcribed words."""
+
     start: float
     end: float
     text: str
@@ -85,22 +103,30 @@ class TranscriptSegment(BaseModel):
 
 
 class TempoPoint(BaseModel):
+    """A model that stores about speech rate."""
+
     time: float
     wpm: float
     zone: str
 
 
 class PauseInterval(BaseModel):
+    """A model that stores about speech pauses."""
+
     start: float
     end: float
     duration: float
 
 
 class SlideAnalysis(BaseModel):
+    """A model that stores about user presentation analysis."""
+
     presentation_summary: str
 
 
 class ConfidenceComponents(BaseModel):
+    """A model that stores about analysis user gestures and voice."""
+
     volume_level: str
     volume_score: int
     volume_label: str
@@ -116,17 +142,23 @@ class ConfidenceComponents(BaseModel):
 
 
 class ConfidenceIndex(BaseModel):
+    """A model that stores info about the final score and its weighting factors."""
+
     total: float
     total_label: str
     components: ConfidenceComponents
 
 
 class FillersSummary(BaseModel):
+    """A model that stores info about final assessment of the impact of filler words."""
+
     count: int
     ratio: int | float
 
 
 class AnalysisResult(BaseModel):
+    """A model for sending the final results of the analysis."""
+
     task_id: str
     video_path: str
     transcript: List[TranscriptSegment]
@@ -147,6 +179,8 @@ class AnalysisResult(BaseModel):
 
 
 class TaskStatusResponse(BaseModel):
+    """A model for sending the status of a speech processing task."""
+
     task_id: str
     state: TaskState
     hint: str
@@ -156,8 +190,6 @@ class TaskStatusResponse(BaseModel):
 
 
 class UploadResponse(BaseModel):
-    """
-    Модель данных, которые возращает /process
-    """
+    """A model for sending information about a task that has been assigned."""
 
     task_id: str
