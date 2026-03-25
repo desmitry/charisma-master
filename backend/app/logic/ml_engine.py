@@ -528,6 +528,8 @@ class MLEngine:
             t_start, t_end = t, t + window_sec
             count = sum(1 for w in words if w.start >= t_start and w.end < t_end)
             wpm = (count / window_sec) * 60
+
+            # TODO: Move zone values to TempoColorEnum.
             zone = "green"
             if wpm < 80 or wpm > 160:
                 zone = "red"
@@ -552,6 +554,7 @@ class MLEngine:
         Returns:
             str: Russian label describing the score level.
         """
+        # TODO: Remove hardcode values from methods code.
         if score >= 90:
             return "Великолепно"
         if score >= 80:
@@ -580,6 +583,7 @@ class MLEngine:
             rms = librosa.feature.rms(y=y)[0]
             mean_rms = np.mean(rms)
 
+            # TODO: Remove hardcode values from methods code.
             if mean_rms < 0.01:
                 vol_label = "Очень тихо"
             elif mean_rms < 0.03:
@@ -745,6 +749,7 @@ class MLEngine:
         logger.debug(f"Frames with Pose detected: {frames_with_pose}")
         logger.debug(f"Accumulated Movement: {movement_accum}")
 
+        # TODO: Remove hardcode values from methods code.
         gaze_score = 0
         if frames_with_face > 10:
             gaze_score = (looking_at_camera_frames / frames_with_face) * 100
