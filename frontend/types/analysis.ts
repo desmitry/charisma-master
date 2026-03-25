@@ -1,5 +1,5 @@
-export type ProcessingState = "queued" | "processing" | "finished" | "failed";
-export type ProcessingStage = "listening" | "gestures" | "analyzing";
+export type ProcessingState = "PENDING" | "PROCESSING" | "SUCCESS" | "FAILURE";
+export type TaskStage = [string, number, string];
 
 export interface TranscriptWord {
   start: number;
@@ -28,25 +28,48 @@ export interface TempoPoint {
 }
 
 export interface ConfidenceComponents {
+  volume_level: string;
   volume_score: number;
+  volume_label: string;
   filler_score: number;
+  filler_label: string;
   gaze_score: number;
-  gesture_score?: number;
-  gesture_advice?: string;
-  tone_score?: number;
+  gaze_label: string;
+  gesture_score: number;
+  gesture_label: string;
+  gesture_advice: string;
+  tone_score: number;
+  tone_label: string;
 }
 
 export interface ConfidenceIndex {
   total: number;
+  total_label: string;
   components: ConfidenceComponents;
 }
 
-export interface StandardCriterionScore {
-  criterion_name: string;
-  criterion_description: string;
-  criterion_current_value: number;
-  criterion_max_value: number;
-  criterion_feetback: string;
+export interface EvaluationCriterion {
+  name: string;
+  description: string;
+  max_value: number;
+  current_value?: number;
+  feedback?: string;
+}
+
+export interface EvaluationCriteriaReport {
+  total_score: number;
+  max_score: number;
+  criteria: EvaluationCriterion[];
+}
+
+export interface SpeechReport {
+  summary: string;
+  structure: string;
+  mistakes: string;
+  ideal_text: string;
+  persona_feedback: string;
+  dynamic_fillers: string[];
+  presentation_feedback: string;
 }
 
 export interface AnalysisResult {
@@ -58,35 +81,19 @@ export interface AnalysisResult {
     count: number;
     ratio: number;
   };
-  long_pauses?: LongPause[];
-  dynamic_fillers?: string[];
+  long_pauses: LongPause[];
   confidence_index: ConfidenceIndex;
-  summary: string;
-  structure: string;
-  mistakes: string;
-  ideal_text: string;
-  persona_feedback?: string | null;
-  presentation_summary?: string;
-  standard_criteria_result?: number;
-  standard_criteria_max?: number;
-  standard_criteria_scores?: StandardCriterionScore[];
-  analyze_provider?: string;
-  analyze_model?: string;
-  slide_analysis?: any;
-  slide_text_density?: any;
-  raw_metrics?: {
-    gaze_score?: number;
-    gesture_score?: number;
-    raw_movement?: number;
-    volume_score?: number;
-    tone_score?: number;
-    pitch_std?: number;
-  };
+  speech_report: SpeechReport;
+  evaluation_criteria_report: EvaluationCriteriaReport;
+  analyze_provider: string;
+  analyze_model: string;
+  transcribe_model: string;
 }
 
 export interface TaskStatusResponse {
   state: ProcessingState;
-  stage?: string | null;
+  hint: string;
+  stage?: TaskStage | null;
   progress?: number;
   error?: string | null;
   task_id: string;

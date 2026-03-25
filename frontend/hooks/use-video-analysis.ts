@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { AnalysisResult } from "@/types/analysis";
-import { pollForAnalysis, uploadVideo } from "@/lib/api";
+import { AnalysisResult, TaskStage } from "@/types/analysis";
+import { normalizeAnalysisResult, pollForAnalysis, uploadVideo } from "@/lib/api";
 import { getFastRequestsCount, decrementFastRequests, hasFastRequestsAvailable } from "@/lib/cookie-utils";
 
 export type Stage = "landing" | "processing" | "result";
@@ -48,7 +48,7 @@ export function useVideoAnalysis() {
     try {
       const urlObj = new URL(url);
       const hostname = urlObj.hostname.toLowerCase();
-      return hostname.includes('rutube.ru') && urlObj.pathname.includes('/video/');
+      return hostname.includes("rutube.ru") && urlObj.pathname.includes("/video/");
     } catch {
       return false;
     }
@@ -74,16 +74,13 @@ export function useVideoAnalysis() {
           file.type.includes("pdf")
         ) {
           setPresentationFile(file);
-        } else if (
-          name.endsWith(".docx") ||
-          file.type.includes("wordprocessingml")
-        ) {
+        } else if (name.endsWith(".docx") || file.type.includes("wordprocessingml")) {
           setStandardFile(file);
           setStandardMode("custom");
         }
       });
       if (!isVideoSet && !selectedFile) {
-        // Option to just let them upload docx without error if video is already set
+        // no-op: allow adding supporting files after a video is already selected
       }
     }
   };
@@ -135,10 +132,7 @@ export function useVideoAnalysis() {
           file.type.includes("pdf")
         ) {
           setPresentationFile(file);
-        } else if (
-          name.endsWith(".docx") ||
-          file.type.includes("wordprocessingml")
-        ) {
+        } else if (name.endsWith(".docx") || file.type.includes("wordprocessingml")) {
           setStandardFile(file);
           setStandardMode("custom");
         }
@@ -154,11 +148,7 @@ export function useVideoAnalysis() {
     setVideoUrl(url);
     const isValid = validateRuTubeUrl(url);
     setIsValidRuTubeUrl(isValid);
-    if (url && !isValid) {
-      setError(null);
-    } else {
-      setError(null);
-    }
+    setError(null);
     if (url && isValid) {
       setSelectedFile(null);
     }
@@ -167,8 +157,7 @@ export function useVideoAnalysis() {
   const loadMockResponse = async (): Promise<AnalysisResult> => {
     const res = await fetch("/62a26154-2d3e-408d-8737-2dbe5255eac6.json");
     if (!res.ok) throw new Error("mock fetch failed");
-    const data = (await res.json()) as any;
-    return data;
+    return normalizeAnalysisResult(await res.json());
   };
 
   const startMockFlow = async () => {
@@ -193,14 +182,9 @@ export function useVideoAnalysis() {
     setIsUploading(false);
   };
 
-  const stageName = (value?: string | null) => {
+  const stageName = (value?: TaskStage | null) => {
     if (!value) return "Анализируем видео...";
-    switch (value) {
-      case "listening": return "Обрабатываем аудиодорожку...";
-      case "gestures": return "Анализируем видео...";
-      case "analyzing": return "Формируем отчёт...";
-      default: return "Анализируем видео...";
-    }
+    return value[2] || "Анализируем видео...";
   };
 
   const handleAnalyze = async () => {
@@ -220,45 +204,66 @@ export function useVideoAnalysis() {
 
     try {
       setIsExiting(true);
-      let task_id: string;
-      try {
-        setProgress(0.1);
-        setStatusText("Загружаем видео...");
-        const actualProvider = selectedLlmProvider === "default" ? "gigachat" : selectedLlmProvider;
+      let taskId: string;
 
-        if (selectedModel === "whisper_openai") {
-          if (!hasFastRequestsAvailable()) throw new Error("У вас закончились запросы для Fast модели");
-          decrementFastRequests();
-          setFastRequestsCount(getFastRequestsCount());
+      setProgress(0.1);
+      setStatusText("Загружаем видео...");
+
+      const analyzeProvider = selectedLlmProvider === "default" ? "gigachat" : selectedLlmProvider;
+      const transcribeProvider =
+        selectedModel || (analyzeProvider === "openai" ? "whisper_openai" : "sber_gigachat");
+      const evaluationCriteriaId = standardMode === "preset" ? "default" : undefined;
+
+      if (selectedModel === "whisper_openai") {
+        if (!hasFastRequestsAvailable()) {
+          throw new Error("У вас закончились запросы для Fast модели");
         }
-
-        const uploadResult = await uploadVideo(
-          selectedFile,
-          videoUrl || null,
-          selectedPersona || undefined,
-          actualProvider || undefined,
-          selectedModel || undefined,
-          presentationFile,
-          standardMode === "custom" ? standardFile : null
-        );
-        if (!uploadResult?.task_id) throw new Error("Не получен task_id от сервера");
-        task_id = uploadResult.task_id;
-      } catch (uploadErr) {
-        throw uploadErr;
+        decrementFastRequests();
+        setFastRequestsCount(getFastRequestsCount());
       }
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      const uploadResult = await uploadVideo(
+        selectedFile,
+        videoUrl || null,
+        selectedPersona || undefined,
+        analyzeProvider || undefined,
+        transcribeProvider,
+        presentationFile,
+        standardMode === "custom" ? standardFile : null,
+        evaluationCriteriaId
+      );
+
+      if (!uploadResult?.task_id) {
+        throw new Error("Не получен task_id от сервера");
+      }
+      taskId = uploadResult.task_id;
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
       setStage("processing");
       setProgress(0.3);
       setStatusText("Видео принято, начинаем анализ...");
 
-      const analysis = await pollForAnalysis(task_id, (status) => {
-        const p = status.progress ?? (status.state === "finished" ? 1 : 0.4);
-        setProgress(Math.max(0.3, Math.min(1, p)));
-        setStatusText(stageName(status.stage));
-      }, 900_000);
+      const analysis = await pollForAnalysis(
+        taskId,
+        (status) => {
+          const nextProgress =
+            status.state === "SUCCESS" ? 1 : Math.max(0, Math.min(1, status.progress ?? 0));
 
-      if (!analysis) throw new Error("Анализ не получен");
+          setProgress(Math.max(0.3, nextProgress));
+
+          if (status.state === "PROCESSING" && (status.progress ?? 0) !== 0 && status.hint) {
+            setStatusText(status.hint);
+            return;
+          }
+
+          setStatusText(stageName(status.stage));
+        },
+        900_000
+      );
+
+      if (!analysis) {
+        throw new Error("Анализ не получен");
+      }
 
       setResult(analysis);
       setProgress(1);
