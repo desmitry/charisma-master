@@ -1,9 +1,9 @@
+# TODO: Update prompts schemes.
 # ruff: noqa: E501
 from app.models.schemas import PersonaRoles
 
 
-# TODO: Update prompts schemes.
-def get_persona_prompt(persona: PersonaRoles) -> str:
+def _get_persona_prompt(persona: PersonaRoles) -> str:
     match persona:
         case PersonaRoles.strict_critic:
             return "строгий критик, указывает на все недостатки жестко"
@@ -15,7 +15,9 @@ def get_persona_prompt(persona: PersonaRoles) -> str:
             return "Эксперт по публичным выступлениям с многолетним опытом"
 
 
-def get_system_prompt(persona_prompt: str) -> str:
+def get_system_prompt(persona: PersonaRoles) -> str:
+    persona_prompt = _get_persona_prompt(persona)
+
     system_prompt = """
         Твоя персона: {}.
 

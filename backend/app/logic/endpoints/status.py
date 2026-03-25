@@ -9,6 +9,14 @@ router = APIRouter()
 
 @router.get("/tasks/{task_id}/status", response_model=TaskStatusResponse)
 async def get_task_status(task_id: str):
+    """Providing status on the progress of the speech processing task.
+
+    Args:
+        task_id (str): Task UUID.
+
+    Returns:
+        TaskStatusResponse: JSON containing a task status report.
+    """
     task_result = AsyncResult(task_id, app=celery_app)
 
     response = TaskStatusResponse(

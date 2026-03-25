@@ -12,6 +12,7 @@ import numpy as np
 import openai
 import requests
 import urllib3
+from faster_whisper import WhisperModel
 
 from app.config import settings
 from app.models.schemas import (
@@ -28,6 +29,20 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class MLEngine:
+    """ML engine for speech and video analysis.
+    Provides transcription, audio analysis, and video metrics extraction.
+
+    Raises:
+        RuntimeError: If Sber authentication fails.
+        RuntimeError: If Sber audio upload fails.
+        RuntimeError: If Sber task creation fails.
+        RuntimeError: If Sber task fails during processing.
+        TimeoutError: If Sber transcription times out.
+
+    Returns:
+        dict: Analysis results containing audio/video metrics.
+    """
+
     _whisper_local_model = None
 
     VISUAL_DEVIATION = 0.25
@@ -59,12 +74,20 @@ class MLEngine:
     def load_model(
         cls,
         model_name: Optional[str] = None,
-    ):
+    ) -> Optional[WhisperModel]:
+        """Load the Whisper model for local transcription.
+
+        Args:
+            model_name (Optional[str], optional):
+                Provider name to determine which model to load.
+                Defaults to None.
+
+        Returns:
+            WhisperModel: Loaded Whisper model instance, or None if not applicable.
+        """
         if model_name == TranscribeProvider.whisper_local:
             if cls._whisper_local_model is None:
                 logger.info(f"Load local Whisper model ({settings.whisper_compute_type})...")
-
-                from faster_whisper import WhisperModel
 
                 cls._whisper_local_model = WhisperModel(
                     settings.whisper_model_type,
@@ -78,6 +101,12 @@ class MLEngine:
 
     @staticmethod
     def extract_audio(video_path: str, output_path: str):
+        """Extract audio track from a video file using FFmpeg.
+
+        Args:
+            video_path (str): Path to the input video file.
+            output_path (str): Path to save the extracted audio file.
+        """
         command = [
             "ffmpeg",
             "-y",
@@ -111,6 +140,14 @@ class MLEngine:
 
     @staticmethod
     def _convert_to_sber_format(input_path: str) -> str:
+        """Convert audio file to Sber API format (16kHz, mono, PCM).
+
+        Args:
+            input_path (str): Path to the input audio file.
+
+        Returns:
+            str: Path to the converted audio file.
+        """
         temp_path = input_path.replace(".wav", "_sber_16k.wav")
         command = [
             "ffmpeg",
@@ -133,11 +170,21 @@ class MLEngine:
         subprocess.run(command, capture_output=True, check=True)  # noqa: S603
         return temp_path
 
+    # TODO: Refactor this function.
     @staticmethod
     def transcribe(
         audio_path: str,
         provider: TranscribeProvider,
     ) -> List[TranscriptSegment]:
+        """Transcribe audio using the specified provider.
+
+        Args:
+            audio_path (str): Path to the audio file.
+            provider (TranscribeProvider): Transcription provider to use.
+
+        Returns:
+            List[TranscriptSegment]: List of transcribed segments with timestamps and words.
+        """
         if provider == TranscribeProvider.sber_gigachat:
             logger.info("Using Sber SaluteSpeech API...")
 
@@ -148,6 +195,9 @@ class MLEngine:
                 if os.path.exists(sber_audio_path):
                     os.remove(sber_audio_path)
 
+        # FIXME: Added list of words
+        # timestamp_granularities=["segment", "words"]
+        # Maybe, doesn't work, can't test.
         elif provider == TranscribeProvider.whisper_openai:
             logger.info("Using OpenAI Whisper API...")
             client = openai.OpenAI(
@@ -162,9 +212,6 @@ class MLEngine:
                     response_format="verbose_json",
                     timestamp_granularities=["word", "segment"],
                 )
-            # FIXME: Added list of words
-            # timestamp_granularities=["segment", "words"]
-            # Maybe, doesn't work, can't test.
             segments: list[TranscriptSegment] = []
             for seg in transcript.segments:
                 words = []
@@ -216,9 +263,21 @@ class MLEngine:
     # TODO: Refactor this function.
     @staticmethod
     def _transcribe_sber_api_async(audio_path: str) -> List[TranscriptSegment]:
-        if not settings.gigachat_credentials:
-            raise ValueError("GIGACHAT_CREDENTIALS not found in .env")
+        """Transcribe audio using Sber SaluteSpeech API asynchronously.
 
+        Args:
+            audio_path (str): Path to the audio file.
+
+        Raises:
+            RuntimeError: If Sber authentication fails.
+            RuntimeError: If audio upload to Sber fails.
+            RuntimeError: If transcription task creation fails.
+            RuntimeError: If transcription task fails or is cancelled.
+            TimeoutError: If transcription takes too long.
+
+        Returns:
+            List[TranscriptSegment]: List of transcribed segments with timestamps and words.
+        """
         auth_url = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
 
         creds = settings.gigachat_credentials.strip().strip("'").strip('"')
@@ -400,6 +459,18 @@ class MLEngine:
         transcript: List[TranscriptSegment],
         threshold: float = 2.0,
     ) -> List[PauseInterval]:
+        """Detect long pauses between transcript segments.
+
+        Args:
+            transcript (List[TranscriptSegment]):
+                List of transcribed segments to analyze.
+            threshold (float, optional):
+                Minimum pause duration in seconds to be considered long.
+                Defaults to 2.0.
+
+        Returns:
+            List[PauseInterval]: List of detected pause intervals.
+        """
         pauses = []
         if not transcript:
             return pauses
@@ -418,6 +489,18 @@ class MLEngine:
         transcript: List[TranscriptSegment],
         window_sec=5.0,
     ) -> List[TempoPoint]:
+        """Calculate speech tempo (words per minute) over time.
+
+        Args:
+            transcript (List[TranscriptSegment]):
+                List of transcribed segments to analyze.
+            window_sec (float, optional):
+                Time window in seconds for tempo calculation.
+                Defaults to 5.0.
+
+        Returns:
+            List[TempoPoint]: List of tempo points with time, WPM, and zone.
+        """
         words = []
         for seg in transcript:
             if seg.words:
@@ -461,6 +544,14 @@ class MLEngine:
 
     @staticmethod
     def get_score_label(score: float) -> str:
+        """Convert a numeric score to a human-readable label.
+
+        Args:
+            score (float): Numeric score value (0-100).
+
+        Returns:
+            str: Russian label describing the score level.
+        """
         if score >= 90:
             return "Великолепно"
         if score >= 80:
@@ -475,6 +566,14 @@ class MLEngine:
 
     @staticmethod
     def analyze_audio(audio_path: str) -> Dict:
+        """Analyze audio file for volume and tone metrics.
+
+        Args:
+            audio_path (str): Path to the audio file to analyze.
+
+        Returns:
+            Dict: Dictionary containing volume and tone scores and labels.
+        """
         try:
             y, sr = librosa.load(audio_path, sr=None)
 
@@ -516,8 +615,17 @@ class MLEngine:
             logger.error(f"Audio analysis failed: {e}")
             return MLEngine.get_empty_audio_metrics()
 
+    # TODO: Refactor this function.
     @staticmethod
     def analyze_video(video_path: str) -> Dict:
+        """Analyze video file for gaze and gesture metrics.
+
+        Args:
+            video_path (str): Path to the video file to analyze.
+
+        Returns:
+            Dict: Dictionary containing gaze and gesture scores, labels, and advice.
+        """
         logger.debug(f"Video Analysis: {video_path}")
 
         if not os.path.exists(video_path):
@@ -667,6 +775,11 @@ class MLEngine:
 
     @staticmethod
     def get_empty_video_metrics() -> dict:
+        """Return an empty video metrics dictionary with default values.
+
+        Returns:
+            dict: Dictionary with default values for gaze and gesture metrics.
+        """
         return {
             "gaze_score": 0,
             "gaze_label": "Нет данных",
@@ -677,6 +790,11 @@ class MLEngine:
 
     @staticmethod
     def get_empty_audio_metrics() -> dict:
+        """Return an empty audio metrics dictionary with default values.
+
+        Returns:
+            dict: Dictionary with default values for volume and tone metrics.
+        """
         return {
             "volume_score": 0,
             "volume_level": "Нет данных",
