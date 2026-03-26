@@ -10,7 +10,7 @@ dependencies = [
     "faster-whisper>=1.2.1",
     "gigachat==0.1.43",
     "librosa>=0.11.0",
-    "mediapipe>=0.10.14",
+    "mediapipe==0.10.21",
     "numpy>=1.26.4",
     "openai>=2.8.1",
     "opencv-contrib-python>=4.11.0.86",
