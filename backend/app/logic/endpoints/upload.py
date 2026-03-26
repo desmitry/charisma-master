@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import shutil
@@ -39,6 +40,41 @@ def _download_uploaded_file(task_id: str, uploaded_file: UploadFile) -> str:
         shutil.copyfileobj(uploaded_file.file, buffer)
 
     return str(file_path)
+
+
+def _load_criteria_preset(criteria_id: str) -> str:
+    """Load evaluation criteria preset JSON file.
+
+    Args:
+        criteria_id (str): UUID identifier for the criteria preset.
+
+    Raises:
+        HTTPException: If preset file doesn't exist or is invalid.
+
+    Returns:
+        str: Absolute path to the preset JSON file.
+    """
+    preset_path = settings.base_dir / "presets" / f"{criteria_id}.json"
+
+    if not preset_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Пресет с критериями '{criteria_id}' не найден"
+        )
+
+    try:
+        with open(preset_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            # Validate it has expected structure
+            if not isinstance(data, dict) or "criteria" not in data:
+                raise ValueError("Preset must be a JSON object with 'criteria' array")
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=500,
+            detail="Некорректный формат файла пресета"
+        )
+
+    return str(preset_path)
 
 
 def _download_user_speech_from_rutube(task_id: str, video_url: str) -> str:
@@ -200,19 +236,17 @@ async def process(
 
     task_id = str(uuid.uuid4())
 
-    # TODO: Add evaluation criteria loader.
-    # You might be able to use the same method as for `user_speech_file`
+    # Save evaluation criteria file if provided
     evaluation_criteria_final_path = None
     if evaluation_criteria_file:
-        pass
+        evaluation_criteria_final_path = _download_uploaded_file(task_id, evaluation_criteria_file)
     if evaluation_criteria_id:
-        pass
+        evaluation_criteria_final_path = _load_criteria_preset(evaluation_criteria_id)
 
-    # TODO: Add presentation file loader.
-    # You might be able to use the same method as for `user_speech_file`
+    # Save presentation file if provided
     presentation_final_path = None
     if user_presentation_file:
-        pass
+        presentation_final_path = _download_uploaded_file(task_id, user_presentation_file)
 
     speech_final_path = None
     if user_speech_file:
