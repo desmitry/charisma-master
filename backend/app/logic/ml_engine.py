@@ -280,7 +280,7 @@ class MLEngine:
         """
         auth_url = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
 
-        creds = settings.gigachat_credentials.strip().strip("'").strip('"')
+        creds = settings.sber_salute_credentials.strip().strip("'").strip('"')
         if creds.lower().startswith("basic "):
             creds = creds[6:].strip()
 

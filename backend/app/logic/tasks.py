@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import subprocess
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 
@@ -104,11 +105,13 @@ def process_video_pipeline(
     speech_video_path: str,
     evaluation_criteria_path: str,
     presentation_path: Optional[str],
-    analyze_provider: AnalyzeProvider,
-    transcribe_provider: TranscribeProvider,
-    persona: PersonaRoles,
+    analyze_provider: str | Enum,
+    transcribe_provider: str | Enum,
+    persona: str | Enum,
 ):
-    logger.debug(f"Task {task_id}: {transcribe_provider.value=}, {analyze_provider.value=}")
+    analyze_provider = AnalyzeProvider(analyze_provider)
+    transcribe_provider = TranscribeProvider(transcribe_provider)
+    persona = PersonaRoles(persona)
 
     try:
         self.update_state(
