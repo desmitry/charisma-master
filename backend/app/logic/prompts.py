@@ -1,62 +1,111 @@
-# TODO: Update prompts schemes.
-# ruff: noqa: E501
+"""Prompt management module with caching for LLM prompts.
+
+This module provides functions to load and cache prompts from files.
+Prompts are stored in backend/app/media/prompts/ directory.
+"""
+
+from pathlib import Path
+
 from app.models.schemas import PersonaRoles
 
+PROMPTS_DIR = Path(__file__).parent.parent / "media" / "prompts"
+PERSONAS_DIR = PROMPTS_DIR / "personas"
+PRESETS_DIR = Path(__file__).parent.parent / "presets"
 
-def _get_persona_prompt(persona: PersonaRoles) -> str:
-    match persona:
-        case PersonaRoles.strict_critic:
-            return "строгий критик, указывает на все недостатки жестко"
-        case PersonaRoles.kind_mentor:
-            return "добрый наставник, поддерживает и дает мягкие советы"
-        case PersonaRoles.steve_jobs_style:
-            return "Стив Джобс, оценивает выступление с точки зрения минимализма, страсти и подачи"
-        case PersonaRoles.speech_review_specialist:
-            return "Эксперт по публичным выступлениям с многолетним опытом"
+_prompt_cache: dict[str, str] = {}
+
+
+def _load_prompt_file(filepath: Path) -> str:
+    """Load prompt content from file.
+
+    Args:
+        filepath: Path to the prompt file.
+
+    Returns:
+        Content of the prompt file as string.
+
+    Raises:
+        FileNotFoundError: If prompt file does not exist.
+    """
+    with open(filepath, "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+
+def _get_cached_prompt(cache_key: str, filepath: Path) -> str:
+    """Get prompt from cache or load from file.
+
+    Args:
+        cache_key: Unique key for caching.
+        filepath: Path to the prompt file.
+
+    Returns:
+        Cached or freshly loaded prompt content.
+    """
+    if cache_key not in _prompt_cache:
+        _prompt_cache[cache_key] = _load_prompt_file(filepath)
+    return _prompt_cache[cache_key]
+
+
+def get_persona_prompt(persona: PersonaRoles) -> str:
+    """Load persona-specific prompt from file.
+
+    Args:
+        persona: Persona role to load prompt for.
+
+    Returns:
+        Persona prompt content.
+    """
+    filepath = PERSONAS_DIR / f"{persona.value}.txt"
+    return _get_cached_prompt(f"persona:{persona.value}", filepath)
 
 
 def get_analyze_speech_system_prompt(persona: PersonaRoles) -> str:
-    persona_prompt = _get_persona_prompt(persona)
+    """Get speech analysis system prompt with persona substitution.
 
-    system_prompt = """
-        Твоя персона: {}.
+    Args:
+        persona: Persona role for the analysis.
 
-        Тебе даны:
-        1. Текст выступления (транскрипция). ВНИМАНИЕ: Транскрипция получена автоматически, в ней могут отсутствовать знаки препинания и заглавные буквы. Игнорируй отсутствие пунктуации, оценивай только смысл, структуру речи и подбор слов. Не критикуй спикера за орфографию или странные словоформы, оценивай только смысл и структуру.
-        2. Текст, распознанный со слайдов презентации.
-    
-        Твоя задача проанализировать это и вернуть JSON.
-        ВАЖНО: Верни результат СТРОГО в формате чистого JSON без лишнего текста.
-        НЕ НУЖНО ДОБАВЛЯТЬ ДОПОЛНИТЕЛЬНЫЕ ПОЛЯ ИНАЧЕ JSON БУДЕТ С ОШИБКАМИ.
-        НЕ ЗАБУДЬ, ЧТО ТВОЙ ВЫХОДНОЙ JSON ДОЛЖЕН БЫТЬ ПОЛНОСТЬЮ КОРРЕКТНЫМ.
+    Returns:
+        Formatted system prompt with persona inserted.
+    """
+    base_prompt = _get_cached_prompt(
+        "speech_analysis",
+        PROMPTS_DIR / "speech_analysis.txt",
+    )
+    persona_prompt = get_persona_prompt(persona)
 
-        ЗАДАЧА 1: Найди "Динамические слова-паразиты" (dynamic_filters).
-        Это слова, которые спикер повторяет слишком часто (например: "собственно", "как бы", "вот", "значит"). Верни список из 3-5 таких слов.
+    tools = ""
 
-        ЗАДАЧА 2: Оцени презентацию.
-        - Если в разделе СЛАЙДЫ написано "Текст отсутствует", пустое поле или что-то в этом роде: в поле "slides_feedback" напиши строго: "Текст презентации не обнаружен".
-        - Если текст есть: оцени его качество. Если текста слишком много, напиши, что слайды перегружены.
-
-        ЗАДАЧА 3: Оценить всё выступление.
-
-        Формат JSON ответа (все поля обязательны)::
-        - "summary": краткое содержание (2-3 предложения)
-        - "structure": описание структуры (Вступление, Основная часть, Вывод), оцени наличие этих логический блоков в выступлении.
-        - "mistakes": основные ошибки (стилистика, логика, повторы)
-        - "ideal_text": напиши лаконичный и чистый текст, отражающий главную мысль выступления, которые необходимо было донести выступающему до своей аудитории (первые 3-4 предложения)
-        - "persona_feedback": обратная связь именно в твоем стиле ({}),
-        - "dynamic_fillers": ["слово1", "слово2", "слово3"],
-        - "presentation_feedback": "Отзыв о слайдах"
-        """
-
-    return system_prompt.format(persona_prompt, persona_prompt)
+    return base_prompt.format(persona=persona_prompt, tools=tools)
 
 
-# TODO: Add prompt for evalution criteria identity.
 def get_evaluation_criteria_identity_prompt() -> str:
-    return ""
+    """Get criteria extraction prompt.
+
+    Returns:
+        Criteria extraction system prompt.
+    """
+    base_prompt = _get_cached_prompt(
+        "criteria_extraction",
+        PROMPTS_DIR / "criteria_extraction.txt",
+    )
+
+    tools = ""
+
+    return base_prompt.format(tools=tools)
 
 
-# TODO: Add prompt for evalution criteria identity.
 def get_evaluation_criteria_rate_prompt() -> str:
-    return ""
+    """Get criteria evaluation prompt.
+
+    Returns:
+        Criteria evaluation system prompt.
+    """
+    base_prompt = _get_cached_prompt(
+        "criteria_evaluation",
+        PROMPTS_DIR / "criteria_evaluation.txt",
+    )
+
+    tools = ""
+
+    return base_prompt.format(tools=tools)
