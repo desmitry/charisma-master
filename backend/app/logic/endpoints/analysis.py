@@ -1,15 +1,26 @@
 import json
 
+from fastapi import APIRouter, HTTPException
+
 from app.config import settings
 from app.models.schemas import AnalysisResult
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
 
 router = APIRouter()
 
 
 @router.get("/analysis/{task_id}", response_model=AnalysisResult)
 async def get_analysis(task_id: str):
+    """Processing the request for the final analysis results of the presentation.
+
+    Args:
+        task_id (str): Task UUID.
+
+    Raises:
+        HTTPException: The report could not be found.
+
+    Returns:
+        AnalysisResult: JSON containing a task analysis report.
+    """
     file_path = settings.results_dir / f"{task_id}.json"
 
     if not file_path.exists():
@@ -22,19 +33,3 @@ async def get_analysis(task_id: str):
         data = json.load(f)
 
     return data
-
-
-@router.get("/analysis/{task_id}/pdf")
-async def get_pdf(task_id: str):
-    file_path = settings.results_dir / f"{task_id}.pdf"
-    if not file_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="PDF not found",
-        )
-
-    return FileResponse(
-        file_path,
-        media_type="application/pdf",
-        filename=f"report_{task_id}.pdf",
-    )

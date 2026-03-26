@@ -1,30 +1,51 @@
-from app.celery_app import celery_app
-from app.models.schemas import ProcessingState, TaskStatusResponse
 from celery.result import AsyncResult
 from fastapi import APIRouter
+
+from app.celery_app import celery_app
+from app.models.schemas import TaskState, TaskStatusResponse
 
 router = APIRouter()
 
 
 @router.get("/tasks/{task_id}/status", response_model=TaskStatusResponse)
 async def get_task_status(task_id: str):
+    """Providing status on the progress of the speech processing task.
+
+    Args:
+        task_id (str): Task UUID.
+
+    Returns:
+        TaskStatusResponse: JSON containing a task status report.
+    """
     task_result = AsyncResult(task_id, app=celery_app)
 
-    response = TaskStatusResponse(task_id=task_id, state=ProcessingState.queued)
+    response = TaskStatusResponse(
+        task_id=task_id,
+        state=TaskState.queued,
+        hint=TaskState.queued.hint,
+    )
 
-    if task_result.state == "PENDING":
-        response.state = ProcessingState.queued
-    elif task_result.state == "PROCESSING":
-        response.state = ProcessingState.processing
+    if task_result.state == TaskState.queued:
+        response.state = TaskState.queued
+        response.hint = TaskState.queued.hint
+
+    elif task_result.state == TaskState.processing:
+        response.state = TaskState.processing
+        response.hint = TaskState.processing.hint
         info = task_result.info
         if isinstance(info, dict):
             response.stage = info.get("stage")
             response.progress = info.get("progress", 0.0)
-    elif task_result.state == "SUCCESS":
-        response.state = ProcessingState.finished
+            response.hint = info.get("hint", response.hint)
+
+    elif task_result.state == TaskState.finished:
+        response.state = TaskState.finished
+        response.hint = TaskState.finished.hint
         response.progress = 1.0
-    elif task_result.state == "FAILURE":
-        response.state = ProcessingState.failed
+
+    elif task_result.state == TaskState.failed:
+        response.state = TaskState.failed
+        response.hint = TaskState.failed.hint
         response.error = str(task_result.info)
 
     return response

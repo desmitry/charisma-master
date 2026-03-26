@@ -20,7 +20,8 @@ type ExportOptions = {
   structure: boolean;
   idealText: boolean;
   personaFeedback: boolean;
-  rawMetrics: boolean;
+  presentationFeedback: boolean;
+  criteria: boolean;
   longPauses: boolean;
   dynamicFillers: boolean;
 };
@@ -33,6 +34,13 @@ function formatPdfTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function zoneColor(zone?: string) {
+  if (zone === "red") return "#f43f5e";
+  if (zone === "yellow") return "#f59e0b";
+  if (zone === "green") return "#34d399";
+  return "rgba(255,255,255,0.5)";
+}
+
 export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
   const [options, setOptions] = useState<ExportOptions>({
     summary: true,
@@ -40,28 +48,29 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
     tempo: true,
     confidence: true,
     mistakes: true,
-    structure: false,
-    idealText: false,
-    personaFeedback: !!result.persona_feedback,
-    rawMetrics: !!result.raw_metrics,
-    longPauses: !!(result.long_pauses && result.long_pauses.length > 0),
-    dynamicFillers: !!(result.dynamic_fillers && result.dynamic_fillers.length > 0),
+    structure: true,
+    idealText: true,
+    personaFeedback: true,
+    presentationFeedback: true,
+    criteria: true,
+    longPauses: result.long_pauses.length > 0,
+    dynamicFillers: result.speech_report.dynamic_fillers.length > 0,
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const pdfContentRef = useRef<HTMLDivElement>(null);
 
   const transcriptChunks = useMemo(() => {
-    const words = result.transcript?.flatMap((seg) => seg.words) ?? [];
+    const words = result.transcript?.flatMap((segment) => segment.words) ?? [];
     const chunkSize = 600;
     const chunks: typeof words[] = [];
-    for (let i = 0; i < words.length; i += chunkSize) {
-      chunks.push(words.slice(i, i + chunkSize));
+    for (let index = 0; index < words.length; index += chunkSize) {
+      chunks.push(words.slice(index, index + chunkSize));
     }
     return chunks;
   }, [result.transcript]);
 
   const toggleOption = (key: keyof ExportOptions) => {
-    setOptions(prev => ({ ...prev, [key]: !prev[key] }));
+    setOptions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const generatePdf = async (close: () => void) => {
@@ -88,9 +97,7 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
 
       ensureBackground();
 
-      const blocks = Array.from(
-        pdfContentRef.current.querySelectorAll<HTMLElement>("[data-pdf-block]")
-      );
+      const blocks = Array.from(pdfContentRef.current.querySelectorAll<HTMLElement>("[data-pdf-block]"));
 
       for (const block of blocks) {
         const canvasOptions = {
@@ -100,11 +107,8 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
           useCORS: true,
         } as Html2CanvasOptions;
         const canvas = await html2canvas(block, canvasOptions);
-
         const isSliceable = block.getAttribute("data-pdf-slice") === "true";
-
         const imgData = canvas.toDataURL("image/png");
-
         const drawWidth = contentWidth;
         const drawHeight = (canvas.height * contentWidth) / canvas.width;
         const offsetX = margin;
@@ -165,14 +169,15 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
     { key: "summary" as const, label: "Статистика" },
     { key: "confidence" as const, label: "Уверенность" },
     { key: "tempo" as const, label: "Темп речи" },
+    { key: "criteria" as const, label: "Критерии ИИ" },
     { key: "transcript" as const, label: "Транскрипция" },
     { key: "mistakes" as const, label: "Ошибки" },
     { key: "structure" as const, label: "Структура" },
     { key: "idealText" as const, label: "Идеальный текст" },
-    { key: "personaFeedback" as const, label: "Фидбэк персоны", disabled: !result.persona_feedback },
-    { key: "rawMetrics" as const, label: "Сырые метрики", disabled: !result.raw_metrics },
-    { key: "longPauses" as const, label: "Долгие паузы", disabled: !result.long_pauses || result.long_pauses.length === 0 },
-    { key: "dynamicFillers" as const, label: "Слова-паразиты (список)", disabled: !result.dynamic_fillers || result.dynamic_fillers.length === 0 },
+    { key: "personaFeedback" as const, label: "Фидбэк персоны" },
+    { key: "presentationFeedback" as const, label: "Фидбэк по презентации" },
+    { key: "longPauses" as const, label: "Долгие паузы", disabled: result.long_pauses.length === 0 },
+    { key: "dynamicFillers" as const, label: "Слова-паразиты", disabled: result.speech_report.dynamic_fillers.length === 0 },
   ];
 
   return (
@@ -219,72 +224,51 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
               </span>
               <button
                 onClick={() => generatePdf(close)}
-                disabled={isGenerating || Object.values(options).every(v => !v)}
+                disabled={isGenerating || Object.values(options).every((value) => !value)}
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all",
-                  isGenerating || Object.values(options).every(v => !v)
+                  isGenerating || Object.values(options).every((value) => !value)
                     ? "bg-white/10 text-white/30 cursor-not-allowed"
                     : "bg-white text-black hover:bg-white/90 shadow-lg"
                 )}
               >
-                {isGenerating ? (
-                  <>
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    <span>Генерация...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
-                    <span>Скачать PDF</span>
-                  </>
-                )}
+                {isGenerating ? "Генерация..." : "Скачать PDF"}
               </button>
             </div>
           </>
         )}
       </PopoverPanel>
 
-
       <div className="fixed left-[-9999px] top-0">
-        <div 
+        <div
           ref={pdfContentRef}
-          style={{ 
+          style={{
             width: "750px",
             fontFamily: "Arial, Helvetica, sans-serif",
             backgroundColor: "#0a0a0a",
             color: "#ffffff",
-            padding: "0"
+            padding: "0",
           }}
         >
-          <div 
-            data-pdf-block
-            style={{ 
-              padding: "16px 20px",
-              backgroundColor: "#0a0a0a"
-            }}
-          >
+          <div data-pdf-block style={{ padding: "16px 20px", backgroundColor: "#0a0a0a" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <tbody>
                 <tr>
                   <td style={{ verticalAlign: "top" }}>
                     <h1 style={{ fontSize: "28px", fontWeight: "bold", margin: 0, color: "#fff" }}>Charisma</h1>
                     <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "14px", margin: "4px 0 0 0" }}>
-                      Отчёт по анализу выступления
+                      Отчет по анализу выступления
                     </p>
                   </td>
                   <td style={{ verticalAlign: "top", textAlign: "right", fontSize: "12px", color: "rgba(255,255,255,0.4)" }}>
                     <p style={{ margin: 0 }}>ID: {result.task_id.slice(0, 8)}</p>
                     <p style={{ margin: "2px 0 0 0" }}>{new Date().toLocaleDateString("ru-RU")}</p>
-                    {result.analyze_provider && result.analyze_model && (
-                      <p style={{ margin: "4px 0 0 0", color: "rgba(255,255,255,0.6)" }}>
-                        {result.analyze_provider}/{result.analyze_model}
-                      </p>
-                    )}
+                    <p style={{ margin: "4px 0 0 0", color: "rgba(255,255,255,0.6)" }}>
+                      {result.analyze_provider} / {result.analyze_model}
+                    </p>
+                    <p style={{ margin: "2px 0 0 0", color: "rgba(255,255,255,0.45)" }}>
+                      transcribe: {result.transcribe_model}
+                    </p>
                   </td>
                 </tr>
               </tbody>
@@ -292,33 +276,27 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
           </div>
 
           {options.summary && (
-            <div 
-              data-pdf-block
-              style={{ 
-                padding: "12px 20px",
-                backgroundColor: "#0a0a0a"
-              }}
-            >
+            <div data-pdf-block style={{ padding: "12px 20px", backgroundColor: "#0a0a0a" }}>
               <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Общая статистика</h2>
               <div>
                 {[
                   { label: "Паразиты", value: result.fillers_summary.count, sub: `${(result.fillers_summary.ratio * 100).toFixed(1)}%` },
-                  { label: "Уверенность", value: Math.min(100, Math.max(0, result.confidence_index.total)).toFixed(0), sub: "из 100" },
-                  { label: "Плотность", value: `${Math.min(100, Math.max(0, result.slide_analysis?.text_density_score ?? result.slide_text_density ?? 0)).toFixed(1)}%`, sub: "" },
+                  { label: "Уверенность", value: Math.min(100, Math.max(0, result.confidence_index.total)).toFixed(0), sub: result.confidence_index.total_label },
+                  { label: "Критерии ИИ", value: result.evaluation_criteria_report.total_score, sub: `из ${result.evaluation_criteria_report.max_score}` },
                   { label: "Фрагментов", value: result.transcript.length, sub: "" },
-                ].map((item, idx) => (
-                  <div 
+                ].map((item, index) => (
+                  <div
                     key={item.label}
-                    style={{ 
+                    style={{
                       display: "inline-block",
                       width: "168px",
-                      marginRight: idx < 3 ? "10px" : 0,
+                      marginRight: index < 3 ? "10px" : 0,
                       verticalAlign: "top",
-                      borderRadius: "12px", 
-                      backgroundColor: "rgba(255,255,255,0.05)", 
-                      padding: "14px", 
+                      borderRadius: "12px",
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      padding: "14px",
                       border: "1px solid rgba(255,255,255,0.1)",
-                      boxSizing: "border-box"
+                      boxSizing: "border-box",
                     }}
                   >
                     <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", margin: 0 }}>{item.label}</p>
@@ -331,31 +309,114 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
           )}
 
           {options.confidence && (
-            <div 
-              data-pdf-block
-              style={{ 
-                padding: "12px 20px",
-                backgroundColor: "#0a0a0a"
-              }}
-            >
-              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Индекс уверенности: {Math.min(100, Math.max(0, result.confidence_index.total)).toFixed(0)}/100</h2>
+            <div data-pdf-block style={{ padding: "12px 20px", backgroundColor: "#0a0a0a" }}>
+              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>
+                Индекс уверенности: {Math.min(100, Math.max(0, result.confidence_index.total)).toFixed(0)}/100
+              </h2>
               <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "16px", border: "1px solid rgba(255,255,255,0.1)" }}>
                 {[
-                  { label: "Громкость", value: Math.min(100, Math.max(0, result.confidence_index.components.volume_score)) },
-                  { label: "Паразиты", value: Math.min(100, Math.max(0, result.confidence_index.components.filler_score)) },
-                  { label: "Взгляд", value: Math.min(100, Math.max(0, result.confidence_index.components.gaze_score)) },
-                ].map((item, idx) => (
-                  <div key={item.label} style={{ marginBottom: idx < 2 ? "10px" : 0 }}>
+                  {
+                    label: "Громкость",
+                    value: result.confidence_index.components.volume_score,
+                    sub: `${result.confidence_index.components.volume_level} · ${result.confidence_index.components.volume_label}`,
+                  },
+                  {
+                    label: "Паразиты",
+                    value: result.confidence_index.components.filler_score,
+                    sub: result.confidence_index.components.filler_label,
+                  },
+                  {
+                    label: "Взгляд",
+                    value: result.confidence_index.components.gaze_score,
+                    sub: result.confidence_index.components.gaze_label,
+                  },
+                  {
+                    label: "Жесты",
+                    value: result.confidence_index.components.gesture_score,
+                    sub: result.confidence_index.components.gesture_label,
+                  },
+                  {
+                    label: "Тон",
+                    value: result.confidence_index.components.tone_score,
+                    sub: result.confidence_index.components.tone_label,
+                  },
+                ].map((item, index) => (
+                  <div key={item.label} style={{ marginBottom: index < 4 ? "10px" : 0 }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", marginBottom: "6px" }}>
                       <tbody>
                         <tr>
-                          <td style={{ color: "rgba(255,255,255,0.6)" }}>{item.label}</td>
-                          <td style={{ textAlign: "right", color: "#fff" }}>{(item.value || 0).toFixed(0)}%</td>
+                          <td style={{ color: "rgba(255,255,255,0.6)" }}>
+                            {item.label}
+                            <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", marginTop: "2px" }}>{item.sub}</div>
+                          </td>
+                          <td style={{ textAlign: "right", color: "#fff" }}>{Math.round(item.value)}%</td>
                         </tr>
                       </tbody>
                     </table>
                     <div style={{ position: "relative", height: "8px", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: "4px", overflow: "hidden" }}>
-                      <div style={{ position: "absolute", left: 0, top: 0, height: "8px", width: `${item.value || 0}%`, backgroundColor: "#fff", borderRadius: "4px" }} />
+                      <div style={{ position: "absolute", left: 0, top: 0, height: "8px", width: `${item.value}%`, backgroundColor: "#fff", borderRadius: "4px" }} />
+                    </div>
+                  </div>
+                ))}
+                {result.confidence_index.components.gesture_advice && (
+                  <div style={{ marginTop: "14px", fontSize: "12px", lineHeight: "1.6", color: "rgba(255,255,255,0.7)" }}>
+                    Совет по жестам: {result.confidence_index.components.gesture_advice}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {options.tempo && result.tempo.length > 0 && (
+            <div data-pdf-block style={{ padding: "12px 20px", backgroundColor: "#0a0a0a" }}>
+              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>
+                Темп речи (среднее: {(result.tempo.reduce((sum, point) => sum + point.wpm, 0) / result.tempo.length).toFixed(0)} WPM)
+              </h2>
+              <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "16px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {result.tempo.map((point) => (
+                    <div
+                      key={`${point.time}-${point.wpm}`}
+                      style={{
+                        padding: "8px 10px",
+                        borderRadius: "10px",
+                        border: `1px solid ${zoneColor(point.zone)}33`,
+                        backgroundColor: `${zoneColor(point.zone)}16`,
+                        minWidth: "110px",
+                      }}
+                    >
+                      <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>{formatPdfTime(point.time)}</div>
+                      <div style={{ marginTop: "4px", fontSize: "14px", color: "#fff", fontWeight: "bold" }}>{Math.round(point.wpm)} WPM</div>
+                      <div style={{ fontSize: "10px", color: zoneColor(point.zone), textTransform: "uppercase", marginTop: "2px" }}>{point.zone}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {options.criteria && (
+            <div data-pdf-block style={{ padding: "12px 20px", backgroundColor: "#0a0a0a" }}>
+              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>
+                Оценка по выбранным критериям: {result.evaluation_criteria_report.total_score}/{result.evaluation_criteria_report.max_score}
+              </h2>
+              <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "16px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                {result.evaluation_criteria_report.criteria.map((criterion, index) => (
+                  <div
+                    key={`${criterion.name}-${index}`}
+                    style={{
+                      paddingBottom: index < result.evaluation_criteria_report.criteria.length - 1 ? "12px" : 0,
+                      marginBottom: index < result.evaluation_criteria_report.criteria.length - 1 ? "12px" : 0,
+                      borderBottom: index < result.evaluation_criteria_report.criteria.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                    }}
+                  >
+                    <div style={{ fontSize: "13px", color: "#fff", fontWeight: "bold" }}>{criterion.name}</div>
+                    <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.45)", marginTop: "4px" }}>{criterion.description}</div>
+                    <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", marginTop: "6px" }}>
+                      Баллы: {criterion.current_value ?? 0}/{criterion.max_value}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.65)", marginTop: "4px", lineHeight: "1.6" }}>
+                      Совет: {criterion.feedback || "не указан"}
                     </div>
                   </div>
                 ))}
@@ -363,71 +424,19 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
             </div>
           )}
 
-          {options.tempo && result.tempo.length > 0 && (() => {
-            const tempoData = result.tempo.slice(0, 60);
-            const maxWpm = Math.max(...result.tempo.map(p => p.wpm));
-            const barWidth = Math.floor(700 / tempoData.length) - 2;
-            return (
-              <div 
-                data-pdf-block
-                style={{ 
-                  padding: "12px 20px",
-                  backgroundColor: "#0a0a0a"
-                }}
-              >
-                <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Темп речи (среднее: {(result.tempo.reduce((a, b) => a + b.wpm, 0) / result.tempo.length).toFixed(0)} WPM)</h2>
-                <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "16px", border: "1px solid rgba(255,255,255,0.1)" }}>
-                  <div style={{ position: "relative", height: "80px", width: "100%" }}>
-                    {tempoData.map((point, i) => {
-                      const height = (point.wpm / maxWpm) * 80;
-                      const color = point.zone === "red" ? "#ef4444" : point.zone === "yellow" ? "#f59e0b" : "rgba(255,255,255,0.5)";
-                      return (
-                        <div 
-                          key={i}
-                          style={{ 
-                            position: "absolute",
-                            bottom: 0,
-                            left: `${i * (barWidth + 2)}px`,
-                            width: `${barWidth}px`,
-                            height: `${height}px`, 
-                            backgroundColor: color,
-                            borderRadius: "2px 2px 0 0"
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
           {options.transcript &&
-            transcriptChunks.map((chunk, idx) => (
+            transcriptChunks.map((chunk, index) => (
               <div
-                key={`transcript-${idx}`}
+                key={`transcript-${index}`}
                 data-pdf-block
                 data-pdf-slice="true"
-                style={{
-                  padding: idx === 0 ? "12px 20px" : "0 20px 12px 20px",
-                  backgroundColor: "#0a0a0a",
-                }}
+                style={{ padding: index === 0 ? "12px 20px" : "0 20px 12px 20px", backgroundColor: "#0a0a0a" }}
               >
-                {idx === 0 && (
-                  <h2
-                    style={{
-                      fontSize: "16px",
-                      fontWeight: "600",
-                      marginBottom: "10px",
-                      color: "#fff",
-                    }}
-                  >
-                    Транскрипция
-                  </h2>
+                {index === 0 && (
+                  <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Транскрипция</h2>
                 )}
                 <div
                   style={{
-                    borderRadius: "0px",
                     backgroundColor: "rgba(255,255,255,0.03)",
                     padding: "16px",
                     border: "1px solid rgba(255,255,255,0.1)",
@@ -435,16 +444,15 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
                     lineHeight: "1.7",
                   }}
                 >
-                  {chunk.map((word, i) => (
+                  {chunk.map((word, wordIndex) => (
                     <span
-                      key={`${idx}-${i}-${word.text}-${word.start}`}
+                      key={`${index}-${wordIndex}-${word.text}-${word.start}`}
                       style={
                         word.is_filler
                           ? {
                               color: "#fb7185",
-                              backgroundColor: "transparent",
-                              padding: "0",
-                              borderRadius: "0",
+                              textDecoration: "underline",
+                              textDecorationColor: "rgba(251,113,133,0.6)",
                             }
                           : { color: "rgba(255,255,255,0.8)" }
                       }
@@ -456,203 +464,37 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
               </div>
             ))}
 
-          {options.mistakes && result.mistakes && (
-            <div 
-              data-pdf-block
-              style={{ 
-                padding: "12px 20px",
-                backgroundColor: "#0a0a0a"
-              }}
-            >
-              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Ошибки</h2>
-              <div style={{ borderRadius: "12px", backgroundColor: "rgba(239,68,68,0.08)", padding: "20px", border: "1px solid rgba(239,68,68,0.25)", fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)" }}>
-                {typeof result.mistakes === "string" 
-                  ? result.mistakes 
-                  : Array.isArray(result.mistakes) 
-                    ? (() => {
-                        const mistakesArray = result.mistakes as unknown[];
-                        return mistakesArray.map((item, idx) => (
-                          <div key={idx} style={{ marginBottom: idx < mistakesArray.length - 1 ? "8px" : 0 }}>
-                            {typeof item === "string" ? item : String(item)}
-                          </div>
-                        ));
-                      })()
-                    : String(result.mistakes || "")}
-              </div>
-            </div>
+          {options.mistakes && result.speech_report.mistakes && (
+            <TextBlock title="Ошибки" text={result.speech_report.mistakes} borderColor="rgba(239,68,68,0.25)" backgroundColor="rgba(239,68,68,0.08)" />
           )}
 
-          {options.structure && result.structure && (
-            <div 
-              data-pdf-block
-              style={{ 
-                padding: "12px 20px",
-                backgroundColor: "#0a0a0a"
-              }}
-            >
-              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Структура</h2>
-              <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "20px", border: "1px solid rgba(255,255,255,0.1)", fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)" }}>
-                {typeof result.structure === "string"
-                  ? result.structure
-                  : typeof result.structure === "object" && result.structure !== null
-                    ? Object.entries(result.structure).map(([key, value], idx, arr) => (
-                        <div key={key} style={{ marginBottom: idx < arr.length - 1 ? "12px" : 0 }}>
-                          <strong style={{ color: "#fff", display: "block", marginBottom: "4px" }}>{key}:</strong>
-                          <span style={{ color: "rgba(255,255,255,0.7)" }}>{String(value)}</span>
-                        </div>
-                      ))
-                    : String(result.structure || "")}
-              </div>
-            </div>
+          {options.structure && result.speech_report.structure && (
+            <TextBlock title="Структура" text={result.speech_report.structure} />
           )}
 
-          {options.idealText && result.ideal_text && (
-            <div 
-              data-pdf-block
-              style={{ 
-                padding: "12px 20px",
-                backgroundColor: "#0a0a0a"
-              }}
-            >
-              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Идеальный текст</h2>
-              <div style={{ borderRadius: "12px", backgroundColor: "rgba(16,185,129,0.08)", padding: "20px", border: "1px solid rgba(16,185,129,0.25)", fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)" }}>
-                {typeof result.ideal_text === "string" ? result.ideal_text : String(result.ideal_text || "")}
-              </div>
-            </div>
+          {options.idealText && result.speech_report.ideal_text && (
+            <TextBlock title="Идеальный текст" text={result.speech_report.ideal_text} borderColor="rgba(16,185,129,0.25)" backgroundColor="rgba(16,185,129,0.08)" />
           )}
 
-          {options.personaFeedback && result.persona_feedback && (
-            <div 
-              data-pdf-block
-              style={{ 
-                padding: "12px 20px",
-                backgroundColor: "#0a0a0a"
-              }}
-            >
-              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Фидбэк персоны</h2>
-              <div style={{ borderRadius: "12px", backgroundColor: "rgba(245,158,11,0.08)", padding: "20px", border: "1px solid rgba(245,158,11,0.25)", fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)" }}>
-                {typeof result.persona_feedback === "string" ? result.persona_feedback : String(result.persona_feedback || "")}
-              </div>
-            </div>
+          {options.personaFeedback && result.speech_report.persona_feedback && (
+            <TextBlock title="Фидбэк персоны" text={result.speech_report.persona_feedback} borderColor="rgba(245,158,11,0.25)" backgroundColor="rgba(245,158,11,0.08)" />
           )}
 
-          {result.confidence_index.components.gesture_advice && (
-            <div 
-              data-pdf-block
-              style={{ 
-                padding: "12px 20px",
-                backgroundColor: "#0a0a0a"
-              }}
-            >
-              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Жестикуляция</h2>
-              <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "20px", border: "1px solid rgba(255,255,255,0.1)", fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)" }}>
-                {result.confidence_index.components.gesture_advice}
-              </div>
-            </div>
+          {options.presentationFeedback && result.speech_report.presentation_feedback && (
+            <TextBlock title="Отчет по выступлению от ИИ" text={result.speech_report.presentation_feedback} borderColor="rgba(14,165,233,0.25)" backgroundColor="rgba(14,165,233,0.08)" />
           )}
 
-          {result.slide_analysis && (
-            result.slide_analysis.has_slides === false 
-              ? result.slide_analysis.ocr_summary 
-              : (result.slide_analysis.acr_summary || result.slide_analysis.ocr_summary)
-          ) && (
-            <div 
-              data-pdf-block
-              style={{ 
-                padding: "12px 20px",
-                backgroundColor: "#0a0a0a"
-              }}
-            >
-              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>
-                {result.slide_analysis.has_slides === false ? "Слайды" : "Анализ презентации"}
-              </h2>
-              <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "20px", border: "1px solid rgba(255,255,255,0.1)", fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)" }}>
-                {result.slide_analysis.has_slides === false 
-                  ? result.slide_analysis.ocr_summary 
-                  : (result.slide_analysis.acr_summary || result.slide_analysis.ocr_summary)}
-              </div>
-            </div>
-          )}
-
-          {options.rawMetrics && result.raw_metrics && (
-            <div 
-              data-pdf-block
-              style={{ 
-                padding: "12px 20px",
-                backgroundColor: "#0a0a0a"
-              }}
-            >
-              <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Сырые метрики</h2>
-              <div style={{ borderRadius: "12px", backgroundColor: "rgba(255,255,255,0.05)", padding: "16px", border: "1px solid rgba(255,255,255,0.1)" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
-                  {result.raw_metrics.gaze_score !== undefined && (
-                    <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.03)" }}>
-                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", margin: 0 }}>Взгляд</p>
-                      <p style={{ fontSize: "18px", fontWeight: "bold", margin: "4px 0 0 0", color: "#fff" }}>{result.raw_metrics.gaze_score.toFixed(1)}%</p>
-                    </div>
-                  )}
-                  {result.raw_metrics.gesture_score !== undefined && (
-                    <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.03)" }}>
-                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", margin: 0 }}>Жесты</p>
-                      <p style={{ fontSize: "18px", fontWeight: "bold", margin: "4px 0 0 0", color: "#fff" }}>{result.raw_metrics.gesture_score.toFixed(1)}%</p>
-                    </div>
-                  )}
-                  {result.raw_metrics.volume_score !== undefined && (
-                    <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.03)" }}>
-                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", margin: 0 }}>Громкость</p>
-                      <p style={{ fontSize: "18px", fontWeight: "bold", margin: "4px 0 0 0", color: "#fff" }}>{result.raw_metrics.volume_score.toFixed(1)}%</p>
-                    </div>
-                  )}
-                  {result.raw_metrics.tone_score !== undefined && (
-                    <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.03)" }}>
-                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", margin: 0 }}>Тон</p>
-                      <p style={{ fontSize: "18px", fontWeight: "bold", margin: "4px 0 0 0", color: "#fff" }}>{result.raw_metrics.tone_score.toFixed(1)}%</p>
-                    </div>
-                  )}
-                  {result.raw_metrics.pitch_std !== undefined && (
-                    <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.03)" }}>
-                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", margin: 0 }}>Вариация тона</p>
-                      <p style={{ fontSize: "18px", fontWeight: "bold", margin: "4px 0 0 0", color: "#fff" }}>{result.raw_metrics.pitch_std.toFixed(2)}</p>
-                    </div>
-                  )}
-                  {result.raw_metrics.raw_movement !== undefined && (
-                    <div style={{ padding: "10px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.03)" }}>
-                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", textTransform: "uppercase", margin: 0 }}>Движение</p>
-                      <p style={{ fontSize: "18px", fontWeight: "bold", margin: "4px 0 0 0", color: "#fff" }}>{result.raw_metrics.raw_movement.toFixed(2)}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {options.longPauses && result.long_pauses && result.long_pauses.length > 0 && (
-            <div 
-              data-pdf-block
-              style={{ 
-                padding: "12px 20px",
-                backgroundColor: "#0a0a0a"
-              }}
-            >
+          {options.longPauses && result.long_pauses.length > 0 && (
+            <div data-pdf-block style={{ padding: "12px 20px", backgroundColor: "#0a0a0a" }}>
               <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Долгие паузы ({result.long_pauses.length})</h2>
               <div style={{ borderRadius: "12px", backgroundColor: "rgba(239,68,68,0.08)", padding: "16px", border: "1px solid rgba(239,68,68,0.25)" }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                  {result.long_pauses.map((pause, idx) => (
-                    <div 
-                      key={idx}
-                      style={{ 
-                        padding: "8px 12px", 
-                        borderRadius: "8px", 
-                        backgroundColor: "rgba(239,68,68,0.1)",
-                        border: "1px solid rgba(239,68,68,0.2)"
-                      }}
-                    >
+                  {result.long_pauses.map((pause, index) => (
+                    <div key={`${pause.start}-${index}`} style={{ padding: "8px 12px", borderRadius: "8px", backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}>
                       <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.6)" }}>
-                        {formatPdfTime(pause.start)} — {formatPdfTime(pause.end)}
+                        {formatPdfTime(pause.start)} - {formatPdfTime(pause.end)}
                       </span>
-                      <span style={{ fontSize: "11px", color: "#fb7185", marginLeft: "8px" }}>
-                        {pause.duration.toFixed(1)}с
-                      </span>
+                      <span style={{ fontSize: "11px", color: "#fb7185", marginLeft: "8px" }}>{pause.duration.toFixed(1)}с</span>
                     </div>
                   ))}
                 </div>
@@ -660,27 +502,21 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
             </div>
           )}
 
-          {options.dynamicFillers && result.dynamic_fillers && result.dynamic_fillers.length > 0 && (
-            <div 
-              data-pdf-block
-              style={{ 
-                padding: "12px 20px",
-                backgroundColor: "#0a0a0a"
-              }}
-            >
+          {options.dynamicFillers && result.speech_report.dynamic_fillers.length > 0 && (
+            <div data-pdf-block style={{ padding: "12px 20px", backgroundColor: "#0a0a0a" }}>
               <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>Обнаруженные слова-паразиты</h2>
               <div style={{ borderRadius: "12px", backgroundColor: "rgba(245,158,11,0.08)", padding: "16px", border: "1px solid rgba(245,158,11,0.25)" }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                  {result.dynamic_fillers.map((filler, idx) => (
-                    <span 
-                      key={idx}
-                      style={{ 
-                        padding: "6px 12px", 
-                        borderRadius: "6px", 
+                  {result.speech_report.dynamic_fillers.map((filler, index) => (
+                    <span
+                      key={`${filler}-${index}`}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "6px",
                         backgroundColor: "rgba(245,158,11,0.15)",
                         color: "#fcd34d",
                         fontSize: "13px",
-                        fontWeight: "500"
+                        fontWeight: "500",
                       }}
                     >
                       {filler}
@@ -690,10 +526,29 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
               </div>
             </div>
           )}
-
         </div>
       </div>
     </Popover>
   );
 }
 
+function TextBlock({
+  title,
+  text,
+  borderColor = "rgba(255,255,255,0.1)",
+  backgroundColor = "rgba(255,255,255,0.05)",
+}: {
+  title: string;
+  text: string;
+  borderColor?: string;
+  backgroundColor?: string;
+}) {
+  return (
+    <div data-pdf-block style={{ padding: "12px 20px", backgroundColor: "#0a0a0a" }}>
+      <h2 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "10px", color: "#fff" }}>{title}</h2>
+      <div style={{ borderRadius: "12px", backgroundColor, padding: "20px", border: `1px solid ${borderColor}`, fontSize: "13px", lineHeight: "1.7", color: "rgba(255,255,255,0.85)", whiteSpace: "pre-line" }}>
+        {text}
+      </div>
+    </div>
+  );
+}

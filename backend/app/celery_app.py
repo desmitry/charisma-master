@@ -1,5 +1,6 @@
-from app.config import settings
 from celery import Celery
+
+from app.config import settings
 
 celery_app = Celery(
     "speech_Analysis",
