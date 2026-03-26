@@ -26,17 +26,65 @@ from app.models.schemas import (
 logger = logging.getLogger(__name__)
 
 
-# TODO: Realize presentation parser
-def _get_presentation_text(presentation_path: str) -> list[str]:
+def _get_presentation_text(presentation_path: Optional[str]) -> list[str]:
     """Obtaining the presentation text by slides.
 
     Args:
-        presentation_path (str): path to the .pptx file.
+        presentation_path (Optional[str]): Path to the .pptx or .pdf file.
+
+    Raises:
+        RuntimeError: If parsing fails.
 
     Returns:
-        list[str]: Text on the slides
+        list[str]: Text on each slide.
     """
-    return [""]
+    if not presentation_path or not Path(presentation_path).exists():
+        return []
+
+    file_ext = Path(presentation_path).suffix.lower()
+
+    try:
+        if file_ext == ".pptx":
+            return _parse_pptx(presentation_path)
+        elif file_ext == ".pdf":
+            return _parse_pdf(presentation_path)
+        else:
+            logger.warning(f"Unsupported presentation format: {file_ext}")
+            return []
+    except Exception as e:
+        logger.error(f"Presentation parsing failed: {e}")
+        raise
+
+
+def _parse_pptx(presentation_path: str) -> list[str]:
+    """Parse text from PPTX file slide by slide."""
+    from python_pptx import Presentation
+
+    prs = Presentation(presentation_path)
+    slides_text = []
+
+    for slide in prs.slides:
+        slide_text = []
+        for shape in slide.shapes:
+            if hasattr(shape, "text") and shape.text.strip():
+                slide_text.append(shape.text.strip())
+        slides_text.append("\n".join(slide_text) if slide_text else "")
+
+    return slides_text
+
+
+def _parse_pdf(presentation_path: str) -> list[str]:
+    """Parse text from PDF file page by page."""
+    import pdfplumber
+
+    slides_text = []
+
+    with pdfplumber.open(presentation_path) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text()
+            slides_text.append(text.strip() if text else "")
+
+    return slides_text
 
 
 @worker_process_init.connect
@@ -109,24 +157,25 @@ def process_video_pipeline(
     except Exception as e:
         logger.warning(f"Audio features failed: {e}")
 
-    # TODO: Realize presentation text parser.
+    # Parse presentation text
     self.update_state(
         state=TaskState.processing.value,
         meta=TaskStage.presentation_text_parsing.meta,
     )
-    presentation_text = _get_presentation_text(presentation_path) if presentation_path else ["NaN"]
-    presentation_text = "\n\n".join(
-        f"[Слайд: {idx + 1}]\n{text}" for idx, text in enumerate(presentation_text)
-    )
+    presentation_text_list = _get_presentation_text(presentation_path) if presentation_path else []
+    if not presentation_text_list:
+        presentation_text = "Текст презентации отсутствует"
+    else:
+        presentation_text = "\n\n".join(
+            f"[Слайд: {idx + 1}]\n{text}" for idx, text in enumerate(presentation_text_list)
+        )
 
-    # TODO: Realize LLM evaluation criteria report.
+    # Extract evaluation criteria from file or preset
     self.update_state(
         state=TaskState.processing.value,
         meta=TaskStage.evaluation_criteria_report.meta,
     )
     evaluation_criteria = list()
-    evaluation_criteria_total_score = 0
-    evaluation_criteria_max_score = 0
     try:
         llm_client = LLMClient()
 
@@ -139,7 +188,8 @@ def process_video_pipeline(
         )
         loop.close()
     except Exception as e:
-        logger.error(f"LLM Client error: {e}")
+        logger.error(f"Failed to extract evaluation criteria: {e}")
+        raise RuntimeError(f"Criteria extraction failed: {str(e)}")
 
     self.update_state(
         state=TaskState.processing.value,
@@ -162,9 +212,10 @@ def process_video_pipeline(
         )
         loop.close()
     except Exception as e:
-        logger.error(f"LLM Client error: {e}")
+        logger.error(f"LLM speech analysis failed: {e}")
+        raise RuntimeError(f"Speech analysis failed: {str(e)}")
 
-    # TODO: Realize criteria analisis for LLMClient.
+    # Analyze speech against evaluation criteria
     self.update_state(
         state=TaskState.processing.value,
         meta=TaskStage.llm_criteria_report.meta,
@@ -181,8 +232,19 @@ def process_video_pipeline(
                 evaluation_criteria=evaluation_criteria,
             )
         )
+        loop.close()
+
+        # Calculate total and max scores
+        evaluation_criteria_total_score = sum(c.current_value for c in evaluation_criteria)
+        evaluation_criteria_max_score = sum(c.max_value for c in evaluation_criteria)
+
+        logger.info(
+            f"Criteria evaluation completed: "
+            f"{evaluation_criteria_total_score}/{evaluation_criteria_max_score}"
+        )
     except Exception as e:
-        logger.error(f"LLM Client error: {e}")
+        logger.error(f"Criteria analysis failed: {e}")
+        raise RuntimeError(f"Criteria analysis failed: {str(e)}")
 
     # TODO: Document and verify these coefficients.
     total_words = len(full_text.split()) if full_text else 1
