@@ -186,6 +186,7 @@ async def process(
     Returns:
         UploadResponse: JSON containing a task upload report.
     """
+
     if (user_speech_file is None) == (user_speech_url is None):
         raise HTTPException(
             status_code=400,
@@ -224,9 +225,9 @@ async def process(
     process_video_pipeline.apply_async(
         kwargs={
             "task_id": task_id,
-            "user_speech_path": speech_final_path,
+            "speech_video_path": speech_final_path,
             "evaluation_criteria_path": evaluation_criteria_final_path,
-            "user_presentation_path": presentation_final_path,
+            "presentation_path": presentation_final_path,
             "analyze_provider": analyze_provider,
             "transcribe_provider": transcribe_provider,
             "persona": persona,
