@@ -104,6 +104,12 @@ class Settings(BaseSettings):
         validate_default=True,
         frozen=False,
     )
+    sber_salute_credentials: str = Field(
+        key="SBER_SALUTE_CREDENTIALS",
+        default="",
+        validate_default=True,
+        frozen=True,
+    )
     gigachat_scope: str = Field(
         key="GIGACHAT_SCOPE",
         default="GIGACHAT_API_PERS",
