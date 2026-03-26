@@ -7,8 +7,15 @@ services:
         restart: unless-stopped
 
     celery:
-        image: ghcr.io/desmitry/charisma-master-backend:latest
+        image: ${BACKEND_IMAGE:-ghcr.io/desmitry/charisma-master-backend:latest}
+        build:
+            context: ./backend
+            dockerfile: ./Dockerfile
         container_name: celery
+        user: "1000:1000"
+        environment:
+            - MPLCONFIGDIR=/tmp/matplotlib
+            - NUMBA_CACHE_DIR=/tmp/numba
         command:
             [
                 "celery",
@@ -24,18 +31,18 @@ services:
         depends_on:
             - redis
         volumes:
-            - ./media:/backend/app/media
-        deploy:
-          resources:
-            reservations:
-              devices:
-                - driver: nvidia
-                  count: 1
-                  capabilities: [gpu]
+            - ./backend/media:/backend/app/media
 
     backend:
-        image: ghcr.io/desmitry/charisma-master-backend:latest
+        image: ${BACKEND_IMAGE:-ghcr.io/desmitry/charisma-master-backend:latest}
+        build:
+            context: ./backend
+            dockerfile: ./Dockerfile
         container_name: backend
+        user: "1000:1000"
+        environment:
+            - MPLCONFIGDIR=/tmp/matplotlib
+            - NUMBA_CACHE_DIR=/tmp/numba
         command:
             [
                 "uvicorn",
@@ -55,17 +62,13 @@ services:
         depends_on:
             - celery
         volumes:
-            - ./media:/backend/app/media
-        deploy:
-          resources:
-            reservations:
-              devices:
-                - driver: nvidia
-                  count: 1
-                  capabilities: [gpu]
+            - ./backend/media:/backend/app/media
 
     frontend:
-        image: ghcr.io/desmitry/charisma-master-frontend:latest
+        image: ${FRONTEND_IMAGE:-ghcr.io/desmitry/charisma-master-frontend:latest}
+        build:
+            context: ./frontend
+            dockerfile: ./Dockerfile
         container_name: frontend
         command: ["npm", "start"]
         restart: unless-stopped
