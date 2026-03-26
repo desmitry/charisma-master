@@ -245,4 +245,21 @@ def process_video_pipeline(
     with open(settings.results_dir / f"{task_id}.json", "w", encoding="utf-8") as file:
         file.write(result_data.model_dump_json(ensure_ascii=False))
 
+    try:
+        from app.db import TelemetryRecord
+        from app.db_sync import SyncSessionLocal
+
+        with SyncSessionLocal() as session:
+            record = TelemetryRecord(
+                task_id=task_id,
+                media_filename=Path(speech_video_path).name,
+                confidence_total=total_conf,
+                analyze_provider=analyze_provider.value,
+                transcribe_provider=transcribe_provider.value,
+            )
+            session.add(record)
+            session.commit()
+    except Exception as e:
+        logger.warning(f"Failed to save telemetry record: {e}")
+
     return {"status": "completed", "task_id": task_id}

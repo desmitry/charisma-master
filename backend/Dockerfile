@@ -29,10 +29,13 @@ COPY . .
 
 RUN uv pip install --system --no-cache-dir -r pyproject.toml
 
-RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser && \
+# Create appuser with fixed UID/GID 1000 to match host bind-mount ownership
+RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser -m -d /home/appuser appuser && \
     mkdir -p /backend/app/media/results && \
     chown -R appuser:appuser /backend
 
-USER appuser
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-ENTRYPOINT []
+# Container starts as root; entrypoint creates media dirs and drops to appuser
+ENTRYPOINT ["/entrypoint.sh"]

@@ -7,7 +7,12 @@ from app.models.schemas import TaskState, TaskStatusResponse
 router = APIRouter()
 
 
-@router.get("/tasks/{task_id}/status", response_model=TaskStatusResponse)
+@router.get(
+    "/tasks/{task_id}/status",
+    response_model=TaskStatusResponse,
+    summary="Получить статус обработки задачи",
+    response_description="Текущее состояние, прогресс и этап обработки",
+)
 async def get_task_status(task_id: str):
     """Providing status on the progress of the speech processing task.
 

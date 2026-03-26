@@ -50,6 +50,19 @@ class Settings(BaseSettings):
         frozen=True,
     )
 
+    database_url: str = Field(
+        key="DATABASE_URL",
+        default="postgresql+asyncpg://charisma:charisma@postgres:5432/charisma",
+        validate_default=True,
+        frozen=True,
+    )
+    database_url_sync: str = Field(
+        key="DATABASE_URL_SYNC",
+        default="postgresql+psycopg2://charisma:charisma@postgres:5432/charisma",
+        validate_default=True,
+        frozen=True,
+    )
+
     base_dir: Path = Path(__file__).parent.parent.resolve() / "app"
     media_root: Path = base_dir / "media"
     results_dir: Path = media_root / "results"

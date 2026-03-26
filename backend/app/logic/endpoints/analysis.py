@@ -8,7 +8,15 @@ from app.models.schemas import AnalysisResult
 router = APIRouter()
 
 
-@router.get("/analysis/{task_id}", response_model=AnalysisResult)
+@router.get(
+    "/analysis/{task_id}",
+    response_model=AnalysisResult,
+    summary="Получить результаты анализа выступления",
+    response_description="Полный отчёт: транскрипция, темп, уверенность, LLM-оценка",
+    responses={
+        404: {"description": "Анализ не найден или ещё обрабатывается"},
+    },
+)
 async def get_analysis(task_id: str):
     """Processing the request for the final analysis results of the presentation.
 

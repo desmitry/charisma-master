@@ -1,3 +1,6 @@
+volumes:
+    postgres_data:
+
 services:
     redis:
         image: redis:8.4.0
@@ -6,13 +9,28 @@ services:
             - redis-server
         restart: unless-stopped
 
+    postgres:
+        image: postgres:16-alpine
+        container_name: postgres
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: charisma
+            POSTGRES_PASSWORD: charisma
+            POSTGRES_DB: charisma
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U charisma"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+
     celery:
         image: ${BACKEND_IMAGE:-ghcr.io/desmitry/charisma-master-backend:latest}
         build:
             context: ./backend
             dockerfile: ./Dockerfile
         container_name: celery
-        user: "1000:1000"
         environment:
             - MPLCONFIGDIR=/tmp/matplotlib
             - NUMBA_CACHE_DIR=/tmp/numba
@@ -30,6 +48,7 @@ services:
             - ./backend/.docker.env
         depends_on:
             - redis
+            - postgres
         volumes:
             - ./backend/media:/backend/app/media
 
@@ -39,7 +58,6 @@ services:
             context: ./backend
             dockerfile: ./Dockerfile
         container_name: backend
-        user: "1000:1000"
         environment:
             - MPLCONFIGDIR=/tmp/matplotlib
             - NUMBA_CACHE_DIR=/tmp/numba
@@ -61,6 +79,7 @@ services:
             - 127.0.0.1:8000:8000
         depends_on:
             - celery
+            - postgres
         volumes:
             - ./backend/media:/backend/app/media
 

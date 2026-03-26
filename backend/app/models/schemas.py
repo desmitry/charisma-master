@@ -1,13 +1,13 @@
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import settings
 
 
 class TranscribeProvider(str, Enum):
-    """Enum of speech transcription providers for the ML engine."""
+    """Провайдер транскрибации речи."""
 
     sber_gigachat = "sber_gigachat"
     whisper_local = "whisper_local"
@@ -15,10 +15,10 @@ class TranscribeProvider(str, Enum):
 
 
 class AnalyzeProvider(str, Enum):
-    """Enum of providers for analyzing speech text for the ML engine.
+    """Провайдер LLM-анализа текста выступления.
 
     Attrs:
-        model_name: full name of the model to be used for the analysis.
+        model_name: полное название модели для анализа.
     """
 
     gigachat = "gigachat"
@@ -33,7 +33,7 @@ class AnalyzeProvider(str, Enum):
 
 
 class PersonaRoles(str, Enum):
-    """Enum of the critic's roles in text analysis."""
+    """Роль AI-критика при анализе выступления."""
 
     strict_critic = "strict_critic"
     kind_mentor = "kind_mentor"
@@ -42,10 +42,10 @@ class PersonaRoles(str, Enum):
 
 
 class TaskState(str, Enum):
-    """Enum of Celery task states.
+    """Состояние задачи обработки в Celery.
 
     Attrs:
-        hint: default task information
+        hint: текстовое описание состояния.
     """
 
     queued = "PENDING"
@@ -59,10 +59,10 @@ class TaskState(str, Enum):
 
 
 class TaskStage(Enum):
-    """Enum of all MLEngine task stages with metadata for Celery & frontend.
+    """Этап обработки задачи с метаданными для Celery и фронтенда.
 
     Attrs:
-        meta: a dict containing the name, completion percentage, and UI text.
+        meta: словарь с названием этапа, процентом выполнения и подсказкой для UI.
     """
 
     transcription = (
@@ -116,128 +116,247 @@ class TaskStage(Enum):
 
 
 class TranscriptWord(BaseModel):
-    """A model that stores about transcribed words."""
+    """Отдельное слово из транскрипции с временными метками."""
 
-    start: float
-    end: float
-    text: str
-    is_filler: bool = False
+    start: float = Field(description="Время начала слова в секундах")
+    end: float = Field(description="Время окончания слова в секундах")
+    text: str = Field(description="Текст слова")
+    is_filler: bool = Field(default=False, description="Является ли слово паразитом (ну, типа, как бы)")
 
 
 class TranscriptSegment(BaseModel):
-    """A model that stores about transcribed words."""
+    """Сегмент транскрипции — фраза или предложение с набором слов."""
 
-    start: float
-    end: float
-    text: str
-    words: List[TranscriptWord]
+    start: float = Field(description="Время начала сегмента в секундах")
+    end: float = Field(description="Время окончания сегмента в секундах")
+    text: str = Field(description="Полный текст сегмента")
+    words: List[TranscriptWord] = Field(description="Список слов в сегменте")
 
 
 class TempoPoint(BaseModel):
-    """A model that stores about speech rate."""
+    """Точка измерения темпа речи в определённый момент времени."""
 
-    time: float
-    wpm: float
-    zone: str
+    time: float = Field(description="Время измерения в секундах")
+    wpm: float = Field(description="Слов в минуту (words per minute)")
+    zone: str = Field(description="Зона темпа: slow, normal, fast")
 
 
 class PauseInterval(BaseModel):
-    """A model that stores about speech pauses."""
+    """Длинная пауза в речи."""
 
-    start: float
-    end: float
-    duration: float
+    start: float = Field(description="Начало паузы в секундах")
+    end: float = Field(description="Конец паузы в секундах")
+    duration: float = Field(description="Продолжительность паузы в секундах")
 
 
 class ConfidenceComponents(BaseModel):
-    """A model that stores about analysis user gestures and voice."""
+    """Компоненты индекса уверенности оратора (0-100 по каждому параметру)."""
 
-    volume_level: str
-    volume_score: int
-    volume_label: str
-    filler_score: int
-    filler_label: str
-    gaze_score: int
-    gaze_label: str
-    gesture_score: int
-    gesture_label: str
-    gesture_advice: str
-    tone_score: int
-    tone_label: str
+    volume_level: str = Field(description="Уровень громкости: quiet, normal, loud")
+    volume_score: int = Field(description="Оценка громкости (0-100)")
+    volume_label: str = Field(description="Текстовая оценка громкости")
+    filler_score: int = Field(description="Оценка по словам-паразитам (0-100, больше = лучше)")
+    filler_label: str = Field(description="Текстовая оценка по паразитам")
+    gaze_score: int = Field(description="Оценка направления взгляда (0-100)")
+    gaze_label: str = Field(description="Текстовая оценка взгляда")
+    gesture_score: int = Field(description="Оценка жестикуляции (0-100)")
+    gesture_label: str = Field(description="Текстовая оценка жестов")
+    gesture_advice: str = Field(description="Рекомендация по улучшению жестикуляции")
+    tone_score: int = Field(description="Оценка тона голоса (0-100)")
+    tone_label: str = Field(description="Текстовая оценка тона")
 
 
 class ConfidenceIndex(BaseModel):
-    """A model that stores info about the final score and its weighting factors."""
+    """Итоговый индекс уверенности оратора с компонентами."""
 
-    total: float
-    total_label: str
-    components: ConfidenceComponents
+    total: float = Field(description="Общий индекс уверенности (0-100)")
+    total_label: str = Field(description="Текстовая оценка: Низкий / Средний / Высокий")
+    components: ConfidenceComponents = Field(description="Детализация по компонентам")
 
 
 class FillersSummary(BaseModel):
-    """A model that stores info about final assessment of the impact of filler words."""
+    """Сводка по словам-паразитам в речи."""
 
-    count: int
-    ratio: int | float
+    count: int = Field(description="Общее количество слов-паразитов")
+    ratio: int | float = Field(description="Доля паразитов от общего числа слов (0.0 - 1.0)")
 
 
 class SpeechReport(BaseModel):
-    """A model that stores info about LLM speech analisys."""
+    """Отчёт LLM-анализа содержания выступления."""
 
-    summary: str
-    structure: str
-    mistakes: str
-    ideal_text: str
-    persona_feedback: str
-    dynamic_fillers: list[str]
-    presentation_feedback: str
+    summary: str = Field(description="Краткое резюме выступления")
+    structure: str = Field(description="Анализ структуры речи")
+    mistakes: str = Field(description="Выявленные ошибки и недочёты")
+    ideal_text: str = Field(description="Улучшенная версия текста выступления")
+    persona_feedback: str = Field(description="Обратная связь от выбранной AI-персоны")
+    dynamic_fillers: list[str] = Field(description="Контекстные слова-паразиты, обнаруженные LLM")
+    presentation_feedback: str = Field(description="Обратная связь по содержанию презентации")
 
 
 class EvaluationCriterion(BaseModel):
-    """A model that stores info about evaluation criterion."""
+    """Отдельный критерий оценки выступления."""
 
-    name: str
-    description: str
-    max_value: int
-    current_value: int = 0
-    feedback: str = ""
+    name: str = Field(description="Название критерия")
+    description: str = Field(description="Описание критерия")
+    max_value: int = Field(description="Максимальный балл по критерию")
+    current_value: int = Field(default=0, description="Набранный балл по критерию")
+    feedback: str = Field(default="", description="Комментарий по критерию")
 
 
 class EvaluationCriteriaReport(BaseModel):
-    total_score: int
-    max_score: int
-    criteria: list[EvaluationCriterion]
+    """Отчёт оценки выступления по заданным критериям."""
+
+    total_score: int = Field(description="Суммарный набранный балл")
+    max_score: int = Field(description="Максимально возможный балл")
+    criteria: list[EvaluationCriterion] = Field(description="Список критериев с оценками")
 
 
 class AnalysisResult(BaseModel):
-    """A model for sending the final results of the analysis."""
+    """Полный результат анализа выступления."""
 
-    task_id: str
-    video_path: str
-    transcript: List[TranscriptSegment]
-    tempo: List[TempoPoint]
-    long_pauses: List[PauseInterval]
-    fillers_summary: FillersSummary
-    confidence_index: ConfidenceIndex
-    speech_report: SpeechReport
-    evaluation_criteria_report: EvaluationCriteriaReport
-    analyze_provider: str
-    analyze_model: str
-    transcribe_model: str
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "task_id": "550e8400-e29b-41d4-a716-446655440000",
+                "video_path": "/media/550e8400-e29b-41d4-a716-446655440000.mp4",
+                "transcript": [],
+                "tempo": [],
+                "long_pauses": [],
+                "fillers_summary": {"count": 12, "ratio": 0.05},
+                "confidence_index": {
+                    "total": 72,
+                    "total_label": "Средний",
+                    "components": {
+                        "volume_level": "normal",
+                        "volume_score": 80,
+                        "volume_label": "Хорошо",
+                        "filler_score": 65,
+                        "filler_label": "Средне",
+                        "gaze_score": 70,
+                        "gaze_label": "Хорошо",
+                        "gesture_score": 60,
+                        "gesture_label": "Средне",
+                        "gesture_advice": "Используйте больше открытых жестов",
+                        "tone_score": 75,
+                        "tone_label": "Хорошо",
+                    },
+                },
+                "speech_report": {
+                    "summary": "Выступление на тему...",
+                    "structure": "Логичная структура с введением и заключением",
+                    "mistakes": "Частые повторы, нечёткие формулировки",
+                    "ideal_text": "Улучшенный вариант текста...",
+                    "persona_feedback": "Обратная связь от критика...",
+                    "dynamic_fillers": ["как бы", "в принципе"],
+                    "presentation_feedback": "Слайды соответствуют речи",
+                },
+                "evaluation_criteria_report": {
+                    "total_score": 35,
+                    "max_score": 50,
+                    "criteria": [],
+                },
+                "analyze_provider": "gigachat",
+                "analyze_model": "GigaChat",
+                "transcribe_model": "sber_gigachat",
+            }
+        }
+    )
+
+    task_id: str = Field(description="UUID задачи обработки")
+    video_path: str = Field(description="Путь к видеофайлу для воспроизведения")
+    transcript: List[TranscriptSegment] = Field(description="Сегменты транскрипции речи")
+    tempo: List[TempoPoint] = Field(description="Точки измерения темпа речи")
+    long_pauses: List[PauseInterval] = Field(description="Длинные паузы в речи (> 2 сек)")
+    fillers_summary: FillersSummary = Field(description="Сводка по словам-паразитам")
+    confidence_index: ConfidenceIndex = Field(description="Индекс уверенности оратора")
+    speech_report: SpeechReport = Field(description="LLM-отчёт по содержанию речи")
+    evaluation_criteria_report: EvaluationCriteriaReport = Field(
+        description="Отчёт по критериям оценивания"
+    )
+    analyze_provider: str = Field(description="Провайдер LLM-анализа (gigachat / openai)")
+    analyze_model: str = Field(description="Название модели анализа")
+    transcribe_model: str = Field(description="Провайдер транскрибации")
 
 
 class TaskStatusResponse(BaseModel):
-    """A model for sending the status of a speech processing task."""
+    """Статус задачи обработки выступления."""
 
-    task_id: str
-    state: TaskState
-    hint: str
-    progress: float = 0.0
-    stage: Optional[TaskStage] = None
-    error: Optional[str] = None
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "task_id": "550e8400-e29b-41d4-a716-446655440000",
+                "state": "PROCESSING",
+                "hint": "Анализ видео...",
+                "progress": 0.25,
+                "stage": None,
+                "error": None,
+            }
+        }
+    )
+
+    task_id: str = Field(description="UUID задачи")
+    state: TaskState = Field(description="Текущее состояние: PENDING, PROCESSING, SUCCESS, FAILURE")
+    hint: str = Field(description="Текстовая подсказка о текущем этапе")
+    progress: float = Field(default=0.0, description="Прогресс обработки (0.0 - 1.0)")
+    stage: Optional[TaskStage] = Field(default=None, description="Текущий этап обработки")
+    error: Optional[str] = Field(default=None, description="Описание ошибки (при state=FAILURE)")
 
 
 class UploadResponse(BaseModel):
-    """A model for sending information about a task that has been assigned."""
+    """Ответ на загрузку видео — содержит ID созданной задачи."""
 
-    task_id: str
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "task_id": "550e8400-e29b-41d4-a716-446655440000",
+            }
+        }
+    )
+
+    task_id: str = Field(description="UUID созданной задачи для отслеживания прогресса")
+
+
+class RatingRequest(BaseModel):
+    """Запрос на оценку качества анализа."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "rating": 4,
+            }
+        }
+    )
+
+    rating: int = Field(ge=1, le=5, description="Оценка качества анализа от 1 до 5")
+
+
+class RatingResponse(BaseModel):
+    """Ответ на сохранение оценки."""
+
+    task_id: str = Field(description="UUID задачи")
+    rating: int = Field(description="Сохранённая оценка")
+    message: str = Field(description="Сообщение о результате")
+
+
+class TelemetryStatsResponse(BaseModel):
+    """Сводная статистика использования сервиса."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "total_analyses": 150,
+                "rated_count": 89,
+                "average_rating": 4.2,
+                "average_confidence": 68.5,
+            }
+        }
+    )
+
+    total_analyses: int = Field(description="Общее количество обработанных выступлений")
+    rated_count: int = Field(description="Количество оценённых пользователями анализов")
+    average_rating: Optional[float] = Field(
+        default=None, description="Средняя пользовательская оценка (1-5)"
+    )
+    average_confidence: Optional[float] = Field(
+        default=None, description="Средний индекс уверенности оратора"
+    )
