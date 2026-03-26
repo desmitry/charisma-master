@@ -1,0 +1,17 @@
+services:
+  celery:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+  
+  backend:
+    deploy:
+      resources:
+        devices:
+        - driver: nvidia
+          count: 1
+          capabilities: [gpu]
