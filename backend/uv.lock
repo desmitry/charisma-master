@@ -227,6 +227,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "celery" },
     { name = "celery-types" },
+    { name = "docx" },
     { name = "fastapi" },
     { name = "faster-whisper" },
     { name = "gigachat" },
@@ -257,6 +258,7 @@ dev = [
 requires-dist = [
     { name = "celery", specifier = ">=5.6.0" },
     { name = "celery-types", specifier = "==0.23.0" },
+    { name = "docx", specifier = ">=0.2.4" },
     { name = "fastapi", specifier = ">=0.123.7" },
     { name = "faster-whisper", specifier = ">=1.2.1" },
     { name = "gigachat", specifier = "==0.1.43" },
@@ -481,6 +483,16 @@ sdist = { url = "https://files.pythonhosted.org/packages/fc/f8/98eea607f65de6527
 wheels = [
     { url = "https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2", size = 20277, upload-time = "2023-12-24T09:54:30.421Z" },
 ]
+
+[[package]]
+name = "docx"
+version = "0.2.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "lxml" },
+    { name = "pillow" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4a/8e/5a01644697b03016de339ef444cfff28367f92984dc74eddaab1ed60eada/docx-0.2.4.tar.gz", hash = "sha256:9d7595eac6e86cda0b7136a2995318d039c1f3eaa368a3300805abbbe5dc8877", size = 54925, upload-time = "2014-02-06T10:02:49.394Z" }
 
 [[package]]
 name = "fastapi"

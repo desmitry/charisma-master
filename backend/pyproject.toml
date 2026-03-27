@@ -6,6 +6,7 @@ requires-python = ">=3.11,<3.12"
 dependencies = [
     "celery>=5.6.0",
     "celery-types==0.23.0",
+    "docx>=0.2.4",
     "fastapi>=0.123.7",
     "faster-whisper>=1.2.1",
     "gigachat==0.1.43",

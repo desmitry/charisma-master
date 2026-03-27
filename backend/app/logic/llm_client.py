@@ -114,9 +114,7 @@ class LLMClient:
 
         system_prompt = prompts.get_evaluation_criteria_identity_prompt()
 
-        user_content = (
-            f"Исходный документ с требованиями/критериями:\n{document_text[:10000]}"
-        )
+        user_content = f"Исходный документ с требованиями/критериями:\n{document_text[:10000]}"
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -164,6 +162,7 @@ class LLMClient:
                 return f.read()
         elif file_ext == ".docx":
             from docx import Document
+
             doc = Document(file_path)
             text = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
             if not text:
@@ -198,10 +197,13 @@ class LLMClient:
 
         system_prompt = prompts.get_evaluation_criteria_rate_prompt()
 
-        criteria_json = json.dumps([
-            {"name": c.name, "description": c.description, "max_value": c.max_value}
-            for c in evaluation_criteria
-        ], ensure_ascii=False)
+        criteria_json = json.dumps(
+            [
+                {"name": c.name, "description": c.description, "max_value": c.max_value}
+                for c in evaluation_criteria
+            ],
+            ensure_ascii=False,
+        )
 
         user_content = (
             f"ТРАНСКРИПЦИЯ ВЫСТУПЛЕНИЯ:\n{transcript_text[:7000]}\n\n"
