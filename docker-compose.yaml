@@ -15,10 +15,7 @@ services:
         user: "1000:1000"
         environment:
             - MPLCONFIGDIR=/tmp/matplotlib
-<<<<<<< HEAD
             - NUMBA_CACHE_DIR=/tmp/numba
-=======
->>>>>>> 07471fb (Update: update dependencies)
         command:
             [
                 "celery",
@@ -45,10 +42,7 @@ services:
         user: "1000:1000"
         environment:
             - MPLCONFIGDIR=/tmp/matplotlib
-<<<<<<< HEAD
             - NUMBA_CACHE_DIR=/tmp/numba
-=======
->>>>>>> 07471fb (Update: update dependencies)
         command:
             [
                 "uvicorn",
