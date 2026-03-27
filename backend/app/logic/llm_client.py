@@ -1,5 +1,6 @@
 import json
 import logging
+from pathlib import Path
 
 import openai
 from gigachat import GigaChat
@@ -84,14 +85,93 @@ class LLMClient:
             response.summary = str(error_msg)
             return response
 
-    # TODO: Realize LLM evaluation criteria report.
     async def get_evaluation_criteria(
-        self, evaluation_criteria_path: str
+        self,
+        evaluation_criteria_path: str,
     ) -> list[EvaluationCriterion]:
-        system_prompt = prompts.get_evaluation_criteria_identity_prompt()  # noqa: F841
-        return list()
+        """Extract evaluation criteria from uploaded file or preset.
 
-    # TODO: Realize criteria analisis for LLMClient.
+        Args:
+            evaluation_criteria_path (str): Path to criteria file (.json, .docx, .txt).
+
+        Raises:
+            RuntimeError: If criteria extraction fails.
+
+        Returns:
+            list[EvaluationCriterion]: List of criteria without current_value/feedback.
+        """
+        if not evaluation_criteria_path:
+            return []
+
+        file_ext = Path(evaluation_criteria_path).suffix.lower()
+
+        # Case 1: JSON preset file - load directly
+        if file_ext == ".json":
+            return self._load_criteria_from_json(evaluation_criteria_path)
+
+        # Case 2: DOCX or TXT - use LLM to extract criteria
+        document_text = self._read_document_text(evaluation_criteria_path, file_ext)
+
+        system_prompt = prompts.get_evaluation_criteria_identity_prompt()
+
+        user_content = (
+            f"Исходный документ с требованиями/критериями:\n{document_text[:10000]}"
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+        ]
+
+        content = await self._call_gigachat(messages, settings.gigachat_model_name)
+        parsed = self._parse_json_response(content)
+
+        criteria_list = parsed.get("criteria", [])
+        if not criteria_list:
+            raise RuntimeError("Failed to extract criteria from document: empty result")
+
+        return [
+            EvaluationCriterion(
+                name=c["name"],
+                description=c["description"],
+                max_value=c["max_value"],
+            )
+            for c in criteria_list
+        ]
+
+    def _load_criteria_from_json(self, json_path: str) -> list[EvaluationCriterion]:
+        """Load criteria from JSON preset file."""
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        criteria_list = data.get("criteria", [])
+        if not criteria_list:
+            raise RuntimeError("Empty criteria list in JSON preset")
+
+        return [
+            EvaluationCriterion(
+                name=c["name"],
+                description=c["description"],
+                max_value=c["max_value"],
+            )
+            for c in criteria_list
+        ]
+
+    def _read_document_text(self, file_path: str, file_ext: str) -> str:
+        """Read text from DOCX or TXT file."""
+        if file_ext == ".txt":
+            with open(file_path, "r", encoding="utf-8") as f:
+                return f.read()
+        elif file_ext == ".docx":
+            from docx import Document
+            doc = Document(file_path)
+            text = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+            if not text:
+                raise RuntimeError("Empty DOCX file")
+            return text
+        else:
+            raise RuntimeError(f"Unsupported document format: {file_ext}")
+
     async def analyze_with_evalution_criteria(
         self,
         transcript_text: str,
@@ -99,8 +179,70 @@ class LLMClient:
         provider: AnalyzeProvider,
         evaluation_criteria: list[EvaluationCriterion],
     ) -> list[EvaluationCriterion]:
-        system_prompt = prompts.get_evaluation_criteria_rate_prompt()  # noqa: F841
-        return list()
+        """Analyze speech against evaluation criteria using LLM.
+
+        Args:
+            transcript_text (str): Transcribed speech text.
+            presentation_text (str): Presentation slide text.
+            provider (AnalyzeProvider): LLM provider (ignored, always uses GigaChat).
+            evaluation_criteria (list[EvaluationCriterion]): Criteria to evaluate against.
+
+        Raises:
+            RuntimeError: If criteria analysis fails.
+
+        Returns:
+            list[EvaluationCriterion]: Criteria with current_value and feedback filled.
+        """
+        if not evaluation_criteria:
+            return []
+
+        system_prompt = prompts.get_evaluation_criteria_rate_prompt()
+
+        criteria_json = json.dumps([
+            {"name": c.name, "description": c.description, "max_value": c.max_value}
+            for c in evaluation_criteria
+        ], ensure_ascii=False)
+
+        user_content = (
+            f"ТРАНСКРИПЦИЯ ВЫСТУПЛЕНИЯ:\n{transcript_text[:7000]}\n\n"
+            f"ТЕКСТ ПРЕЗЕНТАЦИИ:\n{presentation_text[:5000]}\n\n"
+            f"КРИТЕРИИ ОЦЕНИВАНИЯ:\n{criteria_json}"
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+        ]
+
+        content = await self._call_gigachat(messages, settings.gigachat_model_name)
+        parsed = self._parse_json_response(content)
+
+        scored_criteria = parsed.get("criteria", [])
+        if not scored_criteria:
+            raise RuntimeError("LLM returned empty criteria analysis")
+
+        if len(scored_criteria) != len(evaluation_criteria):
+            raise RuntimeError(
+                f"Criteria count mismatch: expected {len(evaluation_criteria)}, "
+                f"got {len(scored_criteria)}"
+            )
+
+        result = []
+        for orig, scored in zip(evaluation_criteria, scored_criteria):
+            current_value = scored.get("current_value", 0)
+            if not isinstance(current_value, int) or current_value < 0:
+                raise RuntimeError(f"Invalid current_value for criterion '{orig.name}'")
+
+            result.append(
+                EvaluationCriterion(
+                    name=orig.name,
+                    description=orig.description,
+                    max_value=orig.max_value,
+                    current_value=current_value,
+                    feedback=scored.get("feedback", ""),
+                )
+            )
+        return result
 
     async def _call_openai(self, messages: list, model: str) -> str:
         """Send a chat completion request to OpenAI API.
