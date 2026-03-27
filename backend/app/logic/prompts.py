@@ -8,9 +8,11 @@ from pathlib import Path
 
 from app.models.schemas import PersonaRoles
 
-PROMPTS_DIR = Path(__file__).parent.parent / "media" / "prompts"
+from app.config import settings
+
+PROMPTS_DIR = settings.base_dir / "prompts"
 PERSONAS_DIR = PROMPTS_DIR / "personas"
-PRESETS_DIR = Path(__file__).parent.parent / "presets"
+PRESETS_DIR = settings.base_dir / "presets"
 
 _prompt_cache: dict[str, str] = {}
 
