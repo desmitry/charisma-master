@@ -191,6 +191,7 @@ class SpeechReport(BaseModel):
     persona_feedback: str
     dynamic_fillers: list[str]
     presentation_feedback: str
+    useful_links: str
 
 
 class EvaluationCriterion(BaseModel):
