@@ -74,6 +74,7 @@ class LLMClient:
             else:
                 content = await self._call_openai(messages, provider.model_name)
 
+            print(content)
             return SpeechReport(**self._parse_json_response(content))
 
         except Exception as error_msg:
@@ -314,4 +315,5 @@ class LLMClient:
             persona_feedback="",
             dynamic_fillers=list(),
             presentation_feedback="",
+            useful_links="",
         )
