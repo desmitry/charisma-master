@@ -57,6 +57,12 @@ export function normalizeAnalysisResult(payload: any): AnalysisResult {
     ideal_text: payload?.ideal_text ?? "",
     persona_feedback: payload?.persona_feedback ?? "",
     dynamic_fillers: payload?.dynamic_fillers ?? [],
+    useful_links:
+      Array.isArray(payload?.useful_links)
+        ? payload.useful_links
+        : typeof payload?.useful_links === "string"
+          ? payload.useful_links.split("\n").map((item: string) => item.trim()).filter(Boolean)
+          : [],
     presentation_feedback:
       payload?.presentation_feedback ??
       payload?.slide_analysis?.ocr_summary ??
@@ -103,8 +109,8 @@ export function normalizeAnalysisResult(payload: any): AnalysisResult {
         gaze_score: Math.min(100, Math.max(0, components?.gaze_score ?? 0)),
         gaze_label: components?.gaze_label ?? "",
         gesture_score: Math.min(100, Math.max(0, components?.gesture_score ?? 0)),
-        gesture_label: components?.gesture_label ?? "",
-        gesture_advice: components?.gesture_advice ?? "",
+        gesture_label: components?.gesture_label ?? components?.gesture_advice ?? "",
+        gesture_advice: components?.gesture_advice ?? components?.gesture_label ?? "",
         tone_score: Math.min(100, Math.max(0, components?.tone_score ?? 0)),
         tone_label: components?.tone_label ?? "",
       },
@@ -116,6 +122,12 @@ export function normalizeAnalysisResult(payload: any): AnalysisResult {
       ideal_text: speechReport.ideal_text ?? "",
       persona_feedback: speechReport.persona_feedback ?? "",
       dynamic_fillers: speechReport.dynamic_fillers ?? [],
+      useful_links:
+        Array.isArray(speechReport.useful_links)
+          ? speechReport.useful_links
+          : typeof speechReport.useful_links === "string"
+            ? speechReport.useful_links.split("\n").map((item: string) => item.trim()).filter(Boolean)
+            : [],
       presentation_feedback: speechReport.presentation_feedback ?? "",
     },
     evaluation_criteria_report: {

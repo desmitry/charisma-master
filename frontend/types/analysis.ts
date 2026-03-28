@@ -70,6 +70,7 @@ export interface SpeechReport {
   persona_feedback: string;
   dynamic_fillers: string[];
   presentation_feedback: string;
+  useful_links: string[];
 }
 
 export interface AnalysisResult {

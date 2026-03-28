@@ -10,10 +10,11 @@ export function useVideoAnalysis() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState("");
   const [selectedPersona, setSelectedPersona] = useState<string>("");
-  const [selectedLlmProvider, setSelectedLlmProvider] = useState<string>("default");
-  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [selectedAnalyzeProvider, setSelectedAnalyzeProvider] = useState<string>("gigachat");
+  const [selectedTranscribeProvider, setSelectedTranscribeProvider] = useState<string>("sber_gigachat");
   const [presentationFile, setPresentationFile] = useState<File | null>(null);
   const [standardMode, setStandardMode] = useState<"preset" | "custom">("preset");
+  const [selectedEvaluationPreset, setSelectedEvaluationPreset] = useState<"default" | "urfu">("default");
   const [standardFile, setStandardFile] = useState<File | null>(null);
   const [fastRequestsCount, setFastRequestsCount] = useState<number>(3);
   const [isValidRuTubeUrl, setIsValidRuTubeUrl] = useState(false);
@@ -36,12 +37,6 @@ export function useVideoAnalysis() {
       setFastRequestsCount(getFastRequestsCount());
     }
   }, []);
-
-  useEffect(() => {
-    if (selectedLlmProvider === "default") {
-      setSelectedModel("");
-    }
-  }, [selectedLlmProvider]);
 
   const validateRuTubeUrl = (url: string): boolean => {
     if (!url.trim()) return false;
@@ -209,12 +204,11 @@ export function useVideoAnalysis() {
       setProgress(0.1);
       setStatusText("Загружаем видео...");
 
-      const analyzeProvider = selectedLlmProvider === "default" ? "gigachat" : selectedLlmProvider;
-      const transcribeProvider =
-        selectedModel || (analyzeProvider === "openai" ? "whisper_openai" : "sber_gigachat");
-      const evaluationCriteriaId = standardMode === "preset" ? "default" : undefined;
+      const analyzeProvider = selectedAnalyzeProvider;
+      const transcribeProvider = selectedTranscribeProvider;
+      const evaluationCriteriaId = standardMode === "preset" ? selectedEvaluationPreset : undefined;
 
-      if (selectedModel === "whisper_openai") {
+      if (selectedTranscribeProvider === "whisper_openai") {
         if (!hasFastRequestsAvailable()) {
           throw new Error("У вас закончились запросы для Fast модели");
         }
@@ -300,10 +294,11 @@ export function useVideoAnalysis() {
       selectedFile,
       videoUrl,
       selectedPersona,
-      selectedLlmProvider,
-      selectedModel,
+      selectedAnalyzeProvider,
+      selectedTranscribeProvider,
       presentationFile,
       standardMode,
+      selectedEvaluationPreset,
       standardFile,
       fastRequestsCount,
       isValidRuTubeUrl,
@@ -324,10 +319,11 @@ export function useVideoAnalysis() {
       setSelectedFile,
       setVideoUrl,
       setSelectedPersona,
-      setSelectedLlmProvider,
-      setSelectedModel,
+      setSelectedAnalyzeProvider,
+      setSelectedTranscribeProvider,
       setPresentationFile,
       setStandardMode,
+      setSelectedEvaluationPreset,
       setStandardFile,
       setFastRequestsCount,
       setIsValidRuTubeUrl,

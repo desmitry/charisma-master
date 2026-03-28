@@ -333,7 +333,7 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
                   {
                     label: "Жесты",
                     value: result.confidence_index.components.gesture_score,
-                    sub: result.confidence_index.components.gesture_label,
+                    sub: result.confidence_index.components.gesture_advice,
                   },
                   {
                     label: "Тон",

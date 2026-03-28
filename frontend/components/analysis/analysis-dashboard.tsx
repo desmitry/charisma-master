@@ -159,7 +159,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
       key: "gesture",
       title: "Gesture",
       score: confidence.components.gesture_score,
-      label: confidence.components.gesture_label,
+      label: confidence.components.gesture_advice,
       extra: confidence.components.gesture_advice,
     },
     {
@@ -177,6 +177,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
     { title: "ideal_text", heading: "Идеальный текст", text: speechReport.ideal_text, tone: "border-emerald-500/20 bg-emerald-500/[0.03]" },
     { title: "persona_feedback", heading: "Фидбэк персоны", text: speechReport.persona_feedback, tone: "border-amber-500/20 bg-amber-500/[0.03]" },
     { title: "presentation_feedback", heading: "Фидбэк по презентации", text: speechReport.presentation_feedback, tone: "border-sky-500/20 bg-sky-500/[0.03]" },
+    { title: "useful_links", heading: "Полезные ссылки", text: speechReport.useful_links.join("\n"), tone: "border-violet-500/20 bg-violet-500/[0.03]" },
   ];
 
   const criteriaPercent =

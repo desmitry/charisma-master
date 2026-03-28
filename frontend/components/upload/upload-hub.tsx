@@ -208,14 +208,13 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                                 </RadioGroup>
                               </Field>
 
-                              {/* LLM Provider & Model */}
+                              {/* Analyze provider */}
                               <Field>
                                 <Label className="mb-3 block text-[10px] font-mono uppercase tracking-widest text-white/40">
-                                  Нейросеть
+                                  Провайдер анализа
                                 </Label>
-                                <RadioGroup value={state.selectedLlmProvider} onChange={actions.setSelectedLlmProvider} className="flex gap-1.5">
+                                <RadioGroup value={state.selectedAnalyzeProvider} onChange={actions.setSelectedAnalyzeProvider} className="flex gap-1.5">
                                   {[
-                                    { id: "default", label: "Auto" },
                                     { id: "gigachat", label: "GigaChat" },
                                     { id: "openai", label: "OpenAI" },
                                   ].map((m) => (
@@ -228,23 +227,32 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                                     </Radio>
                                   ))}
                                 </RadioGroup>
-                                {state.selectedLlmProvider === "openai" && (
-                                  <RadioGroup value={state.selectedModel} onChange={actions.setSelectedModel} className="mt-2 flex gap-1.5">
+                              </Field>
+
+                              {/* Transcribe provider */}
+                              <Field>
+                                <Label className="mb-3 block text-[10px] font-mono uppercase tracking-widest text-white/40">
+                                  Провайдер транскрибации
+                                </Label>
+                                <RadioGroup value={state.selectedTranscribeProvider} onChange={actions.setSelectedTranscribeProvider} className="grid grid-cols-1 gap-1.5">
+                                  {[
+                                    { id: "sber_gigachat", label: "Sber GigaChat" },
+                                    { id: "whisper_local", label: "Whisper (локально)" },
+                                    { id: "whisper_openai", label: "Whisper OpenAI" },
+                                  ].map((m) => (
                                     <Radio
-                                      value="whisper_local"
-                                      className="flex-1 rounded-lg border border-white/10 py-1 text-xs text-center transition-colors text-white/40 hover:bg-white/5 cursor-pointer data-[checked]:bg-white/10 data-[checked]:text-white outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+                                      key={m.id}
+                                      value={m.id}
+                                      disabled={m.id === "whisper_openai" && !hasFastRequestsAvailable()}
+                                      className="rounded-lg py-1.5 px-2 text-center text-xs font-medium transition-all duration-300 border border-transparent text-white/40 hover:text-white data-[checked]:bg-white/10 data-[checked]:text-white data-[checked]:shadow-inner data-[checked]:border-white/20 data-[disabled]:opacity-30 data-[disabled]:cursor-not-allowed outline-none focus-visible:ring-2 focus-visible:ring-white/20 cursor-pointer"
                                     >
-                                      Long
+                                      {m.label}
+                                      {m.id === "whisper_openai" && (
+                                        <span className="ml-1 rounded bg-white/10 px-1 text-[9px] text-white">{state.fastRequestsCount}</span>
+                                      )}
                                     </Radio>
-                                    <Radio
-                                      value="whisper_openai"
-                                      disabled={!hasFastRequestsAvailable()}
-                                      className="flex-1 rounded-lg border border-white/10 py-1 text-xs transition-colors flex items-center justify-center gap-1.5 text-white/40 data-[checked]:bg-emerald-500/10 data-[checked]:text-emerald-400 data-[checked]:border-emerald-500/20 data-[disabled]:opacity-30 data-[disabled]:cursor-not-allowed cursor-pointer hover:bg-white/5 outline-none focus-visible:ring-2 focus-visible:ring-white/20"
-                                    >
-                                      Fast <span className="rounded bg-white/10 px-1 text-[9px] text-white">{state.fastRequestsCount}</span>
-                                    </Radio>
-                                  </RadioGroup>
-                                )}
+                                  ))}
+                                </RadioGroup>
                               </Field>
 
                               {/* Standard Mode */}
@@ -273,6 +281,26 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                                     Свой файл
                                   </Radio>
                                 </RadioGroup>
+                                {state.standardMode === "preset" && (
+                                  <RadioGroup
+                                    value={state.selectedEvaluationPreset}
+                                    onChange={actions.setSelectedEvaluationPreset}
+                                    className="mt-2 grid grid-cols-1 gap-1.5"
+                                  >
+                                    {[
+                                      { id: "default", label: "Базовый" },
+                                      { id: "urfu", label: "От УрФУ" },
+                                    ].map((preset) => (
+                                      <Radio
+                                        key={preset.id}
+                                        value={preset.id}
+                                        className="rounded-lg py-1.5 px-2 text-center text-xs font-medium transition-all duration-300 border border-transparent text-white/40 hover:text-white data-[checked]:bg-white/10 data-[checked]:text-white data-[checked]:shadow-inner data-[checked]:border-white/20 outline-none focus-visible:ring-2 focus-visible:ring-white/20 cursor-pointer"
+                                      >
+                                        {preset.label}
+                                      </Radio>
+                                    ))}
+                                  </RadioGroup>
+                                )}
                               </Field>
                             </div>
                           </PopoverPanel>

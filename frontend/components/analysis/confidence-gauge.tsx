@@ -13,7 +13,7 @@ export function ConfidenceGauge({ data }: { data: ConfidenceIndex }) {
     { label: "Volume", value: data.components.volume_score, meta: `${data.components.volume_level} · ${data.components.volume_label}` },
     { label: "Filler", value: data.components.filler_score, meta: data.components.filler_label },
     { label: "Gaze", value: data.components.gaze_score, meta: data.components.gaze_label },
-    { label: "Gesture", value: data.components.gesture_score, meta: data.components.gesture_label },
+    { label: "Gesture", value: data.components.gesture_score, meta: data.components.gesture_advice },
     { label: "Tone", value: data.components.tone_score, meta: data.components.tone_label },
   ];
 
