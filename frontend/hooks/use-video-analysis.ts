@@ -240,17 +240,18 @@ export function useVideoAnalysis() {
       const analysis = await pollForAnalysis(
         taskId,
         (status) => {
-          const nextProgress =
-            status.state === "SUCCESS" ? 1 : Math.max(0, Math.min(1, status.progress ?? 0));
-
-          setProgress(Math.max(0.3, nextProgress));
-
-          if (status.state === "PROCESSING" && (status.progress ?? 0) !== 0 && status.hint) {
-            setStatusText(status.hint);
-            return;
+          if (status.state === "SUCCESS") {
+            setProgress(1);
+            setStatusText("Все готово");
+          } else if (status.state === "PENDING") {
+            setProgress(status.progress ?? 0);
+            setStatusText("Ожидание очереди...");
+          } else if (status.state === "PROCESSING") {
+            setProgress(status.progress ?? 0);
+            if (status.hint) {
+              setStatusText(status.hint);
+            }
           }
-
-          setStatusText(stageName(status.stage));
         },
         900_000
       );
