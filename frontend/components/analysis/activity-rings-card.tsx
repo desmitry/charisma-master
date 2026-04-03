@@ -134,7 +134,7 @@ export function ActivityRingsCard({ result }: { result: AnalysisResult }) {
   const r3 = r2 - sw - gap;
 
   return (
-    <div className="rounded-[24px] bg-[#111] border border-white/[0.06] text-white flex flex-col min-w-[300px] max-w-[340px]">
+    <div className="rounded-[24px] bg-[#111] border border-white/[0.06] text-white flex flex-col w-full sm:min-w-[300px] lg:max-w-[340px] mx-auto lg:mx-0">
       <div className="px-6 pt-5 pb-0">
         <p className="text-[11px] font-mono text-white/35 uppercase tracking-[0.18em]">Общая статистика</p>
       </div>
