@@ -1,0 +1,12 @@
+[project]
+name = "charisma-master"
+version = "0.1.0"
+description = "Charisma Master - Python Monorepo"
+requires-python = ">=3.12,<3.13"
+
+[tool.uv.workspace]
+members = [
+    "packages/charisma_schemas",
+    "services/api_gateway",
+    "services/ml_worker",
+]

@@ -3,7 +3,7 @@ import json
 from fastapi import APIRouter, HTTPException
 
 from app.config import settings
-from app.models.schemas import AnalysisResult
+from charisma_schemas import AnalysisResult
 
 router = APIRouter()
 

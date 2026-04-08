@@ -19,14 +19,20 @@ RUN curl -LsSf "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/
     | tar -xz -C /usr/local/bin --strip-components=1 \
     && chmod +x /usr/local/bin/uv
 
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml ./pyproject.toml
+COPY uv.lock ./uv.lock
+COPY packages/charisma_schemas ./packages/charisma_schemas
+COPY services/ml_worker/pyproject.toml ./services/ml_worker/pyproject.toml
 
 ENV VIRTUAL_ENV=/build/.venv \
     PATH="/build/.venv/bin:$PATH"
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv venv && \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev --package charisma-ml-worker
+
+RUN uv build --wheel --out-dir /build/wheels ./packages/charisma_schemas
+
+RUN uv pip install --no-deps /build/wheels/charisma_schemas-*.whl
 
 FROM nvidia/cuda:13.2.0-runtime-ubuntu24.04 AS runtime
 
@@ -46,7 +52,7 @@ RUN groupadd -r appuser && \
 
 COPY --from=builder --chown=appuser:appuser /build/.venv /backend/.venv
 
-COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser services/ml_worker/app ./app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

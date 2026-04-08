@@ -14,8 +14,8 @@ services:
     ml_worker:
         image: ${ML_WORKER_IMAGE:-ghcr.io/desmitry/charisma-master-ml-worker:latest}
         build:
-            context: ./services/ml_worker
-            dockerfile: ./Dockerfile
+            context: .
+            dockerfile: ./services/ml_worker/Dockerfile
         container_name: ml_worker
         user: "1000:1000"
         command:
@@ -37,8 +37,8 @@ services:
     api_gateway:
         image: ${API_GATEWAY_IMAGE:-ghcr.io/desmitry/charisma-master-api-gateway:latest}
         build:
-            context: ./services/api_gateway
-            dockerfile: ./Dockerfile
+            context: .
+            dockerfile: ./services/api_gateway/Dockerfile
         container_name: api_gateway
         command:
             [

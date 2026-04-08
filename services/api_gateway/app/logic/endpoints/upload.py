@@ -11,7 +11,7 @@ from rutube import Rutube
 
 from app.celery_app import celery_app
 from app.config import settings
-from app.models.schemas import AnalyzeProvider, PersonaRoles, TranscribeProvider, UploadResponse
+from charisma_schemas import AnalyzeProvider, PersonaRoles, TranscribeProvider, UploadResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

@@ -2,7 +2,7 @@ from celery.result import AsyncResult
 from fastapi import APIRouter
 
 from app.celery_app import celery_app
-from app.models.schemas import TaskState, TaskStatusResponse
+from charisma_schemas import TaskState, TaskStatusResponse
 
 router = APIRouter()
 

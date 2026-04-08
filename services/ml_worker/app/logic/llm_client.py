@@ -7,7 +7,7 @@ from gigachat import GigaChat
 
 from app.config import settings
 from app.logic import prompts
-from app.models.schemas import AnalyzeProvider, EvaluationCriterion, PersonaRoles, SpeechReport
+from charisma_schemas import AnalyzeProvider, EvaluationCriterion, PersonaRoles, SpeechReport
 
 logger = logging.getLogger(__name__)
 

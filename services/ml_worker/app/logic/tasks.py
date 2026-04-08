@@ -11,7 +11,7 @@ from celery.signals import worker_process_init
 from app.config import settings
 from app.logic.llm_client import LLMClient
 from app.logic.ml_engine import MLEngine
-from app.models.schemas import (
+from charisma_schemas import (
     AnalysisResult,
     AnalyzeProvider,
     ConfidenceComponents,

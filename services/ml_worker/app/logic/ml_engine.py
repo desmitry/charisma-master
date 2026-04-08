@@ -15,7 +15,7 @@ import urllib3
 from faster_whisper import WhisperModel
 
 from app.config import settings
-from app.models.schemas import (
+from charisma_schemas import (
     PauseInterval,
     TempoPoint,
     TranscribeProvider,

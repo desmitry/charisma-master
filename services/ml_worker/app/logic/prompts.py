@@ -6,7 +6,7 @@ Prompts are stored in backend/app/media/prompts/ directory.
 
 from pathlib import Path
 
-from app.models.schemas import PersonaRoles
+from charisma_schemas import PersonaRoles
 
 from app.config import settings
 

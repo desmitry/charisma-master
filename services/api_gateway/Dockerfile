@@ -20,9 +20,16 @@ RUN curl -LsSf "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/
     | tar -xz -C /usr/local/bin --strip-components=1 \
     && chmod +x /usr/local/bin/uv
 
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml ./pyproject.toml
+COPY uv.lock ./uv.lock
+COPY packages/charisma_schemas ./packages/charisma_schemas
+COPY services/api_gateway/pyproject.toml ./services/api_gateway/pyproject.toml
 
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --package charisma-api-gateway
+
+RUN uv build --wheel --out-dir /build/wheels ./packages/charisma_schemas
+
+RUN uv pip install --no-deps /build/wheels/charisma_schemas-*.whl
 
 FROM python:3.12-slim AS runtime
 
@@ -39,7 +46,7 @@ RUN groupadd -g 1000 appuser && \
 
 COPY --from=builder --chown=appuser:appuser /build/.venv /backend/.venv
 
-COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser services/api_gateway/app ./app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
