@@ -1,0 +1,32 @@
+# Virtual environment
+.venv/
+venv/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+
+# Secrets / env
+*.env
+.env
+.env.*
+
+# Logs
+logs/
+*.log
+
+# Ruff formatter
+.ruff_cache/
+
+## Additional stuff.
+# Git
+.git
+.gitignore
+LICENSE
+*.md
+
+# Docker
+docker/
+.dockerignore

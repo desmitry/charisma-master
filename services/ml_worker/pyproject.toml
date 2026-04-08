@@ -1,0 +1,55 @@
+[project]
+name = "charisma-ml-worker"
+version = "0.1.0"
+description = "Charisma Master ML Worker - Celery worker for speech/video analysis"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "celery>=5.6.0",
+    "celery-types==0.23.0",
+    "faster-whisper>=1.2.1",
+    "gigachat==0.1.43",
+    "librosa>=0.11.0",
+    "mediapipe==0.10.21",
+    "numpy>=1.26.4",
+    "openai>=2.8.1",
+    "opencv-contrib-python>=4.11.0.86",
+    "pdfplumber>=0.11.0",
+    "pydantic-settings>=2.12.0",
+    "python-docx>=1.1.0",
+    "python-pptx>=0.6.23",
+    "redis>=7.1.0",
+    "requests>=2.32.5",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.11.0",
+    "ruff>=0.14.8",
+]
+
+[tool.ruff]
+src = ["app"]
+target-version = "py312"
+line-length = 100
+indent-width = 4
+exclude = [
+    ".git/",
+    "venv/",
+    ".venv/",
+    "vscode/",
+    "__pycache__/",
+    ".ruff_cache/",
+]
+
+[tool.ruff.lint]
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+select = ["E", "F", "N", "I", "C90", "T", "S"]
+ignore = []
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

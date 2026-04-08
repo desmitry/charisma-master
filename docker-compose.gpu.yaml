@@ -1,5 +1,5 @@
 services:
-  celery:
+  ml_worker:
     deploy:
       resources:
         reservations:
@@ -7,11 +7,3 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-  
-  backend:
-    deploy:
-      resources:
-        devices:
-        - driver: nvidia
-          count: 1
-          capabilities: [gpu]

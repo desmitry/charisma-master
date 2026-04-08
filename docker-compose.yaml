@@ -1,21 +1,23 @@
 services:
     redis:
-        image: redis:8.4.0
+        image: redis:8.6.2
         container_name: redis
         command:
             - redis-server
         restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
 
-    celery:
-        image: ${BACKEND_IMAGE:-ghcr.io/desmitry/charisma-master-backend:latest}
+    ml_worker:
+        image: ${ML_WORKER_IMAGE:-ghcr.io/desmitry/charisma-master-ml-worker:latest}
         build:
-            context: ./backend
+            context: ./services/ml_worker
             dockerfile: ./Dockerfile
-        container_name: celery
+        container_name: ml_worker
         user: "1000:1000"
-        environment:
-            - MPLCONFIGDIR=/tmp/matplotlib
-            - NUMBA_CACHE_DIR=/tmp/numba
         command:
             [
                 "celery",
@@ -27,22 +29,17 @@ services:
             ]
         restart: unless-stopped
         env_file:
-            - ./backend/.docker.env
+            - ./services/ml_worker/.docker.env
         depends_on:
-            - redis
-        volumes:
-            - ./backend/media:/backend/app/media
+            redis:
+                condition: service_healthy
 
-    backend:
-        image: ${BACKEND_IMAGE:-ghcr.io/desmitry/charisma-master-backend:latest}
+    api_gateway:
+        image: ${API_GATEWAY_IMAGE:-ghcr.io/desmitry/charisma-master-api-gateway:latest}
         build:
-            context: ./backend
+            context: ./services/api_gateway
             dockerfile: ./Dockerfile
-        container_name: backend
-        user: "1000:1000"
-        environment:
-            - MPLCONFIGDIR=/tmp/matplotlib
-            - NUMBA_CACHE_DIR=/tmp/numba
+        container_name: api_gateway
         command:
             [
                 "uvicorn",
@@ -56,18 +53,23 @@ services:
             ]
         restart: unless-stopped
         env_file:
-            - ./backend/.docker.env
+            - ./services/api_gateway/.docker.env
         ports:
             - 127.0.0.1:8000:8000
         depends_on:
-            - celery
-        volumes:
-            - ./backend/media:/backend/app/media
+            redis:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+            interval: 30s
+            timeout: 10s
+            start_period: 60s
+            retries: 3
 
     frontend:
         image: ${FRONTEND_IMAGE:-ghcr.io/desmitry/charisma-master-frontend:latest}
         build:
-            context: ./frontend
+            context: ./services/frontend
             dockerfile: ./Dockerfile
         container_name: frontend
         command: ["npm", "start"]
@@ -77,6 +79,7 @@ services:
         environment:
             - NODE_ENV=production
             - PORT=3000
-            - BACKEND_URL=http://backend:8000
+            - BACKEND_URL=http://api_gateway:8000
         depends_on:
-            - backend
+            api_gateway:
+                condition: service_healthy
