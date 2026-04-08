@@ -4,6 +4,33 @@ version = "0.1.0"
 description = "Charisma Master - Python Monorepo"
 requires-python = ">=3.12,<3.13"
 
+[tool.ruff]
+src = ["app"]
+target-version = "py312"
+line-length = 100
+indent-width = 4
+exclude = [
+    ".git/",
+    "venv/",
+    ".venv/",
+    "vscode/",
+    "__pycache__/",
+    ".ruff_cache/",
+]
+
+[tool.ruff.lint]
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+select = ["E", "F", "N", "I", "C90", "T", "S"]
+ignore = []
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
 [tool.uv.workspace]
 members = [
     "packages/charisma_schemas",
