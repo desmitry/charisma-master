@@ -1,0 +1,15 @@
+[project]
+name = "charisma-storage"
+version = "0.1.0"
+description = "Shared SeaweedFS (S3-compatible) storage client for Charisma Master services"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "minio>=7.2.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/charisma_storage"]

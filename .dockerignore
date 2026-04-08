@@ -40,6 +40,5 @@ docker/
 *.lock
 !uv.lock
 !pyproject.toml
-docs/
 scripts/
 services/frontend/

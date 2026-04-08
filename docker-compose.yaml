@@ -1,4 +1,90 @@
 services:
+    postgres:
+        image: postgres:17-alpine
+        container_name: postgres
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER:-charisma}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-charisma}
+            POSTGRES_DB: ${POSTGRES_DB:-charisma}
+        ports:
+            - "127.0.0.1:5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-charisma}"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+
+    seaweedfs-master:
+        image: chrislusf/seaweedfs:3.78
+        container_name: seaweedfs-master
+        command: master -ip=seaweedfs-master -port=9333
+        ports:
+            - "9333:9333"
+        volumes:
+            - seaweedfs_data:/data
+        healthcheck:
+            test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:9333/"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+            start_period: 15s
+
+    seaweedfs-volume:
+        image: chrislusf/seaweedfs:3.78
+        container_name: seaweedfs-volume
+        command: volume -mserver=seaweedfs-master:9333 -ip=seaweedfs-volume -port=8080 -dir=/data -max=100
+        volumes:
+            - seaweedfs_data:/data
+        depends_on:
+            seaweedfs-master:
+                condition: service_healthy
+
+    seaweedfs-filer:
+        image: chrislusf/seaweedfs:3.78
+        container_name: seaweedfs-filer
+        command: filer -master=seaweedfs-master:9333 -ip=seaweedfs-filer
+        depends_on:
+            seaweedfs-master:
+                condition: service_healthy
+            seaweedfs-volume:
+                condition: service_started
+        healthcheck:
+            test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8888/"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+
+    seaweedfs-s3:
+        image: chrislusf/seaweedfs:3.78
+        container_name: seaweedfs-s3
+        command: s3 -filer=seaweedfs-filer:8888 -ip.bind=0.0.0.0 -port=8333
+        ports:
+            - "8333:8333"
+        depends_on:
+            seaweedfs-filer:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8333/"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+
+    migrator:
+        image: ${MIGRATOR_IMAGE:-charisma-migrator:latest}
+        build:
+            context: .
+            dockerfile: services/migrator/Dockerfile
+        container_name: migrator
+        environment:
+            DATABASE_URL: postgresql://${POSTGRES_USER:-charisma}:${POSTGRES_PASSWORD:-charisma}@postgres:5432/${POSTGRES_DB:-charisma}
+        depends_on:
+            postgres:
+                condition: service_healthy
+        restart: "no"
+
     redis:
         image: redis:8.6.2
         container_name: redis
@@ -31,6 +117,12 @@ services:
         env_file:
             - ./services/ml_worker/.docker.env
         depends_on:
+            postgres:
+                condition: service_healthy
+            seaweedfs-s3:
+                condition: service_healthy
+            migrator:
+                condition: service_completed_successfully
             redis:
                 condition: service_healthy
 
@@ -57,6 +149,12 @@ services:
         ports:
             - 127.0.0.1:8000:8000
         depends_on:
+            postgres:
+                condition: service_healthy
+            seaweedfs-s3:
+                condition: service_healthy
+            migrator:
+                condition: service_completed_successfully
             redis:
                 condition: service_healthy
         healthcheck:
@@ -83,3 +181,9 @@ services:
         depends_on:
             api_gateway:
                 condition: service_healthy
+
+volumes:
+    postgres_data:
+        driver: local
+    seaweedfs_data:
+        driver: local

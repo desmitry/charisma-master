@@ -7,6 +7,8 @@ requires-python = ">=3.12,<3.13"
 [tool.uv.workspace]
 members = [
     "packages/charisma_schemas",
+    "packages/charisma_storage",
     "services/api_gateway",
     "services/ml_worker",
+    "services/migrator",
 ]
