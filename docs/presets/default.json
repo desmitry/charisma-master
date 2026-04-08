@@ -1,6 +1,6 @@
 {
-  "id": "general",
-  "name": "General Presentation Criteria",
+  "id": "default",
+  "name": "Default Presentation Criteria",
   "description": "Standard evaluation criteria for general presentations",
   "criteria": [
     {

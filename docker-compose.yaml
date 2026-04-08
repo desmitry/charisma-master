@@ -52,7 +52,7 @@ services:
             seaweedfs-volume:
                 condition: service_started
         healthcheck:
-            test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8888/"]
+            test: ["CMD", "wget", "-q", "-O", "/dev/null", "--tries=1", "--timeout=5", "http://127.0.0.1:8888/"]
             interval: 5s
             timeout: 5s
             retries: 10

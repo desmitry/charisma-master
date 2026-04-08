@@ -1,6 +1,8 @@
 import asyncio
 import logging
+import os
 import subprocess
+import tempfile
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -11,17 +13,25 @@ from celery.signals import worker_process_init
 from app.config import settings
 from app.logic.llm_client import LLMClient
 from app.logic.ml_engine import MLEngine
+from app.logic.prompts import load_prompts_from_db
 from charisma_schemas import (
     AnalysisResult,
     AnalyzeProvider,
     ConfidenceComponents,
     ConfidenceIndex,
+    EvaluationCriterion,
     EvaluationCriteriaReport,
     FillersSummary,
     PersonaRoles,
     TaskStage,
     TaskState,
     TranscribeProvider,
+)
+from charisma_storage import (
+    BUCKET_RESULTS,
+    BUCKET_UPLOADS,
+    download_file,
+    put_object_json,
 )
 
 logger = logging.getLogger(__name__)
@@ -88,8 +98,30 @@ def _parse_pdf(presentation_path: str) -> list[str]:
     return slides_text
 
 
+def _download_to_temp(object_key: str) -> str:
+    """Download from SeaweedFS to a temp file, return the path."""
+    suffix = Path(object_key).suffix or ".mp4"
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    tmp.close()
+    download_file(
+        settings.seaweedfs_endpoint,
+        BUCKET_UPLOADS,
+        object_key,
+        tmp.name,
+        settings.seaweedfs_access_key,
+        settings.seaweedfs_secret_key,
+    )
+    return tmp.name
+
+
 @worker_process_init.connect
 def init_worker(**kwargs):
+    logger.info("Preloading prompts from database...")
+    try:
+        load_prompts_from_db()
+    except Exception as e:
+        logger.error(f"Failed to load prompts from DB: {e}")
+
     logger.info("Preloading ML models...")
     try:
         # TODO: Preload all local models
@@ -102,9 +134,10 @@ def init_worker(**kwargs):
 def process_video_pipeline(
     self,
     task_id: str,
-    speech_video_path: str,
-    evaluation_criteria_path: str,
-    presentation_path: Optional[str],
+    speech_video_key: str,
+    evaluation_criteria_key: Optional[str],
+    evaluation_criteria_preset: Optional[list[dict]],
+    presentation_key: Optional[str],
     analyze_provider: str | Enum,
     transcribe_provider: str | Enum,
     persona: str | Enum,
@@ -113,16 +146,22 @@ def process_video_pipeline(
     transcribe_provider = TranscribeProvider(transcribe_provider)
     persona = PersonaRoles(persona)
 
+    video_tmp = _download_to_temp(speech_video_key)
+    audio_tmp = str(Path(video_tmp).with_suffix(".wav"))
+    presentation_tmp = None
+
+    if presentation_key:
+        presentation_tmp = _download_to_temp(presentation_key)
+
     try:
         self.update_state(
             state=TaskState.processing.value,
             meta=TaskStage.transcription.meta,
         )
 
-        audio_path = str(Path(speech_video_path).with_suffix(".wav"))
-        MLEngine.extract_audio(speech_video_path, audio_path)
+        MLEngine.extract_audio(video_tmp, audio_tmp)
 
-        transcript_segments = MLEngine.transcribe(audio_path, provider=transcribe_provider)
+        transcript_segments = MLEngine.transcribe(audio_tmp, provider=transcribe_provider)
         tempo_data = MLEngine.calculate_tempo(transcript_segments)
 
         full_text = " ".join([s.text for s in transcript_segments])
@@ -145,7 +184,7 @@ def process_video_pipeline(
     video_metrics = MLEngine.get_empty_video_metrics()
 
     try:
-        video_metrics = MLEngine.analyze_video(speech_video_path)
+        video_metrics = MLEngine.analyze_video(video_tmp)
     except Exception as e:
         logger.warning(f"Video analysis failed: {e}")
 
@@ -156,16 +195,15 @@ def process_video_pipeline(
     audio_metrics = MLEngine.get_empty_audio_metrics()
 
     try:
-        audio_metrics = MLEngine.analyze_audio(audio_path)
+        audio_metrics = MLEngine.analyze_audio(audio_tmp)
     except Exception as e:
         logger.warning(f"Audio features failed: {e}")
 
-    # Parse presentation text
     self.update_state(
         state=TaskState.processing.value,
         meta=TaskStage.presentation_text_parsing.meta,
     )
-    presentation_text_list = _get_presentation_text(presentation_path) if presentation_path else []
+    presentation_text_list = _get_presentation_text(presentation_tmp) if presentation_tmp else []
     if not presentation_text_list:
         presentation_text = "Текст презентации отсутствует"
     else:
@@ -173,26 +211,34 @@ def process_video_pipeline(
             f"[Слайд: {idx + 1}]\n{text}" for idx, text in enumerate(presentation_text_list)
         )
 
-    # Extract evaluation criteria from file or preset
     self.update_state(
         state=TaskState.processing.value,
         meta=TaskStage.evaluation_criteria_report.meta,
     )
-    evaluation_criteria = list()
-    try:
-        llm_client = LLMClient()
+    evaluation_criteria_list = list()
+    if evaluation_criteria_preset:
+        evaluation_criteria_list = [EvaluationCriterion(**c) for c in evaluation_criteria_preset]
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        evaluation_criteria = loop.run_until_complete(
-            llm_client.get_evaluation_criteria(
-                evaluation_criteria_path,
+    elif evaluation_criteria_key:
+        criteria_path = None
+        try:
+            llm_client = LLMClient()
+
+            criteria_path = _download_to_temp(evaluation_criteria_key)
+
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            evaluation_criteria_list = loop.run_until_complete(
+                llm_client.get_evaluation_criteria(criteria_path)
             )
-        )
-        loop.close()
-    except Exception as e:
-        logger.error(f"Failed to extract evaluation criteria: {e}")
-        raise RuntimeError(f"Criteria extraction failed: {str(e)}")
+            loop.close()
+
+        except Exception as e:
+            logger.error(f"Failed to extract evaluation criteria: {e}")
+            raise RuntimeError(f"Criteria extraction failed: {str(e)}")
+
+        if criteria_path and os.path.exists(criteria_path):
+            os.unlink(criteria_path)
 
     self.update_state(
         state=TaskState.processing.value,
@@ -218,28 +264,28 @@ def process_video_pipeline(
         logger.error(f"LLM speech analysis failed: {e}")
         raise RuntimeError(f"Speech analysis failed: {str(e)}")
 
-    # Analyze speech against evaluation criteria
     self.update_state(
         state=TaskState.processing.value,
         meta=TaskStage.llm_criteria_report.meta,
     )
+    evaluation_criteria_total_score = 0
+    evaluation_criteria_max_score = 0
     try:
         llm_client = LLMClient()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        evaluation_criteria = loop.run_until_complete(
+        evaluation_criteria_list = loop.run_until_complete(
             llm_client.analyze_with_evalution_criteria(
                 transcript_text=full_text,
                 presentation_text=presentation_text,
                 provider=analyze_provider,
-                evaluation_criteria=evaluation_criteria,
+                evaluation_criteria=evaluation_criteria_list,
             )
         )
         loop.close()
 
-        # Calculate total and max scores
-        evaluation_criteria_total_score = sum(c.current_value for c in evaluation_criteria)
-        evaluation_criteria_max_score = sum(c.max_value for c in evaluation_criteria)
+        evaluation_criteria_total_score = sum(c.current_value for c in evaluation_criteria_list)
+        evaluation_criteria_max_score = sum(c.max_value for c in evaluation_criteria_list)
 
         logger.info(
             f"Criteria evaluation completed: "
@@ -270,7 +316,7 @@ def process_video_pipeline(
 
     result_data = AnalysisResult(
         task_id=task_id,
-        video_path=f"/media/{Path(speech_video_path).name}",
+        video_path=f"/media/{task_id}.mp4",
         transcript=transcript_segments,
         tempo=tempo_data,
         long_pauses=long_pauses,
@@ -297,14 +343,20 @@ def process_video_pipeline(
         evaluation_criteria_report=EvaluationCriteriaReport(
             total_score=evaluation_criteria_total_score,
             max_score=evaluation_criteria_max_score,
-            criteria=evaluation_criteria,
+            criteria=evaluation_criteria_list,
         ),
         analyze_provider=analyze_provider.value,
         analyze_model=analyze_provider.model_name,
         transcribe_model=transcribe_provider.value,
     )
 
-    with open(settings.results_dir / f"{task_id}.json", "w", encoding="utf-8") as file:
-        file.write(result_data.model_dump_json(ensure_ascii=False))
+    put_object_json(
+        settings.seaweedfs_endpoint,
+        BUCKET_RESULTS,
+        f"{task_id}.json",
+        result_data.model_dump(),
+        settings.seaweedfs_access_key,
+        settings.seaweedfs_secret_key,
+    )
 
     return {"status": "completed", "task_id": task_id}

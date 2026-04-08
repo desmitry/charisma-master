@@ -23,13 +23,15 @@ RUN curl -LsSf "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/
 COPY pyproject.toml ./pyproject.toml
 COPY uv.lock ./uv.lock
 COPY packages/charisma_schemas ./packages/charisma_schemas
+COPY packages/charisma_storage ./packages/charisma_storage
 COPY services/api_gateway/pyproject.toml ./services/api_gateway/pyproject.toml
 
 RUN uv sync --frozen --no-dev --package charisma-api-gateway
 
 RUN uv build --wheel --out-dir /build/wheels ./packages/charisma_schemas
+RUN uv build --wheel --out-dir /build/wheels ./packages/charisma_storage
 
-RUN uv pip install --no-deps /build/wheels/charisma_schemas-*.whl
+RUN uv pip install --no-deps /build/wheels/*.whl
 
 FROM python:3.12-slim AS runtime
 
@@ -52,9 +54,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/backend/.venv/bin:$PATH" \
     VIRTUAL_ENV=/backend/.venv
-
-RUN mkdir -p /backend/app/media/results && \
-    chown -R appuser:appuser /backend/app/media
 
 RUN sed -i '1s|^#!/build/.venv/bin/python|#!/backend/.venv/bin/python|' /backend/.venv/bin/*
 

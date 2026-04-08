@@ -35,10 +35,16 @@ def ensure_buckets_exist(
     secret_key: str,
     secure: bool = False,
 ):
+    from minio.error import S3Error
+
     client = get_client(endpoint, access_key, secret_key, secure)
     for bucket in [BUCKET_UPLOADS, BUCKET_RESULTS]:
-        if not client.bucket_exists(bucket):
-            client.make_bucket(bucket)
+        try:
+            if not client.bucket_exists(bucket):
+                client.make_bucket(bucket)
+        except S3Error as e:
+            if e.code not in ("BucketAlreadyExists", "BucketAlreadyOwnedByYou"):
+                raise
 
 
 def upload_file(

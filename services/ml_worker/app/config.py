@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Literal, Union
 
 from pydantic import Field
@@ -25,10 +24,31 @@ class Settings(BaseSettings):
         frozen=True,
     )
 
-    base_dir: Path = Path(__file__).parent.parent.resolve()
-    prompts_dir: Path = base_dir / "app" / "prompts"
-    media_root: Path = base_dir / "app" / "media"
-    results_dir: Path = media_root / "results"
+    database_url: str = Field(
+        key="DATABASE_URL",
+        default="postgresql://charisma:charisma@localhost:5432/charisma",
+        validate_default=True,
+        frozen=True,
+    )
+
+    seaweedfs_endpoint: str = Field(
+        key="SEAWEEDFS_ENDPOINT",
+        default="localhost:9222",
+        validate_default=True,
+        frozen=True,
+    )
+    seaweedfs_access_key: str = Field(
+        key="SEAWEEDFS_ACCESS_KEY",
+        default="",
+        validate_default=True,
+        frozen=True,
+    )
+    seaweedfs_secret_key: str = Field(
+        key="SEAWEEDFS_SECRET_KEY",
+        default="",
+        validate_default=True,
+        frozen=True,
+    )
 
     whisper_model_name: str = Field(
         key="WHISPER_MODEL_NAME",
@@ -116,6 +136,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
-settings.media_root.mkdir(parents=True, exist_ok=True)
-settings.results_dir.mkdir(parents=True, exist_ok=True)

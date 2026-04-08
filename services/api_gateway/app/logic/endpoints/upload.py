@@ -1,168 +1,176 @@
 import json
 import logging
 import os
-import shutil
 import subprocess
+import tempfile
 import uuid
 from typing import Optional
 
+import psycopg2
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from rutube import Rutube
 
 from app.celery_app import celery_app
 from app.config import settings
+from charisma_storage import upload_file, BUCKET_UPLOADS
 from charisma_schemas import AnalyzeProvider, PersonaRoles, TranscribeProvider, UploadResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-
-def _download_uploaded_file(task_id: str, uploaded_file: UploadFile) -> str:
-    """Downloading the user uploaded file.
-
-    Args:
-        task_id (str): Task UUID.
-        uploaded_file (UploadFile): User uploaded file.
-
-    Raises:
-        HTTPException: If the uploaded file has no filename.
-
-    Returns:
-        str: Absolute path to the saved file.
-    """
-    if uploaded_file.filename is None:
-        raise HTTPException(status_code=400, detail="Некоретное название файла")
-
-    file_extension = uploaded_file.filename.split(".")[-1]
-    file_path = settings.media_root / f"{task_id}.{file_extension}"
-
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(uploaded_file.file, buffer)
-
-    return str(file_path)
+VIDEO_EXTENSIONS = {"mp4", "mov", "avi", "mkv", "webm", "m4v"}
 
 
-def _load_criteria_preset(criteria_id: str) -> str:
-    """Load evaluation criteria preset JSON file.
-
-    Args:
-        criteria_id (str): UUID identifier for the criteria preset.
-
-    Raises:
-        HTTPException: If preset file doesn't exist or is invalid.
-
-    Returns:
-        str: Absolute path to the preset JSON file.
-    """
-    preset_path = settings.presets_dir / f"{criteria_id}.json"
-
-    if not preset_path.exists():
-        raise HTTPException(
-            status_code=404, detail=f"Пресет с критериями '{criteria_id}' не найден"
-        )
-
-    try:
-        with open(preset_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if not isinstance(data, dict) or "criteria" not in data:
-                raise ValueError("Preset must be a JSON object with 'criteria' array")
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Некорректный формат файла пресета")
-
-    return str(preset_path)
-
-
-def _download_user_speech_from_rutube(task_id: str, video_url: str) -> str:
-    """Downloading user speech video from Rutube.
-
-    Args:
-        task_id (str): Task UUID.
-        video_url (str): User rutube video url.
-
-    Raises:
-        HTTPException: If the URL does not contain 'rutube.ru'.
-        HTTPException: If the video is unavailable or cannot be retrieved.
-        HTTPException: If the downloaded file is empty.
-        HTTPException: If FFmpeg video conversion fails.
-        HTTPException: If an unknown error occurs during download.
-
-    Returns:
-        str: Absolute path to the saved file.
-    """
-
-    if "rutube.ru" not in video_url:
-        raise HTTPException(
-            status_code=400,
-            detail="Ссылка должна быть на rutube.ru",
-        )
-
-    try:
-        rt = Rutube(video_url.lower())
-        rutube_video = rt.get_best()
-
-        if not rutube_video:
-            raise HTTPException(
-                status_code=500,
-                detail="Ошибка загрузки: видео недоступно",
-            )
-
-        temp_path = settings.media_root / f"temp_{task_id}"
-
-        with open(temp_path, "wb") as buffer:
-            rutube_video.download(stream=buffer)
-
-        if not temp_path.exists() or temp_path.stat().st_size == 0:
-            raise HTTPException(
-                status_code=500,
-                detail="Ошибка загрузки: cкачанный файл пустой",
-            )
-
-        file_path = settings.media_root / f"{task_id}.mp4"
-
-        command = [
+def _convert_to_faststart(input_path: str, output_path: str):
+    """Convert video to faststart MP4 for browser streaming support."""
+    subprocess.run(
+        [
             "ffmpeg",
             "-y",
             "-i",
-            str(temp_path),
+            input_path,
             "-c",
             "copy",
             "-movflags",
             "+faststart",
-            str(file_path),
-        ]
-        logger.info(f"Remuxing Rutube video using: {' '.join(command)}")
+            output_path,
+        ],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
 
-        subprocess.run(
-            command,
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-        )
 
-        if temp_path.exists():
-            os.remove(temp_path)
+def _upload_to_seaweedfs(task_id: str, uploaded_file: UploadFile) -> str:
+    """Save uploaded file, convert video to faststart MP4, upload to SeaweedFS.
 
-        return str(file_path)
+    Returns:
+        str: Object key in SeaweedFS (e.g. "{task_id}.mp4").
+    """
+    if uploaded_file.filename is None:
+        raise HTTPException(status_code=400, detail="Некорректное название файла")
+
+    file_extension = uploaded_file.filename.split(".")[-1].lower()
+    content = uploaded_file.file.read()
+
+    if file_extension in VIDEO_EXTENSIONS:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as tmp_in:
+            tmp_in.write(content)
+            tmp_in.flush()
+
+            tmp_out = tmp_in.name + ".faststart.mp4"
+            try:
+                _convert_to_faststart(tmp_in.name, tmp_out)
+                object_key = f"{task_id}.mp4"
+                upload_file(
+                    settings.seaweedfs_endpoint,
+                    BUCKET_UPLOADS,
+                    object_key,
+                    tmp_out,
+                    settings.seaweedfs_access_key,
+                    settings.seaweedfs_secret_key,
+                )
+            finally:
+                os.unlink(tmp_in.name)
+                if os.path.exists(tmp_out):
+                    os.unlink(tmp_out)
+    else:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as tmp:
+            tmp.write(content)
+            tmp.flush()
+            object_key = f"{task_id}.{file_extension}"
+            upload_file(
+                settings.seaweedfs_endpoint,
+                BUCKET_UPLOADS,
+                object_key,
+                tmp.name,
+                settings.seaweedfs_access_key,
+                settings.seaweedfs_secret_key,
+            )
+            os.unlink(tmp.name)
+
+    return object_key
+
+
+def _load_criteria_preset(criteria_id: str) -> list[dict]:
+    """Load evaluation criteria preset from Postgres.
+
+    Returns:
+        list[dict]: List of criteria dictionaries.
+    """
+    logger.info(f"Loading criteria preset: id={criteria_id}")
+    conn = psycopg2.connect(settings.database_url)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT criteria FROM presets WHERE id = %s",
+                (criteria_id,),
+            )
+            row = cur.fetchone()
+            if row is None:
+                logger.error(f"Preset '{criteria_id}' not found in DB")
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Пресет с критериями '{criteria_id}' не найден",
+                )
+            logger.info(f"Preset '{criteria_id}' loaded successfully")
+            return row[0]
+    finally:
+        conn.close()
+
+
+def _download_user_speech_from_rutube(task_id: str, video_url: str) -> str:
+    """Download from RuTube, convert to faststart MP4, upload to SeaweedFS.
+
+    Returns:
+        str: Object key in SeaweedFS (e.g. "{task_id}.mp4").
+    """
+    if "rutube.ru" not in video_url:
+        raise HTTPException(status_code=400, detail="Ссылка должна быть на rutube.ru")
+
+    try:
+        rt = Rutube(video_url.lower())
+        rutube_video = rt.get_best()
+        if not rutube_video:
+            raise HTTPException(status_code=500, detail="Ошибка загрузки: видео недоступно")
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".tmp") as tmp_dl:
+            rutube_video.download(stream=tmp_dl)
+            tmp_dl.flush()
+
+            if not os.path.exists(tmp_dl.name) or os.path.getsize(tmp_dl.name) == 0:
+                os.unlink(tmp_dl.name)
+                raise HTTPException(
+                    status_code=500, detail="Ошибка загрузки: скачанный файл пустой"
+                )
+
+            tmp_out = tmp_dl.name + ".faststart.mp4"
+            try:
+                _convert_to_faststart(tmp_dl.name, tmp_out)
+
+                object_key = f"{task_id}.mp4"
+                upload_file(
+                    settings.seaweedfs_endpoint,
+                    BUCKET_UPLOADS,
+                    object_key,
+                    tmp_out,
+                    settings.seaweedfs_access_key,
+                    settings.seaweedfs_secret_key,
+                )
+                return object_key
+            finally:
+                os.unlink(tmp_dl.name)
+                if os.path.exists(tmp_out):
+                    os.unlink(tmp_out)
 
     except subprocess.CalledProcessError as e:
-        if e.stderr:
-            err_msg = e.stderr.decode()
-        else:
-            err_msg = "Unknown error"
-
+        err_msg = e.stderr.decode() if e.stderr else "Unknown error"
         logger.error(f"FFmpeg conversion failed: {err_msg}")
-
-        if "temp_path" in locals() and temp_path.exists():
-            os.remove(temp_path)
-
         raise HTTPException(status_code=500, detail=f"Ошибка преобразования видео: {err_msg}")
-
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Video download error: {e}")
-
-        if "temp_path" in locals() and temp_path.exists():
-            os.remove(temp_path)
-
         raise HTTPException(status_code=500, detail="Неизвестная ошибка")
 
 
@@ -192,31 +200,38 @@ async def process(
         )
 
     task_id = str(uuid.uuid4())
+    logger.info(f"Processing task {task_id}")
 
-    evaluation_criteria_final_path = None
+    evaluation_criteria_key = None
+    evaluation_criteria_preset = None
     if evaluation_criteria_file:
-        evaluation_criteria_final_path = _download_uploaded_file(task_id, evaluation_criteria_file)
+        evaluation_criteria_key = _upload_to_seaweedfs(task_id, evaluation_criteria_file)
+        logger.info(f"Uploaded criteria file to SeaweedFS: {evaluation_criteria_key}")
     if evaluation_criteria_id:
-        evaluation_criteria_final_path = _load_criteria_preset(evaluation_criteria_id)
+        evaluation_criteria_preset = _load_criteria_preset(evaluation_criteria_id)
+        logger.info(f"Using criteria preset: {evaluation_criteria_preset}")
 
-    presentation_final_path = None
+    logger.info(f"evaluation_criteria_key={evaluation_criteria_key}")
+
+    presentation_key = None
     if user_presentation_file:
-        presentation_final_path = _download_uploaded_file(task_id, user_presentation_file)
+        presentation_key = _upload_to_seaweedfs(task_id, user_presentation_file)
 
-    speech_final_path = None
+    speech_key = None
     if user_speech_file:
-        speech_final_path = _download_uploaded_file(task_id, user_speech_file)
+        speech_key = _upload_to_seaweedfs(task_id, user_speech_file)
 
     if user_speech_url:
-        speech_final_path = _download_user_speech_from_rutube(task_id, user_speech_url)
+        speech_key = _download_user_speech_from_rutube(task_id, user_speech_url)
 
     celery_app.send_task(
         "app.logic.tasks.process_video_pipeline",
         kwargs={
             "task_id": task_id,
-            "speech_video_path": speech_final_path,
-            "evaluation_criteria_path": evaluation_criteria_final_path,
-            "presentation_path": presentation_final_path,
+            "speech_video_key": speech_key,
+            "evaluation_criteria_key": evaluation_criteria_key,
+            "evaluation_criteria_preset": evaluation_criteria_preset,
+            "presentation_key": presentation_key,
             "analyze_provider": analyze_provider.value,
             "transcribe_provider": transcribe_provider.value,
             "persona": persona.value,

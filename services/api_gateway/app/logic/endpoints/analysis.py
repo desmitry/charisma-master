@@ -1,8 +1,7 @@
-import json
-
 from fastapi import APIRouter, HTTPException
 
 from app.config import settings
+from charisma_storage import get_object_json, BUCKET_RESULTS
 from charisma_schemas import AnalysisResult
 
 router = APIRouter()
@@ -10,16 +9,18 @@ router = APIRouter()
 
 @router.get("/analysis/{task_id}", response_model=AnalysisResult)
 async def get_analysis(task_id: str):
-    """Processing the request for the final analysis results of the presentation."""
-    file_path = settings.results_dir / f"{task_id}.json"
-
-    if not file_path.exists():
+    """Get analysis results from SeaweedFS."""
+    try:
+        data = get_object_json(
+            settings.seaweedfs_endpoint,
+            BUCKET_RESULTS,
+            f"{task_id}.json",
+            settings.seaweedfs_access_key,
+            settings.seaweedfs_secret_key,
+        )
+        return data
+    except Exception:
         raise HTTPException(
             status_code=404,
             detail="Analysis not found or still processing",
         )
-
-    with open(file_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    return data

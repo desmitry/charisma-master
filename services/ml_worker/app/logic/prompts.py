@@ -1,50 +1,31 @@
 """Prompt management module with caching for LLM prompts.
 
-This module provides functions to load and cache prompts from files.
-Prompts are stored in backend/app/media/prompts/ directory.
+Prompts are loaded from Postgres database at worker startup and cached in memory.
 """
 
-from pathlib import Path
+import logging
 
-from charisma_schemas import PersonaRoles
+import psycopg2
 
 from app.config import settings
+from charisma_schemas import PersonaRoles
 
-PROMPTS_DIR = settings.prompts_dir
-PERSONAS_DIR = PROMPTS_DIR / "personas"
+logger = logging.getLogger(__name__)
 
 _prompt_cache: dict[str, str] = {}
 
 
-def _load_prompt_file(filepath: Path) -> str:
-    """Load prompt content from file.
-
-    Args:
-        filepath: Path to the prompt file.
-
-    Returns:
-        Content of the prompt file as string.
-
-    Raises:
-        FileNotFoundError: If prompt file does not exist.
-    """
-    with open(filepath, "r", encoding="utf-8") as f:
-        return f.read().strip()
-
-
-def _get_cached_prompt(cache_key: str, filepath: Path) -> str:
-    """Get prompt from cache or load from file.
-
-    Args:
-        cache_key: Unique key for caching.
-        filepath: Path to the prompt file.
-
-    Returns:
-        Cached or freshly loaded prompt content.
-    """
-    if cache_key not in _prompt_cache:
-        _prompt_cache[cache_key] = _load_prompt_file(filepath)
-    return _prompt_cache[cache_key]
+def load_prompts_from_db():
+    """Load all prompts from Postgres into the cache."""
+    conn = psycopg2.connect(settings.database_url)
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT key, content FROM prompts")
+            for key, content in cur.fetchall():
+                _prompt_cache[key] = content
+        logger.info(f"Loaded {len(_prompt_cache)} prompts from database")
+    finally:
+        conn.close()
 
 
 def get_persona_prompt(persona: PersonaRoles) -> str:
@@ -56,8 +37,10 @@ def get_persona_prompt(persona: PersonaRoles) -> str:
     Returns:
         Persona prompt content.
     """
-    filepath = PERSONAS_DIR / f"{persona.value}.txt"
-    return _get_cached_prompt(f"persona:{persona.value}", filepath)
+    cache_key = f"persona:{persona.value}"
+    if cache_key not in _prompt_cache:
+        raise KeyError(f"Prompt not found in cache: {cache_key}")
+    return _prompt_cache[cache_key]
 
 
 def get_analyze_speech_system_prompt(persona: PersonaRoles) -> str:
@@ -69,10 +52,7 @@ def get_analyze_speech_system_prompt(persona: PersonaRoles) -> str:
     Returns:
         Formatted system prompt with persona inserted.
     """
-    base_prompt = _get_cached_prompt(
-        "speech_analysis",
-        PROMPTS_DIR / "speech_analysis.txt",
-    )
+    base_prompt = _prompt_cache.get("speech_analysis", "")
     persona_prompt = get_persona_prompt(persona)
 
     tools = ""
@@ -86,10 +66,7 @@ def get_evaluation_criteria_identity_prompt() -> str:
     Returns:
         Criteria extraction system prompt.
     """
-    base_prompt = _get_cached_prompt(
-        "criteria_extraction",
-        PROMPTS_DIR / "criteria_extraction.txt",
-    )
+    base_prompt = _prompt_cache.get("criteria_extraction", "")
 
     tools = ""
 
@@ -102,10 +79,7 @@ def get_evaluation_criteria_rate_prompt() -> str:
     Returns:
         Criteria evaluation system prompt.
     """
-    base_prompt = _get_cached_prompt(
-        "criteria_evaluation",
-        PROMPTS_DIR / "criteria_evaluation.txt",
-    )
+    base_prompt = _prompt_cache.get("criteria_evaluation", "")
 
     tools = ""
 

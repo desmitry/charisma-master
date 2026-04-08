@@ -1,6 +1,5 @@
 import json
 import logging
-from pathlib import Path
 
 import openai
 from gigachat import GigaChat

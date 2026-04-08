@@ -22,17 +22,18 @@ RUN curl -LsSf "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/
 COPY pyproject.toml ./pyproject.toml
 COPY uv.lock ./uv.lock
 COPY packages/charisma_schemas ./packages/charisma_schemas
+COPY packages/charisma_storage ./packages/charisma_storage
 COPY services/ml_worker/pyproject.toml ./services/ml_worker/pyproject.toml
 
 ENV VIRTUAL_ENV=/build/.venv \
     PATH="/build/.venv/bin:$PATH"
 
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --package charisma-ml-worker
+RUN uv sync --frozen --no-dev --package charisma-ml-worker
 
 RUN uv build --wheel --out-dir /build/wheels ./packages/charisma_schemas
+RUN uv build --wheel --out-dir /build/wheels ./packages/charisma_storage
 
-RUN uv pip install --no-deps /build/wheels/charisma_schemas-*.whl
+RUN uv pip install --no-deps /build/wheels/*.whl
 
 FROM nvidia/cuda:13.2.0-runtime-ubuntu24.04 AS runtime
 
@@ -63,9 +64,6 @@ RUN sed -i '1s|^#!/build/.venv/bin/python|#!/backend/.venv/bin/python|' /backend
 
 RUN mkdir -p /tmp/matplotlib /tmp/numba && \
     chown -R appuser:appuser /tmp/matplotlib /tmp/numba
-
-RUN mkdir -p /backend/app/media/results && \
-    chown -R appuser:appuser /backend/app/media
 
 USER appuser
 
