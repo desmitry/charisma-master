@@ -1,12 +1,18 @@
 import json
 import logging
+from pathlib import Path
 
 import openai
+from charisma_schemas import (
+    AnalyzeProvider,
+    EvaluationCriterion,
+    PersonaRoles,
+    SpeechReport,
+)
 from gigachat import GigaChat
 
 from app.config import settings
 from app.logic import prompts
-from charisma_schemas import AnalyzeProvider, EvaluationCriterion, PersonaRoles, SpeechReport
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +63,10 @@ class LLMClient:
         system_prompt = prompts.get_analyze_speech_system_prompt(persona)
 
         user_content = (
-            f"ТРАНСКРИПЦИЯ:\n"
+            "ТРАНСКРИПЦИЯ:\n"
             f"{transcript_text[: LLMClient.TRANSCRIPTION_LIMIT]}\n\n"
-            f"ТЕКСТ ПРЕЗЕНТАЦИИ:\n{presentation_text[: LLMClient.PRESENTATION_TEXT_LIMIT]}"
+            "ТЕКСТ ПРЕЗЕНТАЦИИ:\n"
+            f"{presentation_text[: LLMClient.PRESENTATION_TEXT_LIMIT]}"
         )
 
         messages = [
@@ -69,16 +76,23 @@ class LLMClient:
 
         try:
             if provider == AnalyzeProvider.gigachat:
-                content = await self._call_gigachat(messages, provider.model_name)
+                content = await self._call_gigachat(
+                    messages, provider.model_name
+                )
             else:
-                content = await self._call_openai(messages, provider.model_name)
+                content = await self._call_openai(
+                    messages, provider.model_name
+                )
 
-            print(content)
+            logger.debug(f"LLM response: {content}")
             return SpeechReport(**self._parse_json_response(content))
 
         except Exception as error_msg:
             logger.error(
-                f"LLM analysis error ({provider}/{provider.model_name}): {str(error_msg)}",
+                "LLM analysis error (%s/%s): %s",
+                provider,
+                provider.model_name,
+                str(error_msg),
                 exc_info=True,
             )
             response = LLMClient._get_empty_speech_analysis_response()
@@ -92,13 +106,15 @@ class LLMClient:
         """Extract evaluation criteria from uploaded file or preset.
 
         Args:
-            evaluation_criteria_path (str): Path to criteria file (.json, .docx, .txt).
+            evaluation_criteria_path (str): Path to criteria file
+                (.json, .docx, .txt).
 
         Raises:
             RuntimeError: If criteria extraction fails.
 
         Returns:
-            list[EvaluationCriterion]: List of criteria without current_value/feedback.
+            list[EvaluationCriterion]: List of criteria without
+                current_value/feedback.
         """
         if not evaluation_criteria_path:
             return []
@@ -110,23 +126,32 @@ class LLMClient:
             return self._load_criteria_from_json(evaluation_criteria_path)
 
         # Case 2: DOCX or TXT - use LLM to extract criteria
-        document_text = self._read_document_text(evaluation_criteria_path, file_ext)
+        document_text = self._read_document_text(
+            evaluation_criteria_path, file_ext
+        )
 
         system_prompt = prompts.get_evaluation_criteria_identity_prompt()
 
-        user_content = f"Исходный документ с требованиями/критериями:\n{document_text[:10000]}"
+        user_content = (
+            "Исходный документ с требованиями/критериями:\n"
+            f"{document_text[:10000]}"
+        )
 
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_content},
         ]
 
-        content = await self._call_gigachat(messages, settings.gigachat_model_name)
+        content = await self._call_gigachat(
+            messages, settings.gigachat_model_name
+        )
         parsed = self._parse_json_response(content)
 
         criteria_list = parsed.get("criteria", [])
         if not criteria_list:
-            raise RuntimeError("Failed to extract criteria from document: empty result")
+            raise RuntimeError(
+                "Failed to extract criteria from document: empty result"
+            )
 
         return [
             EvaluationCriterion(
@@ -137,7 +162,9 @@ class LLMClient:
             for c in criteria_list
         ]
 
-    def _load_criteria_from_json(self, json_path: str) -> list[EvaluationCriterion]:
+    def _load_criteria_from_json(
+        self, json_path: str
+    ) -> list[EvaluationCriterion]:
         """Load criteria from JSON preset file."""
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -164,7 +191,9 @@ class LLMClient:
             from docx import Document
 
             doc = Document(file_path)
-            text = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+            text = "\n".join(
+                [p.text for p in doc.paragraphs if p.text.strip()]
+            )
             if not text:
                 raise RuntimeError("Empty DOCX file")
             return text
@@ -183,14 +212,17 @@ class LLMClient:
         Args:
             transcript_text (str): Transcribed speech text.
             presentation_text (str): Presentation slide text.
-            provider (AnalyzeProvider): LLM provider (ignored, always uses GigaChat).
-            evaluation_criteria (list[EvaluationCriterion]): Criteria to evaluate against.
+            provider (AnalyzeProvider): LLM provider (ignored,
+                always uses GigaChat).
+            evaluation_criteria (list[EvaluationCriterion]): Criteria
+                to evaluate against.
 
         Raises:
             RuntimeError: If criteria analysis fails.
 
         Returns:
-            list[EvaluationCriterion]: Criteria with current_value and feedback filled.
+            list[EvaluationCriterion]: Criteria with current_value
+                and feedback filled.
         """
         if not evaluation_criteria:
             return []
@@ -199,7 +231,11 @@ class LLMClient:
 
         criteria_json = json.dumps(
             [
-                {"name": c.name, "description": c.description, "max_value": c.max_value}
+                {
+                    "name": c.name,
+                    "description": c.description,
+                    "max_value": c.max_value,
+                }
                 for c in evaluation_criteria
             ],
             ensure_ascii=False,
@@ -216,7 +252,9 @@ class LLMClient:
             {"role": "user", "content": user_content},
         ]
 
-        content = await self._call_gigachat(messages, settings.gigachat_model_name)
+        content = await self._call_gigachat(
+            messages, settings.gigachat_model_name
+        )
         parsed = self._parse_json_response(content)
 
         scored_criteria = parsed.get("criteria", [])
@@ -225,7 +263,8 @@ class LLMClient:
 
         if len(scored_criteria) != len(evaluation_criteria):
             raise RuntimeError(
-                f"Criteria count mismatch: expected {len(evaluation_criteria)}, "
+                f"Criteria count mismatch: "
+                f"expected {len(evaluation_criteria)}, "
                 f"got {len(scored_criteria)}"
             )
 
@@ -233,7 +272,9 @@ class LLMClient:
         for orig, scored in zip(evaluation_criteria, scored_criteria):
             current_value = scored.get("current_value", 0)
             if not isinstance(current_value, int) or current_value < 0:
-                raise RuntimeError(f"Invalid current_value for criterion '{orig.name}'")
+                raise RuntimeError(
+                    f"Invalid current_value for criterion '{orig.name}'"
+                )
 
             result.append(
                 EvaluationCriterion(
@@ -250,7 +291,8 @@ class LLMClient:
         """Send a chat completion request to OpenAI API.
 
         Args:
-            messages (list): List of message dictionaries for the chat completion.
+            messages (list): List of message dictionaries for the
+                chat completion.
             model (str): Name of the OpenAI model to use.
 
         Returns:
@@ -267,7 +309,8 @@ class LLMClient:
         """Send a chat completion request to GigaChat API.
 
         Args:
-            messages (list): List of message dictionaries for the chat completion.
+            messages (list): List of message dictionaries for the
+                chat completion.
             model (str): Name of the GigaChat model to use.
 
         Raises:
@@ -277,9 +320,13 @@ class LLMClient:
             str: Response content from the GigaChat API.
         """
         if not self.gigachat_client:
-            raise ValueError("GigaChat client is not initialized. Check credentials.")
+            raise ValueError(
+                "GigaChat client is not initialized. Check credentials."
+            )
 
-        response = await self.gigachat_client.achat(payload={"messages": messages, "model": model})
+        response = await self.gigachat_client.achat(
+            payload={"messages": messages, "model": model}
+        )
         return response.choices[0].message.content
 
     def _parse_json_response(self, content: str) -> dict:
@@ -289,7 +336,8 @@ class LLMClient:
             content (str): Raw JSON string response from the LLM.
 
         Returns:
-            dict: Parsed JSON as a dictionary, or error response if parsing fails.
+            dict: Parsed JSON as a dictionary, or error response if
+                parsing fails.
         """
         cleaned = content.replace("```json", "").replace("```", "").strip()
 

@@ -5,8 +5,8 @@ from charisma_schemas.schemas import (
     AnalyzeProvider,
     ConfidenceComponents,
     ConfidenceIndex,
-    EvaluationCriterion,
     EvaluationCriteriaReport,
+    EvaluationCriterion,
     FillersSummary,
     PauseInterval,
     PersonaRoles,
@@ -15,9 +15,9 @@ from charisma_schemas.schemas import (
     TaskState,
     TaskStatusResponse,
     TempoPoint,
+    TranscribeProvider,
     TranscriptSegment,
     TranscriptWord,
-    TranscribeProvider,
     UploadResponse,
 )
 

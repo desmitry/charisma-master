@@ -1,17 +1,16 @@
 import re
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import Response, StreamingResponse
-from starlette.middleware.cors import CORSMiddleware
-
-from app.config import settings
-from app.logic.endpoints import analysis, status, upload
 from charisma_storage import (
     BUCKET_UPLOADS,
     ensure_buckets_exist,
     get_client,
-    get_object_stat,
 )
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from starlette.middleware.cors import CORSMiddleware
+
+from app.config import settings
+from app.logic.endpoints import analysis, status, upload
 
 if settings.mode == "prod" and settings.origin_url == "*":
     raise Exception("You need to specify a specific url for production!")
@@ -119,19 +118,22 @@ async def stream_video(task_id: str, request: Request):
 
 
 def _iter_range(response, start: int, length: int):
-    """Yield byte chunks from a SeaweedFS response for partial content delivery.
+    """Yield byte chunks from a SeaweedFS response for partial content.
 
-    The MinIO client returns a readable stream object. This generator reads from
-    that stream in 64 KB chunks, starting at the given offset, and yields exactly
-    `length` bytes total. It is used by ``stream_video`` to feed a
-    ``StreamingResponse`` when serving HTTP 206 Partial Content responses.
+    The MinIO client returns a readable stream object.
+    This generator reads from that stream in 64 KB chunks,
+    starting at the given offset, and yields exactly ``length`` bytes total.
 
-    After all bytes are yielded (or the stream ends prematurely), the underlying
-    connection is closed and released back to the connection pool.
+    It is used by ``stream_video`` to feed a ``StreamingResponse`` when serving
+    HTTP 206 Partial Content responses.
+
+    After all bytes are yielded (or the stream ends prematurely), the
+    underlying connection is closed and released back to the pool.
 
     Args:
-        response: Readable response object from ``minio.Minio.get_object``.
-        start: Byte offset to start reading from (already skipped by the caller).
+        response: Readable response from ``minio.Minio.get_object``.
+        start: Byte offset to start reading from
+            (already skipped by the caller).
         length: Total number of bytes to yield.
     """
     remaining = length

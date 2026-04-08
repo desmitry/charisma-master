@@ -155,7 +155,9 @@ class ConfidenceComponents(BaseModel):
 
 
 class ConfidenceIndex(BaseModel):
-    """A model that stores info about the final score and its weighting factors."""
+    """A model that stores info about the final score and its
+    weighting factors.
+    """
 
     total: float
     total_label: str
@@ -163,7 +165,9 @@ class ConfidenceIndex(BaseModel):
 
 
 class FillersSummary(BaseModel):
-    """A model that stores info about final assessment of the impact of filler words."""
+    """A model that stores info about final assessment of the
+    impact of filler words.
+    """
 
     count: int
     ratio: int | float

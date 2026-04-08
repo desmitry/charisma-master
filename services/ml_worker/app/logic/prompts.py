@@ -1,14 +1,15 @@
 """Prompt management module with caching for LLM prompts.
 
-Prompts are loaded from Postgres database at worker startup and cached in memory.
+Prompts are loaded from Postgres database at worker startup and
+cached in memory.
 """
 
 import logging
 
 import psycopg2
+from charisma_schemas import PersonaRoles
 
 from app.config import settings
-from charisma_schemas import PersonaRoles
 
 logger = logging.getLogger(__name__)
 

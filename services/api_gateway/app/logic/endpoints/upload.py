@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import subprocess
@@ -7,13 +6,18 @@ import uuid
 from typing import Optional
 
 import psycopg2
+from charisma_schemas import (
+    AnalyzeProvider,
+    PersonaRoles,
+    TranscribeProvider,
+    UploadResponse,
+)
+from charisma_storage import BUCKET_UPLOADS, upload_file
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from rutube import Rutube
 
 from app.celery_app import celery_app
 from app.config import settings
-from charisma_storage import upload_file, BUCKET_UPLOADS
-from charisma_schemas import AnalyzeProvider, PersonaRoles, TranscribeProvider, UploadResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -23,8 +27,12 @@ VIDEO_EXTENSIONS = {"mp4", "mov", "avi", "mkv", "webm", "m4v"}
 
 def _convert_to_faststart(input_path: str, output_path: str):
     """Convert video to faststart MP4 for browser streaming support."""
-    subprocess.run(
-        [
+    # README: subprocess call is safe.
+    # Arguments are internally generated via tempfile with UUID names,
+    # never from user input, shell=False.
+    # ffmpeg is installed in the Docker image, PATH is controlled.
+    subprocess.run(  # noqa: S603
+        [  # noqa: S607
             "ffmpeg",
             "-y",
             "-i",
@@ -48,13 +56,17 @@ def _upload_to_seaweedfs(task_id: str, uploaded_file: UploadFile) -> str:
         str: Object key in SeaweedFS (e.g. "{task_id}.mp4").
     """
     if uploaded_file.filename is None:
-        raise HTTPException(status_code=400, detail="Некорректное название файла")
+        raise HTTPException(
+            status_code=400, detail="Некорректное название файла"
+        )
 
     file_extension = uploaded_file.filename.split(".")[-1].lower()
     content = uploaded_file.file.read()
 
     if file_extension in VIDEO_EXTENSIONS:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as tmp_in:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=f".{file_extension}"
+        ) as tmp_in:
             tmp_in.write(content)
             tmp_in.flush()
 
@@ -75,7 +87,9 @@ def _upload_to_seaweedfs(task_id: str, uploaded_file: UploadFile) -> str:
                 if os.path.exists(tmp_out):
                     os.unlink(tmp_out)
     else:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as tmp:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=f".{file_extension}"
+        ) as tmp:
             tmp.write(content)
             tmp.flush()
             object_key = f"{task_id}.{file_extension}"
@@ -126,22 +140,32 @@ def _download_user_speech_from_rutube(task_id: str, video_url: str) -> str:
         str: Object key in SeaweedFS (e.g. "{task_id}.mp4").
     """
     if "rutube.ru" not in video_url:
-        raise HTTPException(status_code=400, detail="Ссылка должна быть на rutube.ru")
+        raise HTTPException(
+            status_code=400, detail="Ссылка должна быть на rutube.ru"
+        )
 
     try:
         rt = Rutube(video_url.lower())
         rutube_video = rt.get_best()
         if not rutube_video:
-            raise HTTPException(status_code=500, detail="Ошибка загрузки: видео недоступно")
+            raise HTTPException(
+                status_code=500, detail="Ошибка загрузки: видео недоступно"
+            )
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".tmp") as tmp_dl:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=".tmp"
+        ) as tmp_dl:
             rutube_video.download(stream=tmp_dl)
             tmp_dl.flush()
 
-            if not os.path.exists(tmp_dl.name) or os.path.getsize(tmp_dl.name) == 0:
+            if (
+                not os.path.exists(tmp_dl.name)
+                or os.path.getsize(tmp_dl.name) == 0
+            ):
                 os.unlink(tmp_dl.name)
                 raise HTTPException(
-                    status_code=500, detail="Ошибка загрузки: скачанный файл пустой"
+                    status_code=500,
+                    detail="Ошибка загрузки: скачанный файл пустой",
                 )
 
             tmp_out = tmp_dl.name + ".faststart.mp4"
@@ -166,7 +190,9 @@ def _download_user_speech_from_rutube(task_id: str, video_url: str) -> str:
     except subprocess.CalledProcessError as e:
         err_msg = e.stderr.decode() if e.stderr else "Unknown error"
         logger.error(f"FFmpeg conversion failed: {err_msg}")
-        raise HTTPException(status_code=500, detail=f"Ошибка преобразования видео: {err_msg}")
+        raise HTTPException(
+            status_code=500, detail=f"Ошибка преобразования видео: {err_msg}"
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -183,20 +209,28 @@ async def process(
     user_presentation_file: Optional[UploadFile] = File(None),
     persona: PersonaRoles = Form(PersonaRoles.speech_review_specialist),
     analyze_provider: AnalyzeProvider = Form(AnalyzeProvider.gigachat),
-    transcribe_provider: TranscribeProvider = Form(TranscribeProvider.sber_gigachat),
+    transcribe_provider: TranscribeProvider = Form(
+        TranscribeProvider.sber_gigachat
+    ),
 ):
     """Process user speech video for analysis."""
 
     if (user_speech_file is None) == (user_speech_url is None):
         raise HTTPException(
             status_code=400,
-            detail="Необходимо загрузить либо видео выступления, либо ссылку на него",
+            detail=(
+                "Необходимо загрузить либо видео выступления, "
+                "либо ссылку на него"
+            ),
         )
 
     if (evaluation_criteria_file is None) == (evaluation_criteria_id is None):
         raise HTTPException(
             status_code=400,
-            detail="Необходимо загрузить файл критерии оценивания, либо выбрать один из пресетов",
+            detail=(
+                "Необходимо загрузить файл критерии оценивания, "
+                "либо выбрать один из пресетов"
+            ),
         )
 
     task_id = str(uuid.uuid4())
@@ -205,24 +239,34 @@ async def process(
     evaluation_criteria_key = None
     evaluation_criteria_preset = None
     if evaluation_criteria_file:
-        evaluation_criteria_key = _upload_to_seaweedfs(task_id, evaluation_criteria_file)
-        logger.info(f"Uploaded criteria file to SeaweedFS: {evaluation_criteria_key}")
+        evaluation_criteria_key = _upload_to_seaweedfs(
+            task_id, evaluation_criteria_file
+        )
+        logger.info(
+            f"Uploaded criteria file to SeaweedFS: {evaluation_criteria_key}"
+        )
     if evaluation_criteria_id:
-        evaluation_criteria_preset = _load_criteria_preset(evaluation_criteria_id)
+        evaluation_criteria_preset = _load_criteria_preset(
+            evaluation_criteria_id
+        )
         logger.info(f"Using criteria preset: {evaluation_criteria_preset}")
 
     logger.info(f"evaluation_criteria_key={evaluation_criteria_key}")
 
     presentation_key = None
     if user_presentation_file:
-        presentation_key = _upload_to_seaweedfs(task_id, user_presentation_file)
+        presentation_key = _upload_to_seaweedfs(
+            task_id, user_presentation_file
+        )
 
     speech_key = None
     if user_speech_file:
         speech_key = _upload_to_seaweedfs(task_id, user_speech_file)
 
     if user_speech_url:
-        speech_key = _download_user_speech_from_rutube(task_id, user_speech_url)
+        speech_key = _download_user_speech_from_rutube(
+            task_id, user_speech_url
+        )
 
     celery_app.send_task(
         "app.logic.tasks.process_video_pipeline",

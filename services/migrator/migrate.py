@@ -9,10 +9,14 @@ from pathlib import Path
 import psycopg2
 from psycopg2.extras import Json
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+)
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://charisma:charisma@postgres:5432/charisma")
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL", "postgresql://charisma:charisma@postgres:5432/charisma"
+)
 
 DOCS_DIR = Path(__file__).parent / "docs"
 PROMPTS_DIR = DOCS_DIR / "prompts"

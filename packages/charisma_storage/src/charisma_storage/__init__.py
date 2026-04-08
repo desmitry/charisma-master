@@ -43,7 +43,10 @@ def ensure_buckets_exist(
             if not client.bucket_exists(bucket):
                 client.make_bucket(bucket)
         except S3Error as e:
-            if e.code not in ("BucketAlreadyExists", "BucketAlreadyOwnedByYou"):
+            if e.code not in (
+                "BucketAlreadyExists",
+                "BucketAlreadyOwnedByYou",
+            ):
                 raise
 
 

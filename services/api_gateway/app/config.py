@@ -3,9 +3,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    # README: 0.0.0.0 required for Docker port mapping.
+    # In prod mode the app raises an error if ORIGIN_URL is "*".
     service_host: str = Field(
         key="SERVICE_HOST",
-        default="0.0.0.0",
+        default="0.0.0.0",  # noqa: S104
         validate_default=True,
         frozen=True,
     )

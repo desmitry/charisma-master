@@ -1,8 +1,8 @@
+from charisma_schemas import AnalysisResult
+from charisma_storage import BUCKET_RESULTS, get_object_json
 from fastapi import APIRouter, HTTPException
 
 from app.config import settings
-from charisma_storage import get_object_json, BUCKET_RESULTS
-from charisma_schemas import AnalysisResult
 
 router = APIRouter()
 

@@ -1,8 +1,8 @@
 from celery.result import AsyncResult
+from charisma_schemas import TaskState, TaskStatusResponse
 from fastapi import APIRouter
 
 from app.celery_app import celery_app
-from charisma_schemas import TaskState, TaskStatusResponse
 
 router = APIRouter()
 

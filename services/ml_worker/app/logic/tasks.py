@@ -9,18 +9,13 @@ from typing import Optional
 
 from celery import shared_task
 from celery.signals import worker_process_init
-
-from app.config import settings
-from app.logic.llm_client import LLMClient
-from app.logic.ml_engine import MLEngine
-from app.logic.prompts import load_prompts_from_db
 from charisma_schemas import (
     AnalysisResult,
     AnalyzeProvider,
     ConfidenceComponents,
     ConfidenceIndex,
-    EvaluationCriterion,
     EvaluationCriteriaReport,
+    EvaluationCriterion,
     FillersSummary,
     PersonaRoles,
     TaskStage,
@@ -33,6 +28,11 @@ from charisma_storage import (
     download_file,
     put_object_json,
 )
+
+from app.config import settings
+from app.logic.llm_client import LLMClient
+from app.logic.ml_engine import MLEngine
+from app.logic.prompts import load_prompts_from_db
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ def init_worker(**kwargs):
 
 
 @shared_task(bind=True)
-def process_video_pipeline(
+def process_video_pipeline(  # noqa: C901
     self,
     task_id: str,
     speech_video_key: str,
@@ -161,11 +161,15 @@ def process_video_pipeline(
 
         MLEngine.extract_audio(video_tmp, audio_tmp)
 
-        transcript_segments = MLEngine.transcribe(audio_tmp, provider=transcribe_provider)
+        transcript_segments = MLEngine.transcribe(
+            audio_tmp, provider=transcribe_provider
+        )
         tempo_data = MLEngine.calculate_tempo(transcript_segments)
 
         full_text = " ".join([s.text for s in transcript_segments])
-        long_pauses = MLEngine.get_long_pauses(transcript_segments, threshold=2.0)
+        long_pauses = MLEngine.get_long_pauses(
+            transcript_segments, threshold=2.0
+        )
 
     except subprocess.CalledProcessError as e:
         error_msg = f"FFmpeg error: {str(e)}"
@@ -203,12 +207,15 @@ def process_video_pipeline(
         state=TaskState.processing.value,
         meta=TaskStage.presentation_text_parsing.meta,
     )
-    presentation_text_list = _get_presentation_text(presentation_tmp) if presentation_tmp else []
+    presentation_text_list = (
+        _get_presentation_text(presentation_tmp) if presentation_tmp else []
+    )
     if not presentation_text_list:
         presentation_text = "Текст презентации отсутствует"
     else:
         presentation_text = "\n\n".join(
-            f"[Слайд: {idx + 1}]\n{text}" for idx, text in enumerate(presentation_text_list)
+            f"[Слайд: {idx + 1}]\n{text}"
+            for idx, text in enumerate(presentation_text_list)
         )
 
     self.update_state(
@@ -217,7 +224,9 @@ def process_video_pipeline(
     )
     evaluation_criteria_list = list()
     if evaluation_criteria_preset:
-        evaluation_criteria_list = [EvaluationCriterion(**c) for c in evaluation_criteria_preset]
+        evaluation_criteria_list = [
+            EvaluationCriterion(**c) for c in evaluation_criteria_preset
+        ]
 
     elif evaluation_criteria_key:
         criteria_path = None
@@ -284,8 +293,12 @@ def process_video_pipeline(
         )
         loop.close()
 
-        evaluation_criteria_total_score = sum(c.current_value for c in evaluation_criteria_list)
-        evaluation_criteria_max_score = sum(c.max_value for c in evaluation_criteria_list)
+        evaluation_criteria_total_score = sum(
+            c.current_value for c in evaluation_criteria_list
+        )
+        evaluation_criteria_max_score = sum(
+            c.max_value for c in evaluation_criteria_list
+        )
 
         logger.info(
             f"Criteria evaluation completed: "
@@ -298,7 +311,9 @@ def process_video_pipeline(
     # TODO: Document and verify these coefficients.
     total_words = len(full_text.split()) if full_text else 1
 
-    base_filler_count = sum(1 for s in transcript_segments for w in s.words if w.is_filler)
+    base_filler_count = sum(
+        1 for s in transcript_segments for w in s.words if w.is_filler
+    )
 
     filler_ratio = base_filler_count / total_words if total_words > 0 else 0
     filler_score = max(0, 100 - (filler_ratio * 750))
@@ -320,7 +335,9 @@ def process_video_pipeline(
         transcript=transcript_segments,
         tempo=tempo_data,
         long_pauses=long_pauses,
-        fillers_summary=FillersSummary(count=base_filler_count, ratio=round(filler_ratio, 4)),
+        fillers_summary=FillersSummary(
+            count=base_filler_count, ratio=round(filler_ratio, 4)
+        ),
         confidence_index=ConfidenceIndex(
             total=total_conf,
             total_label=total_conf_label,

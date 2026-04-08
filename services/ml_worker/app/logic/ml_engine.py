@@ -12,9 +12,6 @@ import numpy as np
 import openai
 import requests
 import urllib3
-from faster_whisper import WhisperModel
-
-from app.config import settings
 from charisma_schemas import (
     PauseInterval,
     TempoPoint,
@@ -22,6 +19,9 @@ from charisma_schemas import (
     TranscriptSegment,
     TranscriptWord,
 )
+from faster_whisper import WhisperModel
+
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -83,11 +83,15 @@ class MLEngine:
                 Defaults to None.
 
         Returns:
-            WhisperModel: Loaded Whisper model instance, or None if not applicable.
+            WhisperModel: Loaded Whisper model instance, or None if
+                not applicable.
         """
         if model_name == TranscribeProvider.whisper_local:
             if cls._whisper_local_model is None:
-                logger.info(f"Load local Whisper model ({settings.whisper_compute_type})...")
+                logger.info(
+                    "Load local Whisper model (%s)...",
+                    settings.whisper_compute_type,
+                )
 
                 cls._whisper_local_model = WhisperModel(
                     settings.whisper_model_type,
@@ -125,7 +129,8 @@ class MLEngine:
             # README:
             # The 'command' variable cannot contain an embedded injection.
             # The input data consists of a string containing the UUID.
-            # The `command` variable must not contain strings that are vulnerable to injection.
+            # The `command` variable must not contain strings that are
+            # vulnerable to injection.
             subprocess.run(  # noqa: S603
                 command,
                 capture_output=True,
@@ -166,13 +171,14 @@ class MLEngine:
         # README:
         # The 'command' variable cannot contain an embedded injection.
         # The input data consists of a string containing the UUID.
-        # The `command` variable must not contain strings that are vulnerable to injection.
+        # The `command` variable must not contain strings that are
+        # vulnerable to injection.
         subprocess.run(command, capture_output=True, check=True)  # noqa: S603
         return temp_path
 
     # TODO: Refactor this function.
     @staticmethod
-    def transcribe(
+    def transcribe(  # noqa: C901
         audio_path: str,
         provider: TranscribeProvider,
     ) -> List[TranscriptSegment]:
@@ -183,7 +189,8 @@ class MLEngine:
             provider (TranscribeProvider): Transcription provider to use.
 
         Returns:
-            List[TranscriptSegment]: List of transcribed segments with timestamps and words.
+            List[TranscriptSegment]: List of transcribed segments
+                with timestamps and words.
         """
         if provider == TranscribeProvider.sber_gigachat:
             logger.info("Using Sber SaluteSpeech API...")
@@ -217,7 +224,12 @@ class MLEngine:
                 words = []
                 if seg.words:
                     for w in seg.words:
-                        clean = w.word.strip().lower().replace(",", "").replace(".", "")
+                        clean = (
+                            w.word.strip()
+                            .lower()
+                            .replace(",", "")
+                            .replace(".", "")
+                        )
                         is_filler = clean in MLEngine.BASE_FILLER_WORDS
                         words.append(
                             TranscriptWord(
@@ -228,7 +240,12 @@ class MLEngine:
                             )
                         )
                 segments.append(
-                    TranscriptSegment(start=seg.start, end=seg.end, text=seg.text, words=words)
+                    TranscriptSegment(
+                        start=seg.start,
+                        end=seg.end,
+                        text=seg.text,
+                        words=words,
+                    )
                 )
             return segments
 
@@ -237,13 +254,20 @@ class MLEngine:
 
             model = MLEngine.load_model(provider)
 
-            segments_gen, _ = model.transcribe(audio_path, language="ru", word_timestamps=True)
+            segments_gen, _ = model.transcribe(
+                audio_path, language="ru", word_timestamps=True
+            )
             segments = []
             for seg in segments_gen:
                 words = []
                 if seg.words:
                     for w in seg.words:
-                        clean = w.word.strip().lower().replace(",", "").replace(".", "")
+                        clean = (
+                            w.word.strip()
+                            .lower()
+                            .replace(",", "")
+                            .replace(".", "")
+                        )
                         is_filler = clean in MLEngine.BASE_FILLER_WORDS
                         words.append(
                             TranscriptWord(
@@ -254,7 +278,12 @@ class MLEngine:
                             )
                         )
                 segments.append(
-                    TranscriptSegment(start=seg.start, end=seg.end, text=seg.text, words=words)
+                    TranscriptSegment(
+                        start=seg.start,
+                        end=seg.end,
+                        text=seg.text,
+                        words=words,
+                    )
                 )
             return segments
 
@@ -262,7 +291,9 @@ class MLEngine:
 
     # TODO: Refactor this function.
     @staticmethod
-    def _transcribe_sber_api_async(audio_path: str) -> List[TranscriptSegment]:
+    def _transcribe_sber_api_async(  # noqa: C901
+        audio_path: str,
+    ) -> List[TranscriptSegment]:
         """Transcribe audio using Sber SaluteSpeech API asynchronously.
 
         Args:
@@ -276,7 +307,8 @@ class MLEngine:
             TimeoutError: If transcription takes too long.
 
         Returns:
-            List[TranscriptSegment]: List of transcribed segments with timestamps and words.
+            List[TranscriptSegment]: List of transcribed segments
+                with timestamps and words.
         """
         auth_url = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
 
@@ -291,11 +323,15 @@ class MLEngine:
             "Authorization": f"Basic {creds}",
         }
 
-        response = requests.post(
+        # README: Sber SaluteSpeech API requires verify=False because
+        # their certificate is not in the system CA bundle.
+        # Timeout is omitted because transcription is a long-running
+        # operation; the outer loop handles overall timeout.
+        response = requests.post(  # noqa: S113
             auth_url,
             headers=headers_auth,
             data={"scope": settings.sber_speech_scope},
-            verify=False,
+            verify=False,  # noqa: S501
         )
         if response.status_code != 200:
             raise RuntimeError(f"Sber Auth Error: {response.text}")
@@ -310,8 +346,12 @@ class MLEngine:
         with open(audio_path, "rb") as f:
             file_content = f.read()
 
-        r_upload = requests.post(
-            upload_url, headers=headers_upload, data=file_content, verify=False
+        # Look at previous README tag.
+        r_upload = requests.post(  # noqa: S113
+            upload_url,
+            headers=headers_upload,
+            data=file_content,
+            verify=False,  # noqa: S501
         )
 
         if r_upload.status_code != 200:
@@ -343,7 +383,13 @@ class MLEngine:
 
         logger.info(f"Sber Task Payload: {payload}")
 
-        r_task = requests.post(task_url, headers=headers_task, json=payload, verify=False)
+        # Look at previous README tag.
+        r_task = requests.post(  # noqa: S113
+            task_url,
+            headers=headers_task,
+            json=payload,
+            verify=False,  # noqa: S501
+        )
 
         if r_task.status_code != 200:
             raise RuntimeError(f"Sber Task Creation Error: {r_task.text}")
@@ -351,12 +397,19 @@ class MLEngine:
         task_id = r_task.json()["result"]["id"]
         logger.info(f"Sber: Task started, id={task_id}")
 
-        status_url = f"https://smartspeech.sber.ru/rest/v1/task:get?id={task_id}"
+        status_url = (
+            f"https://smartspeech.sber.ru/rest/v1/task:get?id={task_id}"
+        )
         response_file_id = None
 
         for _ in range(90):
             time.sleep(10)
-            r_status = requests.get(status_url, headers=auth_header, verify=False)
+            # Look at previous README tag.
+            r_status = requests.get(  # noqa: S113
+                status_url,
+                headers=auth_header,
+                verify=False,  # noqa: S501
+            )
 
             if r_status.status_code != 200:
                 continue
@@ -373,10 +426,14 @@ class MLEngine:
         else:
             raise TimeoutError("Sber transcription timed out")
 
-        download_url = (
-            f"https://smartspeech.sber.ru/rest/v1/data:download?response_file_id={response_file_id}"
+        download_url = f"https://smartspeech.sber.ru/rest/v1/data:download?response_file_id={response_file_id}"
+
+        # Look at previous README tag.
+        r_res = requests.get(  # noqa: S113
+            download_url,
+            headers=auth_header,
+            verify=False,  # noqa: S501
         )
-        r_res = requests.get(download_url, headers=auth_header, verify=False)
         r_res.raise_for_status()
         data = r_res.json()
 
@@ -386,11 +443,14 @@ class MLEngine:
         def extract_words(obj):
             found = []
             if isinstance(obj, dict):
-                # Проверяем наличие ключей слова
                 if "word" in obj and "start" in obj and "end" in obj:
                     found.append(obj)
-                # Или просто text (иногда бывает)
-                elif "text" in obj and "start" in obj and "end" in obj and "word" not in obj:
+                elif (
+                    "text" in obj
+                    and "start" in obj
+                    and "end" in obj
+                    and "word" not in obj
+                ):
                     found.append(obj)
 
                 for v in obj.values():
@@ -417,7 +477,9 @@ class MLEngine:
             is_filler = clean in MLEngine.BASE_FILLER_WORDS
 
             words_objs.append(
-                TranscriptWord(start=w_start, end=w_end, text=w_text, is_filler=is_filler)
+                TranscriptWord(
+                    start=w_start, end=w_end, text=w_text, is_filler=is_filler
+                )
             )
 
         if words_objs:
@@ -480,7 +542,9 @@ class MLEngine:
             diff = curr_start - prev_end
             if diff >= threshold:
                 pauses.append(
-                    PauseInterval(start=prev_end, end=curr_start, duration=round(diff, 2))
+                    PauseInterval(
+                        start=prev_end, end=curr_start, duration=round(diff, 2)
+                    )
                 )
         return pauses
 
@@ -526,7 +590,9 @@ class MLEngine:
         points = []
         for t in np.arange(0, duration, 1.0):
             t_start, t_end = t, t + window_sec
-            count = sum(1 for w in words if w.start >= t_start and w.end < t_end)
+            count = sum(
+                1 for w in words if w.start >= t_start and w.end < t_end
+            )
             wpm = (count / window_sec) * 60
 
             # TODO: Move zone values to TempoColorEnum.
@@ -610,9 +676,13 @@ class MLEngine:
 
             audio_metrics["volume_score"] = float(volume_score_val)
             audio_metrics["volume_level"] = vol_label
-            audio_metrics["volume_label"] = MLEngine.get_score_label(float(volume_score_val))
+            audio_metrics["volume_label"] = MLEngine.get_score_label(
+                float(volume_score_val)
+            )
             audio_metrics["tone_score"] = float(tone_score_val)
-            audio_metrics["tone_label"] = MLEngine.get_score_label(float(tone_score_val))
+            audio_metrics["tone_label"] = MLEngine.get_score_label(
+                float(tone_score_val)
+            )
 
             return audio_metrics
         except Exception as e:
@@ -621,14 +691,17 @@ class MLEngine:
 
     # TODO: Refactor this function.
     @staticmethod
-    def analyze_video(video_path: str) -> Dict:
+    def analyze_video(  # noqa: C901
+        video_path: str,
+    ) -> Dict:
         """Analyze video file for gaze and gesture metrics.
 
         Args:
             video_path (str): Path to the video file to analyze.
 
         Returns:
-            Dict: Dictionary containing gaze and gesture scores, labels, and advice.
+            Dict: Dictionary containing gaze and gesture scores,
+                labels, and advice.
         """
         logger.debug(f"Video Analysis: {video_path}")
 
@@ -649,7 +722,9 @@ class MLEngine:
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        logger.debug(f"Video Metadata: {width}x{height}, {fps=}, {frame_count=}")
+        logger.debug(
+            f"Video Metadata: {width}x{height}, {fps=}, {frame_count=}"
+        )
 
         mp_holistic = mp.solutions.holistic
 
@@ -682,7 +757,9 @@ class MLEngine:
 
                     try:
                         scale_mp = MLEngine.TARGET_FRAME_WIDTH / width
-                        small_frame = cv2.resize(frame, (0, 0), fx=scale_mp, fy=scale_mp)
+                        small_frame = cv2.resize(
+                            frame, (0, 0), fx=scale_mp, fy=scale_mp
+                        )
 
                         img_rgb = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
                         img_rgb.flags.writeable = False
@@ -701,7 +778,9 @@ class MLEngine:
                             face_center = (left_ear + right_ear) / 2
 
                             if face_width > 0:
-                                deviation = abs(nose_x - face_center) / face_width
+                                deviation = (
+                                    abs(nose_x - face_center) / face_width
+                                )
                                 if deviation < MLEngine.VISUAL_DEVIATION:
                                     looking_at_camera_frames += 1
 
@@ -735,7 +814,9 @@ class MLEngine:
 
                     except Exception as e_mp:
                         logger.error(
-                            f"MediaPipe processing error at frame {total_frames_processed}: {e_mp}"
+                            "MediaPipe processing error at frame %d: %s",
+                            total_frames_processed,
+                            e_mp,
                         )
 
         except Exception as e_global:
@@ -762,9 +843,14 @@ class MLEngine:
             gesture_score = min(avg_move * 3500, 100)
 
             if gesture_score < 15:
-                gesture_advice = "Вы почти неподвижны (или мы не видим рук). Добавьте энергии!"
+                gesture_advice = (
+                    "Вы почти неподвижны (или мы не видим рук). "
+                    "Добавьте энергии!"
+                )
             elif gesture_score > 85:
-                gesture_advice = "Очень много движений, попробуйте контролировать жесты."
+                gesture_advice = (
+                    "Очень много движений, попробуйте контролировать жесты."
+                )
             else:
                 gesture_advice = "Отличная, естественная жестикуляция."
 
@@ -773,7 +859,9 @@ class MLEngine:
         video_metrics["gaze_score"] = int(gaze_score)
         video_metrics["gaze_label"] = MLEngine.get_score_label(int(gaze_score))
         video_metrics["gesture_score"] = int(gesture_score)
-        video_metrics["gesture_label"] = MLEngine.get_score_label(int(gesture_score))
+        video_metrics["gesture_label"] = MLEngine.get_score_label(
+            int(gesture_score)
+        )
         video_metrics["gesture_advice"] = gesture_advice
 
         return video_metrics
