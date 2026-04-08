@@ -24,11 +24,6 @@ dependencies = [
     "requests>=2.32.5",
 ]
 
-[dependency-groups]
-dev = [
-    "ruff>=0.14.8",
-]
-
 [tool.uv.sources]
 charisma-schemas = { workspace = true }
 charisma-storage = { workspace = true }

@@ -73,11 +73,20 @@ charisma-master/
 ## Требования
 ### Основное:
 - Docker, Docker Compose
-
-### Локальная разработка:
-- uv
+- uv (для локальной разработки)
 - Python 3.12
-- Node.js 25
+- Node.js 25 (для разработки фронтенда)
+
+### Pre-commit хуки
+
+Проект использует pre-commit для автоматической проверки кода перед коммитом. Установите после клонирования:
+
+```bash
+uv sync --group dev
+uv run pre-commit install
+```
+
+Хуки запускают `ruff check --fix` и `ruff format` для всех изменённых Python-файлов.
 
 ## Деплой
 

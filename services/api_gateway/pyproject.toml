@@ -17,11 +17,6 @@ dependencies = [
     "uvicorn[standard]>=0.38.0",
 ]
 
-[dependency-groups]
-dev = [
-    "ruff>=0.14.8",
-]
-
 [tool.uv.sources]
 charisma-schemas = { workspace = true }
 charisma-storage = { workspace = true }
