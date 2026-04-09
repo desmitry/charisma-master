@@ -1,3 +1,6 @@
+**/flake.nix
+**/flake.lock
+**/*.direnv
 .idea/
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -8,6 +11,7 @@ __pycache__/
 *.so
 
 media/
+!services/frontend/**/media
 
 # Distribution / packaging
 .Python
@@ -18,7 +22,7 @@ downloads/
 eggs/
 .eggs/
 lib/
-!frontend/lib/
+!services/frontend/lib/
 lib64/
 parts/
 sdist/

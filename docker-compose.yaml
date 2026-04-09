@@ -1,14 +1,109 @@
 services:
+    postgres:
+        image: postgres:17-alpine
+        container_name: postgres
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER:-charisma}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-charisma}
+            POSTGRES_DB: ${POSTGRES_DB:-charisma}
+        ports:
+            - "127.0.0.1:5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-charisma}"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+
+    seaweedfs-master:
+        image: chrislusf/seaweedfs:3.78
+        container_name: seaweedfs-master
+        command: master -ip=seaweedfs-master -port=9333
+        ports:
+            - "9333:9333"
+        volumes:
+            - seaweedfs_data:/data
+        healthcheck:
+            test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:9333/"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+            start_period: 15s
+
+    seaweedfs-volume:
+        image: chrislusf/seaweedfs:3.78
+        container_name: seaweedfs-volume
+        command: volume -mserver=seaweedfs-master:9333 -ip=seaweedfs-volume -port=8080 -dir=/data -max=100
+        volumes:
+            - seaweedfs_data:/data
+        depends_on:
+            seaweedfs-master:
+                condition: service_healthy
+
+    seaweedfs-filer:
+        image: chrislusf/seaweedfs:3.78
+        container_name: seaweedfs-filer
+        command: filer -master=seaweedfs-master:9333 -ip=seaweedfs-filer
+        depends_on:
+            seaweedfs-master:
+                condition: service_healthy
+            seaweedfs-volume:
+                condition: service_started
+        healthcheck:
+            test: ["CMD", "wget", "-q", "-O", "/dev/null", "--tries=1", "--timeout=5", "http://127.0.0.1:8888/"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+
+    seaweedfs-s3:
+        image: chrislusf/seaweedfs:3.78
+        container_name: seaweedfs-s3
+        command: s3 -filer=seaweedfs-filer:8888 -ip.bind=0.0.0.0 -port=8333
+        ports:
+            - "8333:8333"
+        depends_on:
+            seaweedfs-filer:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8333/"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+
+    migrator:
+        image: ${MIGRATOR_IMAGE:-charisma-migrator:latest}
+        build:
+            context: .
+            dockerfile: services/migrator/Dockerfile
+        container_name: migrator
+        environment:
+            DATABASE_URL: postgresql://${POSTGRES_USER:-charisma}:${POSTGRES_PASSWORD:-charisma}@postgres:5432/${POSTGRES_DB:-charisma}
+        depends_on:
+            postgres:
+                condition: service_healthy
+        restart: "no"
+
     redis:
-        image: redis:8.4.0
+        image: redis:8.6.2
         container_name: redis
         command:
             - redis-server
         restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
 
-    celery:
-        image: ghcr.io/desmitry/charisma-master-backend:latest
-        container_name: celery
+    ml_worker:
+        image: ${ML_WORKER_IMAGE:-ghcr.io/desmitry/charisma-master-ml-worker:latest}
+        build:
+            context: .
+            dockerfile: ./services/ml_worker/Dockerfile
+        container_name: ml_worker
+        user: "1000:1000"
         command:
             [
                 "celery",
@@ -20,22 +115,23 @@ services:
             ]
         restart: unless-stopped
         env_file:
-            - ./backend/.docker.env
+            - ./services/ml_worker/.docker.env
         depends_on:
-            - redis
-        volumes:
-            - ./media:/backend/app/media
-        deploy:
-          resources:
-            reservations:
-              devices:
-                - driver: nvidia
-                  count: 1
-                  capabilities: [gpu]
+            postgres:
+                condition: service_healthy
+            seaweedfs-s3:
+                condition: service_healthy
+            migrator:
+                condition: service_completed_successfully
+            redis:
+                condition: service_healthy
 
-    backend:
-        image: ghcr.io/desmitry/charisma-master-backend:latest
-        container_name: backend
+    api_gateway:
+        image: ${API_GATEWAY_IMAGE:-ghcr.io/desmitry/charisma-master-api-gateway:latest}
+        build:
+            context: .
+            dockerfile: ./services/api_gateway/Dockerfile
+        container_name: api_gateway
         command:
             [
                 "uvicorn",
@@ -49,23 +145,30 @@ services:
             ]
         restart: unless-stopped
         env_file:
-            - ./backend/.docker.env
+            - ./services/api_gateway/.docker.env
         ports:
             - 127.0.0.1:8000:8000
         depends_on:
-            - celery
-        volumes:
-            - ./media:/backend/app/media
-        deploy:
-          resources:
-            reservations:
-              devices:
-                - driver: nvidia
-                  count: 1
-                  capabilities: [gpu]
+            postgres:
+                condition: service_healthy
+            seaweedfs-s3:
+                condition: service_healthy
+            migrator:
+                condition: service_completed_successfully
+            redis:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+            interval: 30s
+            timeout: 10s
+            start_period: 60s
+            retries: 3
 
     frontend:
-        image: ghcr.io/desmitry/charisma-master-frontend:latest
+        image: ${FRONTEND_IMAGE:-ghcr.io/desmitry/charisma-master-frontend:latest}
+        build:
+            context: ./services/frontend
+            dockerfile: ./Dockerfile
         container_name: frontend
         command: ["npm", "start"]
         restart: unless-stopped
@@ -74,6 +177,13 @@ services:
         environment:
             - NODE_ENV=production
             - PORT=3000
-            - BACKEND_URL=http://backend:8000
+            - BACKEND_URL=http://api_gateway:8000
         depends_on:
-            - backend
+            api_gateway:
+                condition: service_healthy
+
+volumes:
+    postgres_data:
+        driver: local
+    seaweedfs_data:
+        driver: local

@@ -1,0 +1,9 @@
+services:
+  ml_worker:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
