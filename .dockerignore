@@ -1,0 +1,44 @@
+# Virtual environment
+.venv/
+venv/
+
+# Secrets / env
+.env*
+*.env.*
+
+# Logs
+logs/
+*.log
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+.DS_Store
+.pytest_cache
+*.egg-info
+.mypy_cache/
+.ruff_cache/
+
+## Additional stuff.
+# Git
+.git
+.gitignore
+.github
+LICENSE
+*.md
+
+# Docker
+docker/
+.dockerignore
+
+# Project
+.vscode
+.idea
+*.lock
+!uv.lock
+!pyproject.toml
+scripts/
+services/frontend/

@@ -1,0 +1,16 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        entry: ruff check
+        name: ruff check
+        args: [--exit-non-zero-on-fix]
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: ruff-format
+        entry: ruff format --check
+        name: ruff format --check
+        language: system
+        pass_filenames: false
+        types: [python]
