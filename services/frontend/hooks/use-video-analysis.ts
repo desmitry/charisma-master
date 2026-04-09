@@ -149,10 +149,15 @@ export function useVideoAnalysis() {
     }
   };
 
+  const DEMO_TASK_ID = "62a26154-2d3e-408d-8737-2dbe5255eac6";
+
   const loadMockResponse = async (): Promise<AnalysisResult> => {
-    const res = await fetch("/62a26154-2d3e-408d-8737-2dbe5255eac6.json");
+    const res = await fetch(`/${DEMO_TASK_ID}.json`);
     if (!res.ok) throw new Error("mock fetch failed");
-    return normalizeAnalysisResult(await res.json());
+    const data = await res.json();
+    
+    data.video_path = `/api/proxy/media/${DEMO_TASK_ID}.mp4`;
+    return normalizeAnalysisResult(data);
   };
 
   const startMockFlow = async () => {

@@ -1,6 +1,6 @@
 [project]
 name = "charisma-ml-worker"
-version = "0.1.0"
+version = "0.1.1"
 description = "Charisma Master ML Worker - Celery worker for speech/video analysis"
 requires-python = ">=3.12,<3.13"
 dependencies = [

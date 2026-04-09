@@ -1,6 +1,6 @@
 [project]
 name = "charisma-master"
-version = "0.1.0"
+version = "0.1.1"
 description = "Charisma Master - Python Monorepo"
 requires-python = ">=3.12,<3.13"
 

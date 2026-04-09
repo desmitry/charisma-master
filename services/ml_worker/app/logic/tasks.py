@@ -69,7 +69,7 @@ def _get_presentation_text(presentation_path: Optional[str]) -> list[str]:
 
 def _parse_pptx(presentation_path: str) -> list[str]:
     """Parse text from PPTX file slide by slide."""
-    from python_pptx import Presentation
+    from pptx import Presentation
 
     prs = Presentation(presentation_path)
     slides_text = []
