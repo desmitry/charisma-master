@@ -96,7 +96,9 @@ class LLMClient:
                 exc_info=True,
             )
             response = LLMClient._get_empty_speech_analysis_response()
-            response.summary = str(error_msg)
+            response.summary = (
+                "Analysis could not be completed. Please try again."
+            )
             return response
 
     async def get_evaluation_criteria(
@@ -344,8 +346,8 @@ class LLMClient:
         try:
             result = json.loads(cleaned)
             return result
-        except Exception as error_msg:
-            raise error_msg
+        except json.JSONDecodeError:
+            raise RuntimeError("LLM returned invalid JSON response")
 
     @staticmethod
     def _get_empty_speech_analysis_response() -> SpeechReport:

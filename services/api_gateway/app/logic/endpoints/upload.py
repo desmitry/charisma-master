@@ -189,9 +189,9 @@ def _download_user_speech_from_rutube(task_id: str, video_url: str) -> str:
 
     except subprocess.CalledProcessError as e:
         err_msg = e.stderr.decode() if e.stderr else "Unknown error"
-        logger.error(f"FFmpeg conversion failed: {err_msg}")
+        logger.error("FFmpeg conversion failed: %s", err_msg)
         raise HTTPException(
-            status_code=500, detail=f"Ошибка преобразования видео: {err_msg}"
+            status_code=500, detail="Ошибка преобразования видео"
         )
     except HTTPException:
         raise

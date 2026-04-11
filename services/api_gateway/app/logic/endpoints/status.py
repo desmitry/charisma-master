@@ -39,6 +39,8 @@ async def get_task_status(task_id: str):
     elif task_result.state == TaskState.failed:
         response.state = TaskState.failed
         response.hint = TaskState.failed.hint
-        response.error = str(task_result.info)
+        # Never expose internal error details (stack traces, exception
+        # messages) to users
+        response.error = "Processing failed. Please try again."
 
     return response
