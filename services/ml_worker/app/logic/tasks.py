@@ -172,13 +172,12 @@ def process_video_pipeline(  # noqa: C901
         )
 
     except subprocess.CalledProcessError as e:
-        error_msg = f"FFmpeg error: {str(e)}"
-        logger.critical(error_msg)
-        raise RuntimeError(error_msg)
+        logger.critical("FFmpeg error: %s", e.stderr, exc_info=True)
+        raise RuntimeError("Audio extraction failed")
 
     except Exception as e:
-        logger.critical(f"Global pipeline error: {e}")
-        raise RuntimeError(f"Processing failed: {str(e)}")
+        logger.critical("Global pipeline error: %s", e, exc_info=True)
+        raise RuntimeError("Processing failed")
 
     self.update_state(
         state=TaskState.processing.value,
@@ -243,8 +242,10 @@ def process_video_pipeline(  # noqa: C901
             loop.close()
 
         except Exception as e:
-            logger.error(f"Failed to extract evaluation criteria: {e}")
-            raise RuntimeError(f"Criteria extraction failed: {str(e)}")
+            logger.error(
+                "Failed to extract evaluation criteria: %s", e, exc_info=True
+            )
+            raise RuntimeError("Criteria extraction failed")
 
         if criteria_path and os.path.exists(criteria_path):
             os.unlink(criteria_path)
@@ -270,8 +271,8 @@ def process_video_pipeline(  # noqa: C901
         )
         loop.close()
     except Exception as e:
-        logger.error(f"LLM speech analysis failed: {e}")
-        raise RuntimeError(f"Speech analysis failed: {str(e)}")
+        logger.error("LLM speech analysis failed: %s", e, exc_info=True)
+        raise RuntimeError("Speech analysis failed")
 
     self.update_state(
         state=TaskState.processing.value,
@@ -305,8 +306,8 @@ def process_video_pipeline(  # noqa: C901
             f"{evaluation_criteria_total_score}/{evaluation_criteria_max_score}"
         )
     except Exception as e:
-        logger.error(f"Criteria analysis failed: {e}")
-        raise RuntimeError(f"Criteria analysis failed: {str(e)}")
+        logger.error("Criteria analysis failed: %s", e, exc_info=True)
+        raise RuntimeError("Criteria analysis failed")
 
     # TODO: Document and verify these coefficients.
     total_words = len(full_text.split()) if full_text else 1
