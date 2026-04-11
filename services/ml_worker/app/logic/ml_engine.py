@@ -334,7 +334,10 @@ class MLEngine:
             verify=False,  # noqa: S501
         )
         if response.status_code != 200:
-            raise RuntimeError(f"Sber Auth Error: {response.text}")
+            logger.error(
+                "Sber auth failed: %s %s", response.status_code, response.text
+            )
+            raise RuntimeError("Sber authentication failed")
 
         access_token = response.json()["access_token"]
         auth_header = {"Authorization": f"Bearer {access_token}"}
@@ -355,7 +358,12 @@ class MLEngine:
         )
 
         if r_upload.status_code != 200:
-            raise RuntimeError(f"Sber Upload Error: {r_upload.text}")
+            logger.error(
+                "Sber upload failed: %s %s",
+                r_upload.status_code,
+                r_upload.text,
+            )
+            raise RuntimeError("Sber audio upload failed")
 
         upload_resp = r_upload.json()
 
@@ -392,7 +400,12 @@ class MLEngine:
         )
 
         if r_task.status_code != 200:
-            raise RuntimeError(f"Sber Task Creation Error: {r_task.text}")
+            logger.error(
+                "Sber task creation failed: %s %s",
+                r_task.status_code,
+                r_task.text,
+            )
+            raise RuntimeError("Sber transcription task creation failed")
 
         task_id = r_task.json()["result"]["id"]
         logger.info(f"Sber: Task started, id={task_id}")
@@ -422,7 +435,10 @@ class MLEngine:
                 response_file_id = st_data["response_file_id"]
                 break
             elif st in ["ERROR", "CANCELED"]:
-                raise RuntimeError(f"Sber task failed: {st}")
+                logger.error(
+                    "Sber transcription task failed with status: %s", st
+                )
+                raise RuntimeError("Sber transcription failed")
         else:
             raise TimeoutError("Sber transcription timed out")
 

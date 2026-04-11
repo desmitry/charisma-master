@@ -1,3 +1,4 @@
+import logging
 import re
 
 from charisma_storage import (
@@ -6,11 +7,13 @@ from charisma_storage import (
     get_client,
 )
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.logic.endpoints import analysis, status, upload
+
+logger = logging.getLogger(__name__)
 
 if settings.mode == "prod" and settings.origin_url == "*":
     raise Exception("You need to specify a specific url for production!")
@@ -21,6 +24,25 @@ app = FastAPI(
     title="Speech Analysis",
     version="1.0.0",
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch all unhandled exceptions and return a generic error message.
+
+    Log full details server-side for debugging, but never expose stack traces
+    or internal error details to the client.
+    """
+    logger.error(
+        "Unhandled exception: %s %s",
+        request.method,
+        request.url.path,
+        exc_info=True,
+    )
+    return JSONResponse(
+        status_code=500, content={"detail": "Internal server error"}
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
