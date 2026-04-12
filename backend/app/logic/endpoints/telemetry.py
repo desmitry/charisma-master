@@ -15,6 +15,10 @@ logger = logging.getLogger(__name__)
     "/telemetry/{task_id}/rate",
     response_model=RatingResponse,
     summary="Оценить качество анализа",
+    description=(
+        "Позволяет пользователю оценить качество анализа от 1 до 5.\n\n"
+        "Оценка сохраняется однократно — повторная оценка вернёт ошибку 400."
+    ),
     response_description="Подтверждение сохранённой оценки",
     responses={
         404: {"description": "Задача не найдена в системе телеметрии"},
@@ -65,6 +69,12 @@ async def rate_analysis(task_id: str, body: RatingRequest):
     "/telemetry/stats",
     response_model=TelemetryStatsResponse,
     summary="Статистика использования сервиса",
+    description=(
+        "Возвращает агрегированную статистику:\n"
+        "- Общее количество обработанных выступлений\n"
+        "- Количество оценённых анализов\n"
+        "- Средний рейтинг и средний индекс уверенности"
+    ),
     response_description="Сводка: общее количество, средний рейтинг, средний индекс уверенности",
 )
 async def get_telemetry_stats():

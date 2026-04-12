@@ -144,6 +144,20 @@ def _download_user_speech_from_rutube(task_id: str, video_url: str) -> str:
     "/process",
     response_model=UploadResponse,
     summary="Загрузить видео выступления для анализа",
+    description=(
+        "Принимает видеофайл или ссылку на Rutube с записью выступления.\n\n"
+        "**Параметры:**\n"
+        "- `user_speech_file` — видеофайл (MP4, AVI, MOV)\n"
+        "- `user_speech_url` — ссылка на Rutube (альтернатива файлу)\n"
+        "- `evaluation_criteria_file` — файл с критериями оценки\n"
+        "- `evaluation_criteria_id` — ID пресета критериев (альтернатива файлу)\n"
+        "- `user_presentation_file` — файл презентации (.pptx)\n"
+        "- `persona` — роль AI-критика\n"
+        "- `analyze_provider` — провайдер LLM-анализа\n"
+        "- `transcribe_provider` — провайдер транскрибации\n\n"
+        "Необходимо указать **ровно один** источник видео (файл или URL) "
+        "и **ровно один** источник критериев (файл или ID пресета)."
+    ),
     response_description="UUID задачи для отслеживания прогресса",
     responses={
         400: {"description": "Некорректные параметры (нет файла/URL или оба одновременно)"},

@@ -11,6 +11,14 @@ router = APIRouter()
     "/tasks/{task_id}/status",
     response_model=TaskStatusResponse,
     summary="Получить статус обработки задачи",
+    description=(
+        "Возвращает текущее состояние задачи обработки видео.\n\n"
+        "**Состояния:**\n"
+        "- `PENDING` — задача в очереди\n"
+        "- `PROCESSING` — идёт обработка (см. `progress` и `stage`)\n"
+        "- `SUCCESS` — обработка завершена\n"
+        "- `FAILURE` — ошибка (см. `error`)"
+    ),
     response_description="Текущее состояние, прогресс и этап обработки",
 )
 async def get_task_status(task_id: str):

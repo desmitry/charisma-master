@@ -69,6 +69,13 @@ app = FastAPI(
         "name": "Charisma Team",
         "url": "https://github.com/desmitry/charisma-master",
     },
+    license_info={
+        "name": "MIT",
+    },
+    servers=[
+        {"url": "https://charisma.geekiot.tech", "description": "Production"},
+        {"url": "http://localhost:8000", "description": "Local development"},
+    ],
     openapi_tags=OPENAPI_TAGS,
     docs_url="/docs",
     redoc_url="/redoc",
