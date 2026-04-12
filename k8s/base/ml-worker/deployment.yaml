@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-worker
+  namespace: charisma
+  labels:
+    app.kubernetes.io/name: ml-worker
+    app.kubernetes.io/part-of: charisma
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ml-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ml-worker
+        app.kubernetes.io/part-of: charisma
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: ml-worker
+          image: ghcr.io/desmitry/charisma-master-ml-worker:latest
+          command:
+            - celery
+            - -A
+            - app.celery_app
+            - worker
+            - --loglevel=info
+            - --pool=solo
+          envFrom:
+            - configMapRef:
+                name: charisma-config
+            - secretRef:
+                name: charisma-secret
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi

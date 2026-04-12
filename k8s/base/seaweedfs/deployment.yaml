@@ -1,0 +1,160 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs
+  namespace: charisma
+  labels:
+    app.kubernetes.io/name: seaweedfs
+    app.kubernetes.io/part-of: charisma
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seaweedfs
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: seaweedfs
+        app.kubernetes.io/part-of: charisma
+    spec:
+      containers:
+        - name: master
+          image: chrislusf/seaweedfs:3.78
+          command:
+            - weed
+            - master
+            - -ip=localhost
+            - -port=9333
+          ports:
+            - containerPort: 9333
+              protocol: TCP
+              name: master
+          volumeMounts:
+            - name: seaweedfs-data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9333
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9333
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+
+        - name: volume
+          image: chrislusf/seaweedfs:3.78
+          command:
+            - weed
+            - volume
+            - -mserver=localhost:9333
+            - -ip=localhost
+            - -port=8080
+            - -dir=/data
+            - -max=100
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+              name: volume
+          volumeMounts:
+            - name: seaweedfs-data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+
+        - name: filer
+          image: chrislusf/seaweedfs:3.78
+          command:
+            - weed
+            - filer
+            - -master=localhost:9333
+            - -ip=localhost
+          ports:
+            - containerPort: 8888
+              protocol: TCP
+              name: filer
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8888
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8888
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+
+        - name: s3
+          image: chrislusf/seaweedfs:3.78
+          command:
+            - weed
+            - s3
+            - -filer=localhost:8888
+            - -ip.bind=0.0.0.0
+            - -port=8333
+          ports:
+            - containerPort: 8333
+              protocol: TCP
+              name: s3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8333
+            initialDelaySeconds: 25
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8333
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+
+      volumes:
+        - name: seaweedfs-data
+          persistentVolumeClaim:
+            claimName: seaweedfs-pvc
