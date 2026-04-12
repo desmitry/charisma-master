@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: charisma-config
+  namespace: charisma
+data:
+  SERVICE_HOST: "0.0.0.0"
+  SERVICE_PORT: "8000"
+  MODE: "prod"
+  REDIS_URL: "redis://redis:6379/0"
+  CELERY_BROKER_URL: "redis://redis:6379/0"
+  CELERY_RESULT_BACKEND: "redis://redis:6379/0"
+  DATABASE_URL: "postgresql+asyncpg://charisma:charisma@postgres:5432/charisma"
+  DATABASE_URL_SYNC: "postgresql+psycopg2://charisma:charisma@postgres:5432/charisma"
+  WHISPER_MODEL_TYPE: "medium"
+  WHISPER_DEVICE: "cuda"
+  WHISPER_COMPUTE_TYPE: "float16"
+  WHISPER_MODEL_NAME: "whisper-1"
+  OPENAI_MODEL_NAME: "gpt-4o-mini"
+  GIGACHAT_MODEL_NAME: "GigaChat"
+  GIGACHAT_VERIFY_SSL: "false"
+  GIGACHAT_SCOPE: "GIGACHAT_API_PERS"
+  SBER_SPEECH_SCOPE: "SALUTE_SPEECH_B2B"
+  BACKEND_URL: "http://backend:8000"
+  NODE_ENV: "production"
+  PORT: "3000"

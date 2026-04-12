@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery
+  namespace: charisma
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celery
+  template:
+    metadata:
+      labels:
+        app: celery
+    spec:
+      containers:
+        - name: celery
+          image: ghcr.io/desmitry/charisma-master-backend:latest
+          command:
+            - celery
+            - -A
+            - app.celery_app
+            - worker
+            - --loglevel=info
+            - --pool=solo
+          envFrom:
+            - configMapRef:
+                name: charisma-config
+            - secretRef:
+                name: charisma-secrets
+          env:
+            - name: MPLCONFIGDIR
+              value: /tmp/matplotlib
+            - name: NUMBA_CACHE_DIR
+              value: /tmp/numba
+          volumeMounts:
+            - name: media
+              mountPath: /backend/app/media
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-pvc

@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: charisma
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: ghcr.io/desmitry/charisma-master-backend:latest
+          command:
+            - uvicorn
+            - app.main:app
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8000"
+            - --timeout-keep-alive
+            - "600"
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: charisma-config
+            - secretRef:
+                name: charisma-secrets
+          env:
+            - name: MPLCONFIGDIR
+              value: /tmp/matplotlib
+            - name: NUMBA_CACHE_DIR
+              value: /tmp/numba
+          volumeMounts:
+            - name: media
+              mountPath: /backend/app/media
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-pvc
