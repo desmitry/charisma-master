@@ -7,7 +7,19 @@ from app.celery_app import celery_app
 router = APIRouter()
 
 
-@router.get("/tasks/{task_id}/status", response_model=TaskStatusResponse)
+@router.get(
+    "/tasks/{task_id}/status",
+    response_model=TaskStatusResponse,
+    summary="Получить статус задачи",
+    description=(
+        "Возвращает текущее состояние задачи обработки выступления. "
+        "Возможные состояния: **PENDING** (в очереди), "
+        "**PROCESSING** (выполняется — содержит этап и прогресс), "
+        "**SUCCESS** (завершена успешно), "
+        "**FAILURE** (завершена с ошибкой — содержит описание ошибки)."
+    ),
+    response_description="Текущий статус задачи",
+)
 async def get_task_status(task_id: str):
     """Providing status on the progress of the speech processing task."""
     task_result = AsyncResult(task_id, app=celery_app)

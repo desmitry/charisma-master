@@ -200,7 +200,41 @@ def _download_user_speech_from_rutube(task_id: str, video_url: str) -> str:
         raise HTTPException(status_code=500, detail="Неизвестная ошибка")
 
 
-@router.post("/process", response_model=UploadResponse)
+@router.post(
+    "/process",
+    response_model=UploadResponse,
+    summary="Загрузить выступление на анализ",
+    description=(
+        "Принимает видео- или аудиофайл выступления (либо ссылку на RuTube), "
+        "файл критериев оценки (либо ID пресета из базы), а также "
+        "необязательный файл презентации. Запускает асинхронный пайплайн "
+        "обработки и возвращает идентификатор задачи для отслеживания."
+    ),
+    response_description="Идентификатор созданной задачи",
+    responses={
+        400: {
+            "description": "Некорректные параметры запроса",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": (
+                            "Необходимо загрузить либо видео "
+                            "выступления, либо ссылку на него"
+                        )
+                    }
+                }
+            },
+        },
+        500: {
+            "description": "Внутренняя ошибка сервера",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Ошибка преобразования видео"}
+                }
+            },
+        },
+    },
+)
 async def process(
     user_speech_file: Optional[UploadFile] = File(None),
     user_speech_url: Optional[str] = Form(None),
