@@ -31,7 +31,7 @@ from charisma_storage import (
 
 from app.config import settings
 from app.logic.llm_client import LLMClient
-from app.logic.ml_engine import MLEngine
+from app.logic.ml_engine import MLEngine, MLEngineFactory
 from app.logic.prompts import load_prompts_from_db
 
 logger = logging.getLogger(__name__)
@@ -161,9 +161,8 @@ def process_video_pipeline(  # noqa: C901
 
         MLEngine.extract_audio(video_tmp, audio_tmp)
 
-        transcript_segments = MLEngine.transcribe(
-            audio_tmp, provider=transcribe_provider
-        )
+        transcriber = MLEngineFactory.create_transcriber(transcribe_provider)
+        transcript_segments = transcriber.transcribe(audio_tmp)
         tempo_data = MLEngine.calculate_tempo(transcript_segments)
 
         full_text = " ".join([s.text for s in transcript_segments])

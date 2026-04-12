@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: charisma-config
+  namespace: charisma
+  labels:
+    app.kubernetes.io/part-of: charisma
+data:
+  # Service
+  SERVICE_HOST: "0.0.0.0"
+  SERVICE_PORT: "8000"
+  MODE: "production"
+
+  # Redis / Celery
+  REDIS_URL: "redis://redis:6379/0"
+  CELERY_BROKER_URL: "redis://redis:6379/0"
+  CELERY_RESULT_BACKEND: "redis://redis:6379/1"
+
+  # Database
+  DATABASE_URL: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres:5432/$(POSTGRES_DB)"
+
+  # SeaweedFS
+  SEAWEEDFS_ENDPOINT: "http://seaweedfs:8333"
+
+  # ML / Whisper
+  WHISPER_MODEL_TYPE: "base"
+  WHISPER_DEVICE: "cpu"
+  WHISPER_COMPUTE_TYPE: "int8"
+
+  # LLM model names
+  OPENAI_MODEL_NAME: "gpt-4o"
+  GIGACHAT_MODEL_NAME: "GigaChat"
+
+  # Frontend
+  BACKEND_URL: "http://api-gateway:8000"
+  NODE_ENV: "production"
+  PORT: "3000"

@@ -7,7 +7,29 @@ from app.config import settings
 router = APIRouter()
 
 
-@router.get("/analysis/{task_id}", response_model=AnalysisResult)
+@router.get(
+    "/analysis/{task_id}",
+    response_model=AnalysisResult,
+    summary="Получить результаты анализа",
+    description=(
+        "Возвращает полный результат анализа выступления. "
+        "Результат включает: транскрипцию, оценки по каждому критерию, "
+        "общий балл, рекомендации и детализированную обратную связь."
+    ),
+    response_description="Результат анализа выступления",
+    responses={
+        404: {
+            "description": "Результат не найден или задача ещё обрабатывается",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Analysis not found or still processing"
+                    }
+                }
+            },
+        },
+    },
+)
 async def get_analysis(task_id: str):
     """Get analysis results from SeaweedFS."""
     try:
