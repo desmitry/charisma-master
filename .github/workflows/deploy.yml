@@ -1,66 +1,123 @@
-name: Lint & Deploy
+name: Build & Deploy
 
 on:
-    push:
-        branches:
-            - develop
-            - main
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/desmitry/charisma-master-backend
+  FRONTEND_IMAGE: ghcr.io/desmitry/charisma-master-frontend
 
 jobs:
-    lint:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Install uv
-              uses: astral-sh/setup-uv@v3
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
 
-            - name: Install ruff
-              run: uv tool install ruff
+      - name: Install ruff
+        run: uv tool install ruff
 
-            - name: Run ruff check
-              run: ruff check --config backend/pyproject.toml
+      - name: Run ruff check
+        run: ruff check --config backend/pyproject.toml
 
-            - name: Run ruff format check
-              run: ruff format --check --config backend/pyproject.toml
+      - name: Run ruff format check
+        run: ruff format --check --config backend/pyproject.toml
 
-    deploy:
-        needs: lint
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Setup SSH
-              uses: webfactory/ssh-agent@v0.9.0
-              with:
-                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
 
-            - name: Add known hosts
-              run: |
-                  echo "Adding SSH host to known hosts..."
-                  ssh-keyscan -p ${{ secrets.SSH_PORT || '22' }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-                  echo "SSH host added successfully"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-            - name: Deploy to server
-              run: |
-                  echo "Starting deployment to server..."
-                  ssh -p ${{ secrets.SSH_PORT || '22' }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-                    echo "Changing to project directory..."
-                    cd /home/${{ secrets.SSH_USER }}/charisma-master
+      - name: Install dependencies
+        run: uv sync --group dev
 
-                    echo "Pulling latest changes from ${{ github.ref_name }} branch..."
-                    git pull origin ${{ github.ref_name }}
+      - name: Run tests
+        run: uv run pytest tests/ -v --tb=short
 
-                    echo "Stopping & removing existing containers..."
-                    docker compose down
+  build-and-push:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-                    echo "Running build script..."
-                    ./scripts/build.sh
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-                    echo "Starting containers..."
-                    docker compose up -d
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+            ${{ env.BACKEND_IMAGE }}:latest
 
-                    echo "Deployment completed successfully!"
-                  EOF
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            ${{ env.FRONTEND_IMAGE }}:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl set image deployment/backend \
+            backend=${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
+            -n charisma
+
+          kubectl set image deployment/celery \
+            celery=${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
+            -n charisma
+
+          kubectl set image deployment/frontend \
+            frontend=${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
+            -n charisma
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/backend -n charisma --timeout=300s
+          kubectl rollout status deployment/celery -n charisma --timeout=300s
+          kubectl rollout status deployment/frontend -n charisma --timeout=300s
