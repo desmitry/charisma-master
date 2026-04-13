@@ -1,29 +1,20 @@
 """Tests for charisma_schemas Pydantic models and enums."""
 
 import pytest
-from pydantic import ValidationError
-
 from charisma_schemas import (
-    AnalysisResult,
     AnalyzeProvider,
-    ConfidenceComponents,
-    ConfidenceIndex,
-    EvaluationCriteriaReport,
     EvaluationCriterion,
     FillersSummary,
-    PauseInterval,
     PersonaRoles,
-    SpeechReport,
     TaskStage,
     TaskState,
     TaskStatusResponse,
-    TempoPoint,
     TranscribeProvider,
     TranscriptSegment,
     TranscriptWord,
     UploadResponse,
 )
-
+from pydantic import ValidationError
 
 # ---- TranscriptWord defaults ------------------------------------------------
 
@@ -36,9 +27,7 @@ class TestTranscriptWord:
         assert word.is_filler is False
 
     def test_is_filler_can_be_set_true(self):
-        word = TranscriptWord(
-            start=0.0, end=0.5, text="ну", is_filler=True
-        )
+        word = TranscriptWord(start=0.0, end=0.5, text="ну", is_filler=True)
         assert word.is_filler is True
 
     def test_missing_required_field_raises(self):
@@ -46,7 +35,7 @@ class TestTranscriptWord:
             TranscriptWord(start=0.0, end=1.0)  # missing text
 
 
-# ---- TaskState ---------------------------------------------------------------
+# ---- TaskState --------------------------------------------------------------
 
 
 class TestTaskState:
@@ -66,7 +55,7 @@ class TestTaskState:
             assert member.hint == member.value
 
 
-# ---- TaskStage ---------------------------------------------------------------
+# ---- TaskStage --------------------------------------------------------------
 
 
 class TestTaskStage:
@@ -92,7 +81,7 @@ class TestTaskStage:
         assert meta["progress"] == 0.1
 
 
-# ---- TranscribeProvider ------------------------------------------------------
+# ---- TranscribeProvider -----------------------------------------------------
 
 
 class TestTranscribeProvider:
@@ -107,7 +96,7 @@ class TestTranscribeProvider:
         assert TranscribeProvider.whisper_openai.value == "whisper_openai"
 
 
-# ---- AnalyzeProvider ---------------------------------------------------------
+# ---- AnalyzeProvider --------------------------------------------------------
 
 
 class TestAnalyzeProvider:
@@ -121,7 +110,7 @@ class TestAnalyzeProvider:
         assert AnalyzeProvider.openai.value == "openai"
 
 
-# ---- PersonaRoles ------------------------------------------------------------
+# ---- PersonaRoles -----------------------------------------------------------
 
 
 class TestPersonaRoles:
@@ -145,14 +134,12 @@ class TestEvaluationCriterion:
     """EvaluationCriterion default values."""
 
     def test_defaults(self):
-        c = EvaluationCriterion(
-            name="Test", description="desc", max_value=10
-        )
+        c = EvaluationCriterion(name="Test", description="desc", max_value=10)
         assert c.current_value == 0
         assert c.feedback == ""
 
 
-# ---- UploadResponse ----------------------------------------------------------
+# ---- UploadResponse ---------------------------------------------------------
 
 
 class TestUploadResponse:
@@ -184,7 +171,7 @@ class TestTaskStatusResponse:
         assert resp.error is None
 
 
-# ---- FillersSummary ----------------------------------------------------------
+# ---- FillersSummary ---------------------------------------------------------
 
 
 class TestFillersSummary:
@@ -215,9 +202,7 @@ class TestTranscriptSegment:
         assert len(seg.words) == 1
 
     def test_empty_words_list(self):
-        seg = TranscriptSegment(
-            start=0.0, end=1.0, text="hi", words=[]
-        )
+        seg = TranscriptSegment(start=0.0, end=1.0, text="hi", words=[])
         assert seg.words == []
 
     def test_missing_words_raises(self):

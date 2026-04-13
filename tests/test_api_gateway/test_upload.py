@@ -37,7 +37,8 @@ async def test_process_both_file_and_url(async_client):
 
 @pytest.mark.asyncio
 async def test_process_with_file_success(async_client):
-    """Upload with a valid file should dispatch a Celery task and return 200."""
+    """Upload with a valid file
+    should dispatch a Celery task and return 200."""
     dummy_file = io.BytesIO(b"fake video content")
 
     with (

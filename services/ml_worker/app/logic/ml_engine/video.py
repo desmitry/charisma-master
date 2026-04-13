@@ -64,9 +64,7 @@ def analyze_video(  # noqa: C901
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    logger.debug(
-        f"Video Metadata: {width}x{height}, {fps=}, {frame_count=}"
-    )
+    logger.debug(f"Video Metadata: {width}x{height}, {fps=}, {frame_count=}")
 
     mp_holistic = mp.solutions.holistic
 
@@ -120,9 +118,7 @@ def analyze_video(  # noqa: C901
                         face_center = (left_ear + right_ear) / 2
 
                         if face_width > 0:
-                            deviation = (
-                                abs(nose_x - face_center) / face_width
-                            )
+                            deviation = abs(nose_x - face_center) / face_width
                             if deviation < VISUAL_DEVIATION:
                                 looking_at_camera_frames += 1
 
@@ -186,8 +182,7 @@ def analyze_video(  # noqa: C901
 
         if gesture_score < 15:
             gesture_advice = (
-                "Вы почти неподвижны (или мы не видим рук). "
-                "Добавьте энергии!"
+                "Вы почти неподвижны (или мы не видим рук). Добавьте энергии!"
             )
         elif gesture_score > 85:
             gesture_advice = (

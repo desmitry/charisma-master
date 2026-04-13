@@ -13,7 +13,6 @@ from charisma_schemas import TranscriptSegment, TranscriptWord
 
 from app.config import settings
 from app.logic.ml_engine.constants import BASE_FILLER_WORDS
-from app.logic.ml_engine.transcription._helpers import _is_filler
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 

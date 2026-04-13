@@ -20,9 +20,7 @@ async def test_status_pending(async_client):
         "services.api_gateway.app.logic.endpoints.status.AsyncResult",
         return_value=_make_async_result("PENDING"),
     ):
-        response = await async_client.get(
-            "/api/v1/tasks/test-task-id/status"
-        )
+        response = await async_client.get("/api/v1/tasks/test-task-id/status")
 
     assert response.status_code == 200
     body = response.json()
@@ -42,9 +40,7 @@ async def test_status_processing(async_client):
         "services.api_gateway.app.logic.endpoints.status.AsyncResult",
         return_value=_make_async_result("PROCESSING", info=info),
     ):
-        response = await async_client.get(
-            "/api/v1/tasks/test-task-id/status"
-        )
+        response = await async_client.get("/api/v1/tasks/test-task-id/status")
 
     assert response.status_code == 200
     body = response.json()
@@ -60,9 +56,7 @@ async def test_status_finished(async_client):
         "services.api_gateway.app.logic.endpoints.status.AsyncResult",
         return_value=_make_async_result("SUCCESS"),
     ):
-        response = await async_client.get(
-            "/api/v1/tasks/test-task-id/status"
-        )
+        response = await async_client.get("/api/v1/tasks/test-task-id/status")
 
     assert response.status_code == 200
     body = response.json()
@@ -75,13 +69,9 @@ async def test_status_failed(async_client):
     """FAILURE task should include the error message."""
     with patch(
         "services.api_gateway.app.logic.endpoints.status.AsyncResult",
-        return_value=_make_async_result(
-            "FAILURE", info=Exception("boom")
-        ),
+        return_value=_make_async_result("FAILURE", info=Exception("boom")),
     ):
-        response = await async_client.get(
-            "/api/v1/tasks/test-task-id/status"
-        )
+        response = await async_client.get("/api/v1/tasks/test-task-id/status")
 
     assert response.status_code == 200
     body = response.json()

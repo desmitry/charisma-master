@@ -31,7 +31,7 @@ def main() -> None:
         json.dumps(schema, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    print(f"OpenAPI schema exported to {OUTPUT_PATH}")
+    print(f"OpenAPI schema exported to {OUTPUT_PATH}")  # noqa: T201
 
 
 if __name__ == "__main__":

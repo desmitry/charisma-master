@@ -3,18 +3,15 @@
 These tests do not require ML models, media files, or external services.
 """
 
-import pytest
 from charisma_schemas import (
     PauseInterval,
     TempoPoint,
     TranscriptSegment,
     TranscriptWord,
 )
-
 from services.ml_worker.app.logic.ml_engine import MLEngine
 
-
-# ---- get_score_label ---------------------------------------------------------
+# ---- get_score_label --------------------------------------------------------
 
 
 class TestGetScoreLabel:
@@ -45,7 +42,7 @@ class TestGetScoreLabel:
         assert MLEngine.get_score_label(0) == "Требует внимания"
 
 
-# ---- calculate_tempo ---------------------------------------------------------
+# ---- calculate_tempo --------------------------------------------------------
 
 
 class TestCalculateTempo:
@@ -65,9 +62,7 @@ class TestCalculateTempo:
         """WPM between 100 and 140 (inclusive) should be green."""
         # 10 words in a 5-second window => (10/5)*60 = 120 wpm
         words = [
-            TranscriptWord(
-                start=i * 0.5, end=i * 0.5 + 0.3, text=f"word{i}"
-            )
+            TranscriptWord(start=i * 0.5, end=i * 0.5 + 0.3, text=f"word{i}")
             for i in range(10)
         ]
         segment = TranscriptSegment(
@@ -84,9 +79,7 @@ class TestCalculateTempo:
         """WPM above 160 should be red."""
         # 15 words in 5 seconds => (15/5)*60 = 180 wpm
         words = [
-            TranscriptWord(
-                start=i * 0.3, end=i * 0.3 + 0.2, text=f"word{i}"
-            )
+            TranscriptWord(start=i * 0.3, end=i * 0.3 + 0.2, text=f"word{i}")
             for i in range(15)
         ]
         segment = TranscriptSegment(
@@ -103,9 +96,7 @@ class TestCalculateTempo:
         """WPM below 80 should be red."""
         # 5 words in 5 seconds => (5/5)*60 = 60 wpm
         words = [
-            TranscriptWord(
-                start=i * 1.0, end=i * 1.0 + 0.5, text=f"word{i}"
-            )
+            TranscriptWord(start=i * 1.0, end=i * 1.0 + 0.5, text=f"word{i}")
             for i in range(5)
         ]
         segment = TranscriptSegment(
@@ -122,9 +113,7 @@ class TestCalculateTempo:
         """WPM between 80-99 or 141-160 should be yellow."""
         # 7 words in 5 seconds => (7/5)*60 = 84 wpm  -> yellow
         words = [
-            TranscriptWord(
-                start=i * 0.7, end=i * 0.7 + 0.4, text=f"word{i}"
-            )
+            TranscriptWord(start=i * 0.7, end=i * 0.7 + 0.4, text=f"word{i}")
             for i in range(7)
         ]
         segment = TranscriptSegment(
@@ -149,7 +138,7 @@ class TestCalculateTempo:
         assert len(points) > 0
 
 
-# ---- get_long_pauses ---------------------------------------------------------
+# ---- get_long_pauses --------------------------------------------------------
 
 
 class TestGetLongPauses:
@@ -159,19 +148,13 @@ class TestGetLongPauses:
         assert MLEngine.get_long_pauses([]) == []
 
     def test_single_segment_no_pauses(self):
-        seg = TranscriptSegment(
-            start=0.0, end=3.0, text="hello", words=[]
-        )
+        seg = TranscriptSegment(start=0.0, end=3.0, text="hello", words=[])
         assert MLEngine.get_long_pauses([seg]) == []
 
     def test_detects_long_pause(self):
         segments = [
-            TranscriptSegment(
-                start=0.0, end=2.0, text="hello", words=[]
-            ),
-            TranscriptSegment(
-                start=5.0, end=7.0, text="world", words=[]
-            ),
+            TranscriptSegment(start=0.0, end=2.0, text="hello", words=[]),
+            TranscriptSegment(start=5.0, end=7.0, text="world", words=[]),
         ]
         pauses = MLEngine.get_long_pauses(segments, threshold=2.0)
         assert len(pauses) == 1
@@ -180,24 +163,16 @@ class TestGetLongPauses:
 
     def test_ignores_short_pause(self):
         segments = [
-            TranscriptSegment(
-                start=0.0, end=2.0, text="hello", words=[]
-            ),
-            TranscriptSegment(
-                start=3.0, end=5.0, text="world", words=[]
-            ),
+            TranscriptSegment(start=0.0, end=2.0, text="hello", words=[]),
+            TranscriptSegment(start=3.0, end=5.0, text="world", words=[]),
         ]
         pauses = MLEngine.get_long_pauses(segments, threshold=2.0)
         assert len(pauses) == 0
 
     def test_custom_threshold(self):
         segments = [
-            TranscriptSegment(
-                start=0.0, end=1.0, text="a", words=[]
-            ),
-            TranscriptSegment(
-                start=2.5, end=3.0, text="b", words=[]
-            ),
+            TranscriptSegment(start=0.0, end=1.0, text="a", words=[]),
+            TranscriptSegment(start=2.5, end=3.0, text="b", words=[]),
         ]
         # With threshold 1.0 the 1.5s gap is detected.
         pauses = MLEngine.get_long_pauses(segments, threshold=1.0)
@@ -217,7 +192,7 @@ class TestGetLongPauses:
         assert pauses[0].end == 10.0
 
 
-# ---- Filler detection --------------------------------------------------------
+# ---- Filler detection -------------------------------------------------------
 
 
 class TestFillerDetection:
@@ -232,7 +207,7 @@ class TestFillerDetection:
         assert non_fillers.isdisjoint(MLEngine.BASE_FILLER_WORDS)
 
 
-# ---- Empty metrics factories -------------------------------------------------
+# ---- Empty metrics factories ------------------------------------------------
 
 
 class TestEmptyMetrics:

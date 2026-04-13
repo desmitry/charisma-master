@@ -1,6 +1,6 @@
 """Shared fixtures for the Charisma test suite."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from charisma_schemas import (
@@ -60,9 +60,7 @@ def sample_transcript_segments() -> list[TranscriptSegment]:
             end=8.0,
             text="ну сегодня мы обсудим результаты",
             words=[
-                TranscriptWord(
-                    start=4.0, end=4.3, text="ну", is_filler=True
-                ),
+                TranscriptWord(start=4.0, end=4.3, text="ну", is_filler=True),
                 TranscriptWord(start=4.4, end=5.0, text="сегодня"),
                 TranscriptWord(start=5.1, end=5.4, text="мы"),
                 TranscriptWord(start=5.5, end=6.2, text="обсудим"),

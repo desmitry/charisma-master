@@ -3,7 +3,12 @@
 from typing import List
 
 import numpy as np
-from charisma_schemas import PauseInterval, TempoPoint, TranscriptSegment, TranscriptWord
+from charisma_schemas import (
+    PauseInterval,
+    TempoPoint,
+    TranscriptSegment,
+    TranscriptWord,
+)
 
 from app.logic.ml_engine.scoring import get_tempo_zone
 
@@ -81,9 +86,7 @@ def calculate_tempo(
     points = []
     for t in np.arange(0, duration, 1.0):
         t_start, t_end = t, t + window_sec
-        count = sum(
-            1 for w in words if w.start >= t_start and w.end < t_end
-        )
+        count = sum(1 for w in words if w.start >= t_start and w.end < t_end)
         wpm = (count / window_sec) * 60
 
         zone = get_tempo_zone(wpm)

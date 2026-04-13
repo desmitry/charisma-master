@@ -22,6 +22,8 @@ from faster_whisper import WhisperModel
 
 from app.logic.ml_engine.audio import (
     analyze_audio as _analyze_audio,
+)
+from app.logic.ml_engine.audio import (
     get_empty_audio_metrics as _get_empty_audio_metrics,
 )
 from app.logic.ml_engine.constants import BASE_FILLER_WORDS
@@ -29,15 +31,23 @@ from app.logic.ml_engine.factory import MLEngineFactory
 from app.logic.ml_engine.scoring import get_score_label as _get_score_label
 from app.logic.ml_engine.tempo import (
     calculate_tempo as _calculate_tempo,
+)
+from app.logic.ml_engine.tempo import (
     get_long_pauses as _get_long_pauses,
 )
 from app.logic.ml_engine.transcription import (
     extract_audio as _extract_audio,
+)
+from app.logic.ml_engine.transcription import (
     load_model as _load_model,
+)
+from app.logic.ml_engine.transcription import (
     transcribe as _transcribe,
 )
 from app.logic.ml_engine.video import (
     analyze_video as _analyze_video,
+)
+from app.logic.ml_engine.video import (
     get_empty_video_metrics as _get_empty_video_metrics,
 )
 

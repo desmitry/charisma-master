@@ -10,7 +10,6 @@ from unittest.mock import patch
 import pytest
 from charisma_schemas import SpeechReport
 
-
 # ---------------------------------------------------------------------------
 # We cannot instantiate LLMClient normally because __init__ tries to create
 # openai and gigachat clients that need real credentials / network.

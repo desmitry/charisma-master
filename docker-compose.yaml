@@ -73,7 +73,7 @@ services:
             retries: 10
 
     migrator:
-        image: ${MIGRATOR_IMAGE:-charisma-migrator:latest}
+        image: ${MIGRATOR_IMAGE:-ghcr.io/desmitry/charisma-master-migrator:latest}
         build:
             context: .
             dockerfile: services/migrator/Dockerfile
