@@ -1,0 +1,151 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types: [completed]
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_PREFIX: ghcr.io/desmitry/charisma-master
+  K8S_NAMESPACE: charisma
+
+jobs:
+  deploy-develop:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'develop' && github.event.workflow_run.event == 'push'
+    environment: develop
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.DEVELOP_KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+        shell: bash
+
+      - name: Deploy api-gateway
+        run: |
+          kubectl set image deployment/api-gateway \
+            api-gateway=${{ env.IMAGE_PREFIX }}-api-gateway:${{ github.event.workflow_run.head_sha }} \
+            -n ${{ env.K8S_NAMESPACE }}
+          kubectl rollout status deployment/api-gateway \
+            -n ${{ env.K8S_NAMESPACE }} --timeout=120s || {
+            kubectl rollout undo deployment/api-gateway -n ${{ env.K8S_NAMESPACE }}
+            exit 1
+          }
+        shell: bash
+
+      - name: Deploy ml-worker
+        run: |
+          kubectl set image deployment/ml-worker \
+            ml-worker=${{ env.IMAGE_PREFIX }}-ml-worker:${{ github.event.workflow_run.head_sha }} \
+            -n ${{ env.K8S_NAMESPACE }}
+          kubectl rollout status deployment/ml-worker \
+            -n ${{ env.K8S_NAMESPACE }} --timeout=120s || {
+            kubectl rollout undo deployment/ml-worker -n ${{ env.K8S_NAMESPACE }}
+            exit 1
+          }
+        shell: bash
+
+      - name: Deploy frontend
+        run: |
+          kubectl set image deployment/frontend \
+            frontend=${{ env.IMAGE_PREFIX }}-frontend:${{ github.event.workflow_run.head_sha }} \
+            -n ${{ env.K8S_NAMESPACE }}
+          kubectl rollout status deployment/frontend \
+            -n ${{ env.K8S_NAMESPACE }} --timeout=120s || {
+            kubectl rollout undo deployment/frontend -n ${{ env.K8S_NAMESPACE }}
+            exit 1
+          }
+        shell: bash
+
+      - name: Deploy migrator
+        run: |
+          kubectl delete job migrator -n ${{ env.K8S_NAMESPACE }} --ignore-not-found=true
+          kubectl create job migrator \
+            --image=${{ env.IMAGE_PREFIX }}-migrator:${{ github.event.workflow_run.head_sha }} \
+            -n ${{ env.K8S_NAMESPACE }}
+          kubectl wait --for=condition=complete job/migrator \
+            -n ${{ env.K8S_NAMESPACE }} --timeout=300s || {
+            kubectl delete job migrator -n ${{ env.K8S_NAMESPACE }} --ignore-not-found=true
+            exit 1
+          }
+        shell: bash
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'push'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.PRODUCTION_KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+        shell: bash
+
+      - name: Deploy api-gateway
+        run: |
+          kubectl set image deployment/api-gateway \
+            api-gateway=${{ env.IMAGE_PREFIX }}-api-gateway:${{ github.event.workflow_run.head_sha }} \
+            -n ${{ env.K8S_NAMESPACE }}
+          kubectl rollout status deployment/api-gateway \
+            -n ${{ env.K8S_NAMESPACE }} --timeout=120s || {
+            kubectl rollout undo deployment/api-gateway -n ${{ env.K8S_NAMESPACE }}
+            exit 1
+          }
+        shell: bash
+
+      - name: Deploy ml-worker
+        run: |
+          kubectl set image deployment/ml-worker \
+            ml-worker=${{ env.IMAGE_PREFIX }}-ml-worker:${{ github.event.workflow_run.head_sha }} \
+            -n ${{ env.K8S_NAMESPACE }}
+          kubectl rollout status deployment/ml-worker \
+            -n ${{ env.K8S_NAMESPACE }} --timeout=120s || {
+            kubectl rollout undo deployment/ml-worker -n ${{ env.K8S_NAMESPACE }}
+            exit 1
+          }
+        shell: bash
+
+      - name: Deploy frontend
+        run: |
+          kubectl set image deployment/frontend \
+            frontend=${{ env.IMAGE_PREFIX }}-frontend:${{ github.event.workflow_run.head_sha }} \
+            -n ${{ env.K8S_NAMESPACE }}
+          kubectl rollout status deployment/frontend \
+            -n ${{ env.K8S_NAMESPACE }} --timeout=120s || {
+            kubectl rollout undo deployment/frontend -n ${{ env.K8S_NAMESPACE }}
+            exit 1
+          }
+        shell: bash
+
+      - name: Deploy migrator
+        run: |
+          kubectl delete job migrator -n ${{ env.K8S_NAMESPACE }} --ignore-not-found=true
+          kubectl create job migrator \
+            --image=${{ env.IMAGE_PREFIX }}-migrator:${{ github.event.workflow_run.head_sha }} \
+            -n ${{ env.K8S_NAMESPACE }}
+          kubectl wait --for=condition=complete job/migrator \
+            -n ${{ env.K8S_NAMESPACE }} --timeout=300s || {
+            kubectl delete job migrator -n ${{ env.K8S_NAMESPACE }} --ignore-not-found=true
+            exit 1
+          }
+        shell: bash
