@@ -14,3 +14,7 @@ repos:
         language: system
         pass_filenames: false
         types: [python]
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
