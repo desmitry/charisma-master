@@ -242,7 +242,7 @@ wheels = [
 
 [[package]]
 name = "charisma-api-gateway"
-version = "0.1.0"
+version = "0.1.1"
 source = { virtual = "services/api_gateway" }
 dependencies = [
     { name = "celery" },
@@ -275,7 +275,7 @@ requires-dist = [
 
 [[package]]
 name = "charisma-master"
-version = "0.1.0"
+version = "0.1.1"
 source = { virtual = "." }
 
 [package.dev-dependencies]
@@ -305,7 +305,7 @@ requires-dist = [{ name = "psycopg2-binary", specifier = ">=2.9.10" }]
 
 [[package]]
 name = "charisma-ml-worker"
-version = "0.1.0"
+version = "0.1.1"
 source = { virtual = "services/ml_worker" }
 dependencies = [
     { name = "celery" },
