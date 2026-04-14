@@ -445,13 +445,6 @@ class MLEngine:
             if isinstance(obj, dict):
                 if "word" in obj and "start" in obj and "end" in obj:
                     found.append(obj)
-                elif (
-                    "text" in obj
-                    and "start" in obj
-                    and "end" in obj
-                    and "word" not in obj
-                ):
-                    found.append(obj)
 
                 for v in obj.values():
                     found.extend(extract_words(v))

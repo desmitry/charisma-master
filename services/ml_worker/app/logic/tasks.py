@@ -134,100 +134,137 @@ def init_worker(**kwargs):
 def process_video_pipeline(  # noqa: C901
     self,
     task_id: str,
-    speech_video_key: str,
+    speech_video_key: Optional[str],
+    speech_text_key: Optional[str],
+    need_text_from_video: bool,
+    need_video_analysis: bool,
+    presentation_key: Optional[str],
     evaluation_criteria_key: Optional[str],
     evaluation_criteria_preset: Optional[list[dict]],
-    presentation_key: Optional[str],
+    persona: str | Enum,
     analyze_provider: str | Enum,
     transcribe_provider: str | Enum,
-    persona: str | Enum,
 ):
+    persona = PersonaRoles(persona)
     analyze_provider = AnalyzeProvider(analyze_provider)
     transcribe_provider = TranscribeProvider(transcribe_provider)
-    persona = PersonaRoles(persona)
 
-    video_tmp = _download_to_temp(speech_video_key)
-    audio_tmp = str(Path(video_tmp).with_suffix(".wav"))
-    presentation_tmp = None
+    video_tmp = None
+    audio_tmp = None
 
-    if presentation_key:
-        presentation_tmp = _download_to_temp(presentation_key)
+    full_text = None
+    transcript_segments = []
+    tempo_data = []
+    long_pauses = []
 
-    try:
+    if need_text_from_video and speech_video_key:
         self.update_state(
             state=TaskState.processing.value,
             meta=TaskStage.transcription.meta,
         )
+        if video_tmp is None:
+            video_tmp = _download_to_temp(speech_video_key)
 
-        MLEngine.extract_audio(video_tmp, audio_tmp)
+        if audio_tmp is None:
+            audio_tmp = str(Path(video_tmp).with_suffix(".wav"))
 
-        transcript_segments = MLEngine.transcribe(
-            audio_tmp, provider=transcribe_provider
+        try:
+            MLEngine.extract_audio(
+                video_tmp,
+                audio_tmp,
+            )
+            transcript_segments = MLEngine.transcribe(
+                audio_tmp,
+                provider=transcribe_provider,
+            )
+            tempo_data = MLEngine.calculate_tempo(
+                transcript_segments,
+            )
+            long_pauses = MLEngine.get_long_pauses(
+                transcript_segments,
+                threshold=2.0,
+            )
+            full_text = " ".join([s.text for s in transcript_segments])
+        except subprocess.CalledProcessError as e:
+            error_msg = f"FFmpeg error: {str(e)}"
+            logger.critical(error_msg)
+            raise RuntimeError(error_msg)
+        except Exception as e:
+            logger.critical(f"Global pipeline error: {e}")
+            raise RuntimeError(f"Processing failed: {str(e)}")
+
+    if speech_text_key and full_text is None:
+        text_tmp = _download_to_temp(
+            speech_text_key,
         )
-        tempo_data = MLEngine.calculate_tempo(transcript_segments)
-
-        full_text = " ".join([s.text for s in transcript_segments])
-        long_pauses = MLEngine.get_long_pauses(
-            transcript_segments, threshold=2.0
+        full_text = LLMClient._read_document_text(
+            text_tmp,
+            Path(text_tmp).suffix,
         )
-
-    except subprocess.CalledProcessError as e:
-        error_msg = f"FFmpeg error: {str(e)}"
-        logger.critical(error_msg)
-        raise RuntimeError(error_msg)
-
-    except Exception as e:
-        logger.critical(f"Global pipeline error: {e}")
-        raise RuntimeError(f"Processing failed: {str(e)}")
-
-    self.update_state(
-        state=TaskState.processing.value,
-        meta=TaskStage.video_analisis.meta,
-    )
+        os.unlink(
+            text_tmp,
+        )
 
     video_metrics = MLEngine.get_empty_video_metrics()
-
-    try:
-        video_metrics = MLEngine.analyze_video(video_tmp)
-    except Exception as e:
-        logger.warning(f"Video analysis failed: {e}")
-
-    self.update_state(
-        state=TaskState.processing.value,
-        meta=TaskStage.audio_analisis.meta,
-    )
     audio_metrics = MLEngine.get_empty_audio_metrics()
+    if need_video_analysis and speech_video_key:
+        self.update_state(
+            state=TaskState.processing.value,
+            meta=TaskStage.video_analisis.meta,
+        )
+        if video_tmp is None:
+            video_tmp = _download_to_temp(speech_video_key)
+        if audio_tmp is None:
+            audio_tmp = str(Path(video_tmp).with_suffix(".wav"))
+            try:
+                MLEngine.extract_audio(video_tmp, audio_tmp)
+            except subprocess.CalledProcessError as e:
+                logger.error(f"FFmpeg audio extraction failed: {e}")
+                audio_tmp = None
 
-    try:
-        audio_metrics = MLEngine.analyze_audio(audio_tmp)
-    except Exception as e:
-        logger.warning(f"Audio features failed: {e}")
+        try:
+            video_metrics = MLEngine.analyze_video(
+                video_tmp,
+            )
+        except Exception as e:
+            logger.warning(
+                f"Video analysis failed: {e}",
+            )
 
+        if audio_tmp:
+            try:
+                audio_metrics = MLEngine.analyze_audio(
+                    audio_tmp,
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Audio analysis failed: {e}",
+                )
+
+    presentation_tmp = None
+    presentation_text = "Текст презентации отсутствует"
     self.update_state(
         state=TaskState.processing.value,
         meta=TaskStage.presentation_text_parsing.meta,
     )
-    presentation_text_list = (
-        _get_presentation_text(presentation_tmp) if presentation_tmp else []
-    )
-    if not presentation_text_list:
-        presentation_text = "Текст презентации отсутствует"
-    else:
-        presentation_text = "\n\n".join(
-            f"[Слайд: {idx + 1}]\n{text}"
-            for idx, text in enumerate(presentation_text_list)
-        )
+    if presentation_key:
+        presentation_tmp = _download_to_temp(presentation_key)
+        presentation_text_list = _get_presentation_text(presentation_tmp)
+        if presentation_text_list:
+            presentation_text = "\n\n".join(
+                f"[Слайд: {idx + 1}]\n{text}"
+                for idx, text in enumerate(presentation_text_list)
+            )
 
+    evaluation_criteria_list = list()
     self.update_state(
         state=TaskState.processing.value,
         meta=TaskStage.evaluation_criteria_report.meta,
     )
-    evaluation_criteria_list = list()
     if evaluation_criteria_preset:
         evaluation_criteria_list = [
             EvaluationCriterion(**c) for c in evaluation_criteria_preset
         ]
-
     elif evaluation_criteria_key:
         criteria_path = None
         try:
@@ -249,64 +286,66 @@ def process_video_pipeline(  # noqa: C901
         if criteria_path and os.path.exists(criteria_path):
             os.unlink(criteria_path)
 
+    llm_speech_report = LLMClient._get_empty_speech_analysis_response()
     self.update_state(
         state=TaskState.processing.value,
         meta=TaskStage.llm_speech_report.meta,
     )
-    llm_speech_report = LLMClient._get_empty_speech_analysis_response()
 
-    try:
-        llm_client = LLMClient()
+    if full_text:
+        try:
+            llm_client = LLMClient()
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        llm_speech_report = loop.run_until_complete(
-            llm_client.analyze_speech(
-                transcript_text=full_text,
-                presentation_text=presentation_text,
-                provider=analyze_provider,
-                persona=persona,
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            llm_speech_report = loop.run_until_complete(
+                llm_client.analyze_speech(
+                    transcript_text=full_text,
+                    presentation_text=presentation_text,
+                    provider=analyze_provider,
+                    persona=persona,
+                )
             )
-        )
-        loop.close()
-    except Exception as e:
-        logger.error(f"LLM speech analysis failed: {e}")
-        raise RuntimeError(f"Speech analysis failed: {str(e)}")
+            loop.close()
+        except Exception as e:
+            logger.error(f"LLM speech analysis failed: {e}")
+            raise RuntimeError(f"Speech analysis failed: {str(e)}")
 
+    evaluation_criteria_total_score = 0
+    evaluation_criteria_max_score = 0
     self.update_state(
         state=TaskState.processing.value,
         meta=TaskStage.llm_criteria_report.meta,
     )
-    evaluation_criteria_total_score = 0
-    evaluation_criteria_max_score = 0
-    try:
-        llm_client = LLMClient()
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        evaluation_criteria_list = loop.run_until_complete(
-            llm_client.analyze_with_evalution_criteria(
-                transcript_text=full_text,
-                presentation_text=presentation_text,
-                provider=analyze_provider,
-                evaluation_criteria=evaluation_criteria_list,
+    if full_text and evaluation_criteria_list:
+        try:
+            llm_client = LLMClient()
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            evaluation_criteria_list = loop.run_until_complete(
+                llm_client.analyze_with_evalution_criteria(
+                    transcript_text=full_text,
+                    presentation_text=presentation_text,
+                    provider=analyze_provider,
+                    evaluation_criteria=evaluation_criteria_list,
+                )
             )
-        )
-        loop.close()
+            loop.close()
 
-        evaluation_criteria_total_score = sum(
-            c.current_value for c in evaluation_criteria_list
-        )
-        evaluation_criteria_max_score = sum(
-            c.max_value for c in evaluation_criteria_list
-        )
+            evaluation_criteria_total_score = sum(
+                c.current_value for c in evaluation_criteria_list
+            )
+            evaluation_criteria_max_score = sum(
+                c.max_value for c in evaluation_criteria_list
+            )
 
-        logger.info(
-            f"Criteria evaluation completed: "
-            f"{evaluation_criteria_total_score}/{evaluation_criteria_max_score}"
-        )
-    except Exception as e:
-        logger.error(f"Criteria analysis failed: {e}")
-        raise RuntimeError(f"Criteria analysis failed: {str(e)}")
+            logger.info(
+                f"Criteria evaluation completed: "
+                f"{evaluation_criteria_total_score}/{evaluation_criteria_max_score}"
+            )
+        except Exception as e:
+            logger.error(f"Criteria analysis failed: {e}")
+            raise RuntimeError(f"Criteria analysis failed: {str(e)}")
 
     # TODO: Document and verify these coefficients.
     total_words = len(full_text.split()) if full_text else 1
@@ -331,7 +370,9 @@ def process_video_pipeline(  # noqa: C901
 
     result_data = AnalysisResult(
         task_id=task_id,
-        video_path=f"/media/{task_id}.mp4",
+        video_path=f"/media/{task_id}.mp4" if speech_video_key else None,
+        user_need_video_analysis=need_video_analysis,
+        user_need_text_from_video=need_text_from_video,
         transcript=transcript_segments,
         tempo=tempo_data,
         long_pauses=long_pauses,

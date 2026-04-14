@@ -206,7 +206,9 @@ class AnalysisResult(BaseModel):
     """A model for sending the final results of the analysis."""
 
     task_id: str
-    video_path: str
+    video_path: Optional[str]
+    user_need_video_analysis: bool
+    user_need_text_from_video: bool
     transcript: List[TranscriptSegment]
     tempo: List[TempoPoint]
     long_pauses: List[PauseInterval]
@@ -226,7 +228,7 @@ class TaskStatusResponse(BaseModel):
     state: TaskState
     hint: str
     progress: float = 0.0
-    stage: Optional[TaskStage] = None
+    stage: Optional[str] = None
     error: Optional[str] = None
 
 
