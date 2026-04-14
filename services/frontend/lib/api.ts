@@ -12,6 +12,20 @@ class ExpectedError extends Error {
   }
 }
 
+export interface UploadVideoPayload {
+  userSpeechTextFile?: File | null;
+  userSpeechVideoFile?: File | null;
+  userSpeechVideoUrl?: string | null;
+  userNeedTextFromVideo: boolean;
+  userNeedVideoAnalysis: boolean;
+  userPresentationFile?: File | null;
+  evaluationCriteriaFile?: File | null;
+  evaluationCriteriaId?: string;
+  persona?: string;
+  analyzeProvider?: string;
+  transcribeProvider?: string;
+}
+
 async function checkResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const text = await response.text().catch(() => "");
@@ -141,40 +155,46 @@ export function normalizeAnalysisResult(payload: any): AnalysisResult {
   };
 }
 
-export async function uploadVideo(
-  file: File | null,
-  videoUrl: string | null,
-  persona?: string,
-  analyzeProvider?: string,
-  transcribeProvider?: string,
-  presentationFile?: File | null,
-  standardFile?: File | null,
-  evaluationCriteriaId?: string
-): Promise<{ task_id: string }> {
+export async function uploadVideo(payload: UploadVideoPayload): Promise<{ task_id: string }> {
   const formData = new FormData();
-  if (file) {
-    formData.append("user_speech_file", file);
+
+  if (payload.userSpeechTextFile) {
+    formData.append("user_speech_text_file", payload.userSpeechTextFile);
   }
-  if (videoUrl) {
-    formData.append("user_speech_url", videoUrl);
+
+  if (payload.userSpeechVideoFile) {
+    formData.append("user_speech_video_file", payload.userSpeechVideoFile);
   }
-  if (persona) {
-    formData.append("persona", persona);
+
+  if (payload.userSpeechVideoUrl) {
+    formData.append("user_speech_video_url", payload.userSpeechVideoUrl);
   }
-  if (analyzeProvider) {
-    formData.append("analyze_provider", analyzeProvider);
+
+  formData.append("user_need_text_from_video", String(payload.userNeedTextFromVideo));
+  formData.append("user_need_video_analysis", String(payload.userNeedVideoAnalysis));
+
+  if (payload.persona) {
+    formData.append("persona", payload.persona);
   }
-  if (transcribeProvider) {
-    formData.append("transcribe_provider", transcribeProvider);
+
+  if (payload.analyzeProvider) {
+    formData.append("analyze_provider", payload.analyzeProvider);
   }
-  if (presentationFile) {
-    formData.append("user_presentation_file", presentationFile);
+
+  if (payload.transcribeProvider) {
+    formData.append("transcribe_provider", payload.transcribeProvider);
   }
-  if (standardFile) {
-    formData.append("evaluation_criteria_file", standardFile);
+
+  if (payload.userPresentationFile) {
+    formData.append("user_presentation_file", payload.userPresentationFile);
   }
-  if (evaluationCriteriaId) {
-    formData.append("evaluation_criteria_id", evaluationCriteriaId);
+
+  if (payload.evaluationCriteriaFile) {
+    formData.append("evaluation_criteria_file", payload.evaluationCriteriaFile);
+  }
+
+  if (payload.evaluationCriteriaId) {
+    formData.append("evaluation_criteria_id", payload.evaluationCriteriaId);
   }
 
   try {
@@ -225,7 +245,7 @@ export async function uploadVideo(
 }
 
 export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/tasks/${taskId}/status`);
+  const response = await fetch(`/api/wait/${taskId}`);
   const data = await checkResponse<TaskStatusResponse>(response);
   return { ...data, progress: data.progress ?? 0 };
 }

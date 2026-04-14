@@ -1,29 +1,41 @@
-import { useState, useRef, useEffect } from "react";
-import { AnalysisResult, TaskStage } from "@/types/analysis";
+import { useEffect, useState } from "react";
+
+import { AnalysisResult } from "@/types/analysis";
 import { normalizeAnalysisResult, pollForAnalysis, uploadVideo } from "@/lib/api";
-import { getFastRequestsCount, decrementFastRequests, hasFastRequestsAvailable } from "@/lib/cookie-utils";
+import { decrementFastRequests, getFastRequestsCount, hasFastRequestsAvailable } from "@/lib/cookie-utils";
 
 export type Stage = "landing" | "processing" | "result";
+export type InputMode = "speech_text" | "speech_video" | null;
+export type CriteriaMode = "none" | "preset" | "custom";
+export type WizardStepId = "source" | "presentation" | "video" | "criteria" | "settings" | "review";
+
+const DEMO_TASK_ID = "62a26154-2d3e-408d-8737-2dbe5255eac6";
 
 export function useVideoAnalysis() {
   const [stage, setStage] = useState<Stage>("landing");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [videoUrl, setVideoUrl] = useState("");
-  const [selectedPersona, setSelectedPersona] = useState<string>("");
+  const [currentStep, setCurrentStep] = useState<WizardStepId>("source");
+
+  const [inputMode, setInputMode] = useState<InputMode>(null);
+  const [speechTextFile, setSpeechTextFile] = useState<File | null>(null);
+  const [speechVideoFile, setSpeechVideoFile] = useState<File | null>(null);
+  const [speechVideoUrl, setSpeechVideoUrl] = useState("");
+  const [isValidRuTubeUrl, setIsValidRuTubeUrl] = useState(false);
+  const [needTextFromVideo, setNeedTextFromVideo] = useState(true);
+  const [needVideoAnalysis, setNeedVideoAnalysis] = useState(false);
+
+  const [presentationFile, setPresentationFile] = useState<File | null>(null);
+  const [criteriaMode, setCriteriaMode] = useState<CriteriaMode>("none");
+  const [selectedEvaluationPreset, setSelectedEvaluationPreset] = useState<"default" | "urfu">("default");
+  const [evaluationCriteriaFile, setEvaluationCriteriaFile] = useState<File | null>(null);
+
+  const [selectedPersona, setSelectedPersona] = useState<string>("speech_review_specialist");
   const [selectedAnalyzeProvider, setSelectedAnalyzeProvider] = useState<string>("gigachat");
   const [selectedTranscribeProvider, setSelectedTranscribeProvider] = useState<string>("sber_gigachat");
-  const [presentationFile, setPresentationFile] = useState<File | null>(null);
-  const [standardMode, setStandardMode] = useState<"preset" | "custom">("preset");
-  const [selectedEvaluationPreset, setSelectedEvaluationPreset] = useState<"default" | "urfu">("default");
-  const [standardFile, setStandardFile] = useState<File | null>(null);
-  const [fastRequestsCount, setFastRequestsCount] = useState<number>(3);
-  const [isValidRuTubeUrl, setIsValidRuTubeUrl] = useState(false);
 
+  const [fastRequestsCount, setFastRequestsCount] = useState<number>(3);
   const [statusText, setStatusText] = useState("Готовим обработку...");
   const [progress, setProgress] = useState(0.15);
   const [error, setError] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragCounterRef = useRef(0);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [isMockMode, setIsMockMode] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -40,6 +52,7 @@ export function useVideoAnalysis() {
 
   const validateRuTubeUrl = (url: string): boolean => {
     if (!url.trim()) return false;
+
     try {
       const urlObj = new URL(url);
       const hostname = urlObj.hostname.toLowerCase();
@@ -49,113 +62,118 @@ export function useVideoAnalysis() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      let isVideoSet = false;
-      Array.from(files).forEach((file) => {
-        const name = file.name.toLowerCase();
-        if (file.type === "video/mp4" || name.endsWith(".mp4")) {
-          setSelectedFile(file);
-          setError(null);
-          setVideoUrl("");
-          setIsValidRuTubeUrl(false);
-          isVideoSet = true;
-        } else if (
-          name.endsWith(".pptx") ||
-          name.endsWith(".ppt") ||
-          name.endsWith(".pdf") ||
-          file.type.includes("presentation") ||
-          file.type.includes("pdf")
-        ) {
-          setPresentationFile(file);
-        } else if (name.endsWith(".docx") || file.type.includes("wordprocessingml")) {
-          setStandardFile(file);
-          setStandardMode("custom");
-        }
-      });
-      if (!isVideoSet && !selectedFile) {
-        // no-op: allow adding supporting files after a video is already selected
-      }
+  const hasSpeechVideo = Boolean(speechVideoFile) || Boolean(speechVideoUrl && isValidRuTubeUrl);
+  const hasRequiredSource =
+    inputMode === "speech_text"
+      ? Boolean(speechTextFile)
+      : inputMode === "speech_video"
+        ? hasSpeechVideo
+        : false;
+
+  const getSubmissionError = () => {
+    if (!inputMode) {
+      return "Сначала выберите, что отправляем на анализ: текст или видео";
     }
-  };
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounterRef.current++;
-    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-      setIsDragging(true);
+    if (inputMode === "speech_text" && !speechTextFile) {
+      return "Загрузите текст выступления в формате TXT, MD, DOC или DOCX";
     }
-  };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounterRef.current--;
-    if (dragCounterRef.current === 0) {
-      setIsDragging(false);
+    if (inputMode === "speech_video" && !hasSpeechVideo) {
+      return "Добавьте видеофайл или корректную ссылку на RuTube";
     }
-  };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    dragCounterRef.current = 0;
-
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      let isVideoSet = false;
-      Array.from(files).forEach((file) => {
-        const name = file.name.toLowerCase();
-        if (file.type === "video/mp4" || name.endsWith(".mp4")) {
-          setSelectedFile(file);
-          setError(null);
-          setVideoUrl("");
-          setIsValidRuTubeUrl(false);
-          isVideoSet = true;
-        } else if (
-          name.endsWith(".pptx") ||
-          name.endsWith(".ppt") ||
-          name.endsWith(".pdf") ||
-          file.type.includes("presentation") ||
-          file.type.includes("pdf")
-        ) {
-          setPresentationFile(file);
-        } else if (name.endsWith(".docx") || file.type.includes("wordprocessingml")) {
-          setStandardFile(file);
-          setStandardMode("custom");
-        }
-      });
-      if (!isVideoSet && !selectedFile) {
-        setError("Пожалуйста, добавьте видео в формате MP4");
-      }
+    if (speechVideoUrl && !isValidRuTubeUrl) {
+      return "Введите корректную ссылку на RuTube";
     }
+
+    if (inputMode === "speech_video" && !needTextFromVideo && !needVideoAnalysis) {
+      return "Для видео выберите хотя бы один сценарий: получить текст или сделать видеоанализ";
+    }
+
+    if (needVideoAnalysis && !hasSpeechVideo) {
+      return "Для видеоанализа нужно загрузить видео или указать ссылку на RuTube";
+    }
+
+    if (criteriaMode === "custom" && !evaluationCriteriaFile) {
+      return "Загрузите файл со своими критериями или выберите другой вариант";
+    }
+
+    return null;
   };
 
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const url = e.target.value;
-    setVideoUrl(url);
-    const isValid = validateRuTubeUrl(url);
-    setIsValidRuTubeUrl(isValid);
+  const selectInputMode = (mode: InputMode) => {
+    setInputMode(mode);
     setError(null);
-    if (url && isValid) {
-      setSelectedFile(null);
+
+    if (mode === "speech_text") {
+      setNeedTextFromVideo(false);
+      setNeedVideoAnalysis(false);
+    }
+
+    if (mode === "speech_video") {
+      setNeedTextFromVideo(true);
+      setNeedVideoAnalysis(true);
     }
   };
 
-  const DEMO_TASK_ID = "62a26154-2d3e-408d-8737-2dbe5255eac6";
+  const handleSpeechTextFileChange = (file: File | null) => {
+    setSpeechTextFile(file);
+    setError(null);
+  };
+
+  const handleSpeechVideoFileChange = (file: File | null) => {
+    setSpeechVideoFile(file);
+    if (file) {
+      setSpeechVideoUrl("");
+      setIsValidRuTubeUrl(false);
+    }
+    setError(null);
+  };
+
+  const handlePresentationFileChange = (file: File | null) => {
+    setPresentationFile(file);
+    setError(null);
+  };
+
+  const handleCriteriaFileChange = (file: File | null) => {
+    setEvaluationCriteriaFile(file);
+    if (file) {
+      setCriteriaMode("custom");
+    }
+    setError(null);
+  };
+
+  const handleSpeechVideoUrlChange = (value: string) => {
+    setSpeechVideoUrl(value);
+    const isValid = validateRuTubeUrl(value);
+    setIsValidRuTubeUrl(isValid);
+
+    if (value.trim()) {
+      setSpeechVideoFile(null);
+    }
+
+    setError(null);
+  };
+
+  const openReviewStep = () => {
+    const submissionError = getSubmissionError();
+    if (submissionError) {
+      setError(submissionError);
+      return;
+    }
+
+    setError(null);
+    setCurrentStep("review");
+  };
 
   const loadMockResponse = async (): Promise<AnalysisResult> => {
     const res = await fetch(`/${DEMO_TASK_ID}.json`);
-    if (!res.ok) throw new Error("mock fetch failed");
+    if (!res.ok) {
+      throw new Error("mock fetch failed");
+    }
+
     const data = await res.json();
-    
     data.video_path = `/api/proxy/media/${DEMO_TASK_ID}.mp4`;
     return normalizeAnalysisResult(data);
   };
@@ -168,7 +186,7 @@ export function useVideoAnalysis() {
     await new Promise((res) => setTimeout(res, 300));
 
     setStage("processing");
-    setStatusText("Анализируем видео...");
+    setStatusText("Анализируем демо...");
     setProgress(0.2);
     await new Promise((res) => setTimeout(res, 5000));
     const mock = await loadMockResponse();
@@ -182,80 +200,77 @@ export function useVideoAnalysis() {
     setIsUploading(false);
   };
 
-  const stageName = (value?: TaskStage | null) => {
-    if (!value) return "Анализируем видео...";
-    return value[2] || "Анализируем видео...";
-  };
-
   const handleAnalyze = async () => {
+    const submissionError = getSubmissionError();
+    if (submissionError) {
+      setError(submissionError);
+      return;
+    }
+
     setError(null);
     setIsMockMode(false);
     setIsUploading(true);
 
-    if (!selectedFile && videoUrl && !isValidRuTubeUrl) {
-      setError("Введите корректную ссылку на RuTube видео");
-      setIsUploading(false);
-      return;
-    }
-
-    if (isMockMode || (!selectedFile && !videoUrl)) {
-      return startMockFlow();
-    }
-
     try {
       setIsExiting(true);
-      let taskId: string;
-
       setProgress(0.1);
-      setStatusText("Загружаем видео...");
+      setStatusText("Отправляем материалы...");
 
-      const analyzeProvider = selectedAnalyzeProvider;
-      const transcribeProvider = selectedTranscribeProvider;
-      const evaluationCriteriaId = standardMode === "preset" ? selectedEvaluationPreset : undefined;
+      const userNeedTextFromVideo = inputMode === "speech_video" ? needTextFromVideo : false;
+      const userNeedVideoAnalysis = needVideoAnalysis;
+      const evaluationCriteriaId = criteriaMode === "preset" ? selectedEvaluationPreset : undefined;
+      const criteriaFile = criteriaMode === "custom" ? evaluationCriteriaFile : null;
 
-      if (selectedTranscribeProvider === "whisper_openai") {
+      if (userNeedTextFromVideo && selectedTranscribeProvider === "whisper_openai") {
         if (!hasFastRequestsAvailable()) {
           throw new Error("У вас закончились запросы для Fast модели");
         }
+
         decrementFastRequests();
         setFastRequestsCount(getFastRequestsCount());
       }
 
-      const uploadResult = await uploadVideo(
-        selectedFile,
-        videoUrl || null,
-        selectedPersona || undefined,
-        analyzeProvider || undefined,
-        transcribeProvider,
-        presentationFile,
-        standardMode === "custom" ? standardFile : null,
-        evaluationCriteriaId
-      );
+      const uploadResult = await uploadVideo({
+        userSpeechTextFile: inputMode === "speech_text" ? speechTextFile : null,
+        userSpeechVideoFile: speechVideoFile,
+        userSpeechVideoUrl: speechVideoUrl || null,
+        userNeedTextFromVideo,
+        userNeedVideoAnalysis,
+        userPresentationFile: presentationFile,
+        evaluationCriteriaFile: criteriaFile,
+        evaluationCriteriaId,
+        persona: selectedPersona || undefined,
+        analyzeProvider: selectedAnalyzeProvider || undefined,
+        transcribeProvider: selectedTranscribeProvider || undefined,
+      });
 
       if (!uploadResult?.task_id) {
         throw new Error("Не получен task_id от сервера");
       }
-      taskId = uploadResult.task_id;
 
       await new Promise((resolve) => setTimeout(resolve, 100));
       setStage("processing");
-      setProgress(0.3);
-      setStatusText("Видео принято, начинаем анализ...");
+      setProgress(0.25);
+      setStatusText("Материалы приняты, ждём обработку...");
 
       const analysis = await pollForAnalysis(
-        taskId,
+        uploadResult.task_id,
         (status) => {
           if (status.state === "SUCCESS") {
             setProgress(1);
             setStatusText("Все готово");
-          } else if (status.state === "PENDING") {
+            return;
+          }
+
+          if (status.state === "PENDING") {
             setProgress(status.progress ?? 0);
-            setStatusText("Ожидание очереди...");
-          } else if (status.state === "PROCESSING") {
+            setStatusText(status.hint || "Ожидание очереди...");
+            return;
+          }
+
+          if (status.state === "PROCESSING") {
             setProgress(status.progress ?? 0);
-            if (status.hint) {
-              setStatusText(status.hint);
-            }
+            setStatusText(status.hint || "Обрабатываем материалы...");
           }
         },
         900_000
@@ -284,34 +299,59 @@ export function useVideoAnalysis() {
 
   const resetState = () => {
     setShowResult(false);
+
     setTimeout(() => {
       setStage("landing");
+      setCurrentStep("source");
+      setInputMode(null);
+      setSpeechTextFile(null);
+      setSpeechVideoFile(null);
+      setSpeechVideoUrl("");
+      setIsValidRuTubeUrl(false);
+      setNeedTextFromVideo(true);
+      setNeedVideoAnalysis(false);
+      setPresentationFile(null);
+      setCriteriaMode("none");
+      setSelectedEvaluationPreset("default");
+      setEvaluationCriteriaFile(null);
+      setSelectedPersona("speech_review_specialist");
+      setSelectedAnalyzeProvider("gigachat");
+      setSelectedTranscribeProvider("sber_gigachat");
       setResult(null);
+      setError(null);
       setProgress(0.15);
       setIsUploading(false);
       setStatusText("Готовим обработку...");
       setIsMockMode(false);
+      setIsExiting(false);
+      setShowResult(false);
     }, 400);
   };
 
   return {
     state: {
       stage,
-      selectedFile,
-      videoUrl,
+      currentStep,
+      inputMode,
+      speechTextFile,
+      speechVideoFile,
+      speechVideoUrl,
+      isValidRuTubeUrl,
+      needTextFromVideo,
+      needVideoAnalysis,
+      presentationFile,
+      criteriaMode,
+      selectedEvaluationPreset,
+      evaluationCriteriaFile,
       selectedPersona,
       selectedAnalyzeProvider,
       selectedTranscribeProvider,
-      presentationFile,
-      standardMode,
-      selectedEvaluationPreset,
-      standardFile,
       fastRequestsCount,
-      isValidRuTubeUrl,
+      hasSpeechVideo,
+      hasRequiredSource,
       statusText,
       progress,
       error,
-      isDragging,
       result,
       isMockMode,
       isExiting,
@@ -321,22 +361,24 @@ export function useVideoAnalysis() {
       serverErrorText,
     },
     actions: {
-      setStage,
-      setSelectedFile,
-      setVideoUrl,
+      setCurrentStep,
+      setSpeechTextFile,
+      setSpeechVideoFile,
+      setSpeechVideoUrl,
+      setNeedTextFromVideo,
+      setNeedVideoAnalysis,
+      setPresentationFile,
+      setCriteriaMode,
+      setSelectedEvaluationPreset,
+      setEvaluationCriteriaFile,
       setSelectedPersona,
       setSelectedAnalyzeProvider,
       setSelectedTranscribeProvider,
-      setPresentationFile,
-      setStandardMode,
-      setSelectedEvaluationPreset,
-      setStandardFile,
       setFastRequestsCount,
       setIsValidRuTubeUrl,
       setStatusText,
       setProgress,
       setError,
-      setIsDragging,
       setResult,
       setIsMockMode,
       setIsExiting,
@@ -345,15 +387,16 @@ export function useVideoAnalysis() {
       setShowErrorPopup,
       setServerErrorText,
       validateRuTubeUrl,
-      handleFileChange,
-      handleDragEnter,
-      handleDragLeave,
-      handleDragOver,
-      handleDrop,
-      handleUrlChange,
+      selectInputMode,
+      handleSpeechTextFileChange,
+      handleSpeechVideoFileChange,
+      handlePresentationFileChange,
+      handleCriteriaFileChange,
+      handleSpeechVideoUrlChange,
+      getSubmissionError,
+      openReviewStep,
       loadMockResponse,
       startMockFlow,
-      stageName,
       handleAnalyze,
       resetState,
     },
