@@ -202,11 +202,14 @@ def _download_user_speech_from_rutube(task_id: str, video_url: str) -> str:
 
 @router.post("/process", response_model=UploadResponse)
 async def process(
-    user_speech_file: Optional[UploadFile] = File(None),
-    user_speech_url: Optional[str] = Form(None),
+    user_speech_video_file: Optional[UploadFile] = File(None),
+    user_speech_video_url: Optional[str] = Form(None),
+    user_speech_text_file: Optional[UploadFile] = File(None),
+    user_need_text_from_video: bool = Form(False),
+    user_need_video_analysis: bool = Form(False),
+    user_presentation_file: Optional[UploadFile] = File(None),
     evaluation_criteria_file: Optional[UploadFile] = File(None),
     evaluation_criteria_id: Optional[str] = File(None),
-    user_presentation_file: Optional[UploadFile] = File(None),
     persona: PersonaRoles = Form(PersonaRoles.speech_review_specialist),
     analyze_provider: AnalyzeProvider = Form(AnalyzeProvider.gigachat),
     transcribe_provider: TranscribeProvider = Form(
@@ -214,27 +217,59 @@ async def process(
     ),
 ):
     """Process user speech video for analysis."""
+    has_text_file = user_speech_text_file is not None
+    has_video = (user_speech_video_file is not None) or (
+        user_speech_video_url is not None
+    )
+    needs_transcription = user_need_text_from_video and has_video
+    has_text_source = has_text_file or needs_transcription
 
-    if (user_speech_file is None) == (user_speech_url is None):
+    if not (has_text_source or user_need_video_analysis):
         raise HTTPException(
             status_code=400,
-            detail=(
-                "Необходимо загрузить либо видео выступления, "
-                "либо ссылку на него"
-            ),
-        )
-
-    if (evaluation_criteria_file is None) == (evaluation_criteria_id is None):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Необходимо загрузить файл критерии оценивания, "
-                "либо выбрать один из пресетов"
-            ),
+            detail="Не указан источник для базового анализа (текст или видео)",
         )
 
     task_id = str(uuid.uuid4())
     logger.info(f"Processing task {task_id}")
+
+    text_key = None
+    if user_speech_text_file:
+        text_key = _upload_to_seaweedfs(
+            task_id,
+            user_speech_text_file,
+        )
+        logger.info(
+            f"Upload text file to SeaweedFS: {text_key}",
+        )
+
+    video_key = None
+    if user_speech_video_file:
+        video_key = _upload_to_seaweedfs(
+            task_id,
+            user_speech_video_file,
+        )
+        logger.info(
+            f"Uploaded video file to SeaweedFS: {video_key}",
+        )
+    if user_speech_video_url:
+        video_key = _download_user_speech_from_rutube(
+            task_id,
+            user_speech_video_url,
+        )
+        logger.info(
+            f"Uploaded video file (Rutube) to SeaweedFS: {video_key}",
+        )
+
+    presentation_key = None
+    if user_presentation_file:
+        presentation_key = _upload_to_seaweedfs(
+            task_id,
+            user_presentation_file,
+        )
+        logger.info(
+            f"Uploaded presentation file to SeaweedFS: {presentation_key}",
+        )
 
     evaluation_criteria_key = None
     evaluation_criteria_preset = None
@@ -243,42 +278,30 @@ async def process(
             task_id, evaluation_criteria_file
         )
         logger.info(
-            f"Uploaded criteria file to SeaweedFS: {evaluation_criteria_key}"
+            f"Uploaded criteria file to SeaweedFS: {evaluation_criteria_key}",
         )
     if evaluation_criteria_id:
         evaluation_criteria_preset = _load_criteria_preset(
             evaluation_criteria_id
         )
-        logger.info(f"Using criteria preset: {evaluation_criteria_preset}")
-
-    logger.info(f"evaluation_criteria_key={evaluation_criteria_key}")
-
-    presentation_key = None
-    if user_presentation_file:
-        presentation_key = _upload_to_seaweedfs(
-            task_id, user_presentation_file
-        )
-
-    speech_key = None
-    if user_speech_file:
-        speech_key = _upload_to_seaweedfs(task_id, user_speech_file)
-
-    if user_speech_url:
-        speech_key = _download_user_speech_from_rutube(
-            task_id, user_speech_url
+        logger.info(
+            f"Using criteria preset: {evaluation_criteria_preset}",
         )
 
     celery_app.send_task(
         "app.logic.tasks.process_video_pipeline",
         kwargs={
             "task_id": task_id,
-            "speech_video_key": speech_key,
+            "speech_video_key": video_key,
+            "speech_text_key": text_key,
+            "need_text_from_video": user_need_text_from_video,
+            "need_video_analysis": user_need_video_analysis,
+            "presentation_key": presentation_key,
             "evaluation_criteria_key": evaluation_criteria_key,
             "evaluation_criteria_preset": evaluation_criteria_preset,
-            "presentation_key": presentation_key,
+            "persona": persona.value,
             "analyze_provider": analyze_provider.value,
             "transcribe_provider": transcribe_provider.value,
-            "persona": persona.value,
         },
         task_id=task_id,
     )

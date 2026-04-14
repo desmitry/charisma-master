@@ -184,12 +184,13 @@ class LLMClient:
             for c in criteria_list
         ]
 
-    def _read_document_text(self, file_path: str, file_ext: str) -> str:
+    @staticmethod
+    def _read_document_text(file_path: str, file_ext: str) -> str:
         """Read text from DOCX or TXT file."""
-        if file_ext == ".txt":
+        if file_ext in (".txt", ".md"):
             with open(file_path, "r", encoding="utf-8") as f:
                 return f.read()
-        elif file_ext == ".docx":
+        elif file_ext in (".docx", ".doc"):
             from docx import Document
 
             doc = Document(file_path)
