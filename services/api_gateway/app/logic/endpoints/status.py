@@ -7,9 +7,7 @@ from app.celery_app import celery_app
 router = APIRouter()
 
 
-@router.get("/tasks/{task_id}/status", response_model=TaskStatusResponse)
-async def get_task_status(task_id: str):
-    """Providing status on the progress of the speech processing task."""
+def _build_task_status_response(task_id: str) -> TaskStatusResponse:
     task_result = AsyncResult(task_id, app=celery_app)
 
     response = TaskStatusResponse(
@@ -42,3 +40,15 @@ async def get_task_status(task_id: str):
         response.error = str(task_result.info)
 
     return response
+
+
+@router.get("/tasks/{task_id}/status", response_model=TaskStatusResponse)
+async def get_task_status(task_id: str):
+    """Providing status on the progress of the speech processing task."""
+    return _build_task_status_response(task_id)
+
+
+@router.get("/tasks/{task_id}/wait", response_model=TaskStatusResponse)
+async def wait_task_status(task_id: str):
+    """Dedicated polling endpoint for waiting on task processing."""
+    return _build_task_status_response(task_id)
