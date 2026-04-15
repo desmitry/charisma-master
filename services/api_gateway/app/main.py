@@ -17,9 +17,54 @@ if settings.mode == "prod" and settings.origin_url == "*":
 
 origins = [settings.origin_url]
 
+OPENAPI_TAGS = [
+    {
+        "name": "Processing",
+        "description": "Загрузка и запуск обработки выступлений.",
+    },
+    {
+        "name": "Status",
+        "description": "Отслеживание прогресса задач анализа.",
+    },
+    {
+        "name": "Analysis",
+        "description": "Получение результатов анализа выступлений.",
+    },
+    {
+        "name": "Health",
+        "description": "Проверка работоспособности сервиса.",
+    },
+    {
+        "name": "Media",
+        "description": "Потоковая передача медиафайлов.",
+    },
+]
+
 app = FastAPI(
-    title="Speech Analysis",
+    title="Charisma — Speech Analysis API",
+    summary="REST API для анализа публичных выступлений",
+    description=(
+        "Сервис принимает видео- или аудиозаписи выступлений, выполняет "
+        "транскрибацию и многокритериальный анализ с помощью LLM. "
+        "Результаты включают оценки по критериям, рекомендации и "
+        "детализированную обратную связь."
+    ),
     version="1.0.0",
+    contact={
+        "name": "Charisma Team",
+        "url": "https://github.com/desmitry/charisma",
+    },
+    license_info={
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT",
+    },
+    openapi_tags=OPENAPI_TAGS,
+    servers=[
+        {
+            "url": "http://localhost:8000",
+            "description": "Локальная разработка",
+        },
+    ],
 )
 
 app.add_middleware(
@@ -37,12 +82,41 @@ ensure_buckets_exist(
 )
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    tags=["Health"],
+    summary="Проверка здоровья сервиса",
+    response_description="Статус работоспособности",
+)
 async def health_check():
+    """Возвращает статус работоспособности API-шлюза."""
     return {"status": "ok"}
 
 
-@app.get("/media/{task_id}.mp4")
+@app.get(
+    "/media/{task_id}.mp4",
+    tags=["Media"],
+    summary="Потоковое воспроизведение видео",
+    response_description="Видео-файл в формате MP4 с поддержкой HTTP Range",
+    responses={
+        404: {
+            "description": "Видео не найдено",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Video not found"}
+                }
+            },
+        },
+        416: {
+            "description": "Невалидный заголовок Range",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid Range header"}
+                }
+            },
+        },
+    },
+)
 async def stream_video(task_id: str, request: Request):
     """Stream a video file from SeaweedFS with HTTP Range request support.
 
@@ -148,6 +222,6 @@ def _iter_range(response, start: int, length: int):
     response.release_conn()
 
 
-app.include_router(upload.router, prefix="/api/v1", tags=["Processing"])
-app.include_router(status.router, prefix="/api/v1", tags=["Status"])
-app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"])
+app.include_router(upload.router, prefix="/api/v1")
+app.include_router(status.router, prefix="/api/v1")
+app.include_router(analysis.router, prefix="/api/v1")

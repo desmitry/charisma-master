@@ -42,13 +42,39 @@ def _build_task_status_response(task_id: str) -> TaskStatusResponse:
     return response
 
 
-@router.get("/tasks/{task_id}/status", response_model=TaskStatusResponse)
+@router.get(
+    "/tasks/{task_id}/status",
+    response_model=TaskStatusResponse,
+    tags=["Status"],
+    summary="Получить статус задачи",
+    description=(
+        "Возвращает текущее состояние задачи обработки выступления. "
+        "Возможные состояния:\n\n"
+        "- **PENDING** — задача в очереди\n"
+        "- **PROCESSING** — выполняется (содержит этап `stage` и "
+        "прогресс `progress`)\n"
+        "- **SUCCESS** — завершена успешно (`progress=1.0`)\n"
+        "- **FAILURE** — завершена с ошибкой (содержит `error`)"
+    ),
+    response_description="Текущий статус задачи",
+)
 async def get_task_status(task_id: str):
     """Providing status on the progress of the speech processing task."""
     return _build_task_status_response(task_id)
 
 
-@router.get("/tasks/{task_id}/wait", response_model=TaskStatusResponse)
+@router.get(
+    "/tasks/{task_id}/wait",
+    response_model=TaskStatusResponse,
+    tags=["Status"],
+    summary="Ожидать статус задачи (polling)",
+    description=(
+        "Dedicated endpoint для long-polling клиентов, ожидающих "
+        "смены состояния задачи. Возвращает ту же структуру "
+        "`TaskStatusResponse`, что и `/status`."
+    ),
+    response_description="Текущий статус задачи",
+)
 async def wait_task_status(task_id: str):
     """Dedicated polling endpoint for waiting on task processing."""
     return _build_task_status_response(task_id)
