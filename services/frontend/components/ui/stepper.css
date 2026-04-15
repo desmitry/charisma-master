@@ -1,0 +1,76 @@
+/* ─── Stepper indicator row ─── */
+.stepper-indicator-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: 0.25rem 0;
+}
+
+/* ─── Indicator circle ─── */
+.stepper-indicator {
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.stepper-indicator-inner {
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-weight: 600;
+  border: 1.5px solid transparent;
+  transition: box-shadow 0.4s ease;
+}
+
+.stepper-active-dot {
+  height: 0.5rem;
+  width: 0.5rem;
+  border-radius: 9999px;
+  background-color: #fff;
+}
+
+.stepper-step-number {
+  font-size: 0.8125rem;
+  font-family: var(--font-geist-mono, monospace);
+  letter-spacing: -0.02em;
+}
+
+/* ─── Connector line ─── */
+.stepper-connector {
+  position: relative;
+  margin-left: 0.375rem;
+  margin-right: 0.375rem;
+  height: 1.5px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 1px;
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.stepper-connector-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+}
+
+/* ─── Check icon ─── */
+.stepper-check-icon {
+  height: 0.875rem;
+  width: 0.875rem;
+  color: #fff;
+}
+
+/* ─── Step content area (animated container) ─── */
+.stepper-content-area {
+  position: relative;
+  overflow: hidden;
+}
+
+.stepper-step-content {
+  padding: 0;
+}
