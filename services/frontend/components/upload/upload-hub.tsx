@@ -10,9 +10,11 @@ import {
   FileStack,
   FileText,
   Link as LinkIcon,
+  Mic,
   Play,
   Presentation,
   Sparkles,
+  Upload,
   UserRound,
   Video,
   Wand2,
@@ -38,8 +40,8 @@ type StepDefinition = {
 const STEPS: StepDefinition[] = [
   {
     id: "source",
-    title: "Материалы выступления",
-    description: "Сначала выберите, что станет основой анализа: готовый текст или видео выступления.",
+    title: "Текст выступления",
+    description: "Загрузите файл с текстом речи или видеозапись выступления — текст будет извлечён автоматически.",
   },
   {
     id: "presentation",
@@ -104,7 +106,7 @@ function StepBadge({
 }) {
   if (status === "complete") {
     return (
-      <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-400/15 text-emerald-300">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.1] text-emerald-300/80">
         <Check className="h-4 w-4" />
       </div>
     );
@@ -113,10 +115,10 @@ function StepBadge({
   return (
     <div
       className={cn(
-        "flex h-10 w-10 items-center justify-center rounded-2xl border text-sm font-semibold transition-all",
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-sm font-semibold transition-all",
         status === "current"
-          ? "border-white/40 bg-white/[0.12] text-white shadow-[0_0_24px_rgba(255,255,255,0.08)]"
-          : "border-white/10 bg-white/5 text-white/45"
+          ? "border-white/30 bg-white/[0.1] text-white shadow-[0_0_28px_rgba(255,255,255,0.06)]"
+          : "border-white/[0.08] bg-white/[0.04] text-white/35"
       )}
     >
       {index + 1}
@@ -133,6 +135,7 @@ function FileField({
   file,
   onChange,
   onRemove,
+  compact,
 }: {
   id: string;
   title: string;
@@ -142,45 +145,63 @@ function FileField({
   file: File | null;
   onChange: (file: File | null) => void;
   onRemove: () => void;
+  compact?: boolean;
 }) {
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) onChange(droppedFile);
+  };
+
   return (
-    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-      <div className="mb-4 flex items-start gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white/75">
+    <div className="group/field rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-5 transition-colors hover:border-white/[0.14]">
+      <div className={cn("flex items-start gap-3", file ? "mb-3" : "mb-4")}>
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.05] text-white/60 transition-colors group-hover/field:border-white/[0.14] group-hover/field:text-white/80">
           {icon}
         </div>
-        <div>
-          <h4 className="text-sm font-semibold text-white">{title}</h4>
-          <p className="mt-1 text-sm text-white/50">{description}</p>
+        <div className="min-w-0">
+          <h4 className="text-sm font-semibold text-white/90">{title}</h4>
+          {!compact && <p className="mt-0.5 text-[13px] leading-5 text-white/40">{description}</p>}
         </div>
       </div>
 
       {file ? (
-        <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-white">{file.name}</p>
-            <p className="text-xs text-white/45">{Math.max(1, Math.round(file.size / 1024))} КБ</p>
+        <div className="flex items-center gap-3 rounded-2xl border border-emerald-400/15 bg-emerald-400/[0.06] px-4 py-3">
+          <FileCheck className="h-4 w-4 shrink-0 text-emerald-300/70" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-white/90">{file.name}</p>
+            <p className="text-xs text-white/35">{Math.max(1, Math.round(file.size / 1024))} КБ</p>
           </div>
           <button
             type="button"
             onClick={onRemove}
-            className="ml-4 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/50 transition hover:border-rose-400/30 hover:bg-rose-400/10 hover:text-rose-300"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.04] text-white/40 transition hover:border-rose-400/25 hover:bg-rose-400/10 hover:text-rose-300"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       ) : (
         <label
           htmlFor={id}
-          className="group flex cursor-pointer items-center justify-between rounded-2xl border border-dashed border-white/15 bg-black/20 px-4 py-4 transition hover:border-white/30 hover:bg-white/[0.04]"
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          className="group/drop flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/[0.1] bg-black/20 px-5 py-6 text-center transition-all hover:border-white/25 hover:bg-white/[0.03]"
         >
-          <div>
-            <p className="text-sm font-medium text-white">Выбрать файл</p>
-            <p className="mt-1 text-xs text-white/40">{accept.replaceAll(",", ", ")}</p>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.05] text-white/30 transition group-hover/drop:border-white/20 group-hover/drop:text-white/60">
+            <Upload className="h-4 w-4" />
           </div>
-          <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-white/70 transition group-hover:text-white">
-            Загрузить
-          </span>
+          <div>
+            <p className="text-sm font-medium text-white/70 transition group-hover/drop:text-white/90">
+              Перетащите файл сюда или нажмите
+            </p>
+            <p className="mt-1 text-xs text-white/30">{accept.replaceAll(",", ", ")}</p>
+          </div>
           <input
             id={id}
             type="file"
@@ -212,28 +233,40 @@ function ToggleCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full items-start gap-3 rounded-[1.35rem] border px-4 py-4 text-left transition",
+        "group/toggle relative flex w-full items-start gap-3.5 rounded-[1.35rem] border px-5 py-5 text-left transition-all",
         active
-          ? "border-white/30 bg-white/10 text-white shadow-[0_0_24px_rgba(255,255,255,0.08)]"
-          : "border-white/10 bg-white/[0.03] text-white/70 hover:border-white/20 hover:bg-white/[0.06]"
+          ? "border-white/25 bg-gradient-to-br from-white/[0.1] to-white/[0.04] text-white shadow-[0_0_32px_rgba(255,255,255,0.06)]"
+          : "border-white/[0.07] bg-white/[0.02] text-white/60 hover:border-white/[0.15] hover:bg-white/[0.04]"
       )}
     >
-      <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-black/25">
+      <div
+        className={cn(
+          "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all",
+          active
+            ? "border-white/20 bg-white/[0.1] text-white"
+            : "border-white/[0.08] bg-black/20 text-white/50 group-hover/toggle:border-white/[0.15] group-hover/toggle:text-white/70"
+        )}
+      >
         {icon}
       </div>
-      <div>
-        <p className="text-sm font-semibold">{title}</p>
-        <p className="mt-1 text-sm text-white/50">{description}</p>
+      <div className="min-w-0">
+        <p className={cn("text-sm font-semibold transition-colors", active ? "text-white" : "text-white/80")}>{title}</p>
+        <p className="mt-1 text-[13px] leading-5 text-white/40">{description}</p>
       </div>
+      {active && (
+        <div className="absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full bg-white/[0.12]">
+          <Check className="h-3 w-3 text-white/80" />
+        </div>
+      )}
     </button>
   );
 }
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-      <span className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/35">{label}</span>
-      <span className="text-sm text-white/85">{value}</span>
+    <div className="flex flex-col gap-1 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
+      <span className="text-[11px] font-mono uppercase tracking-[0.18em] text-white/30">{label}</span>
+      <span className="text-sm text-white/80">{value}</span>
     </div>
   );
 }
@@ -322,15 +355,15 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
       <div className="grid gap-3 md:grid-cols-2">
         <ToggleCard
           active={state.inputMode === "speech_text"}
-          title="Текст выступления"
-          description="Загружаем готовый текст речи в TXT, MD, DOC или DOCX."
+          title="Файл с текстом"
+          description="Загрузите готовый текст речи в формате TXT, MD, DOC или DOCX."
           icon={<FileText className="h-5 w-5 text-white/80" />}
           onClick={() => actions.selectInputMode("speech_text")}
         />
         <ToggleCard
           active={state.inputMode === "speech_video"}
-          title="Видео выступления"
-          description="Берём видеофайл или ссылку на RuTube, а потом решаем, нужен ли текст и видеоанализ."
+          title="Видеозапись выступления"
+          description="Загрузите видео — текст будет извлечён из записи автоматически (транскрибация)."
           icon={<Video className="h-5 w-5 text-white/80" />}
           onClick={() => actions.selectInputMode("speech_video")}
         />
@@ -354,7 +387,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
           <FileField
             id="speech-video-file"
             title="Видео выступления"
-            description="Если видео уже есть, можно использовать его и для расшифровки, и для видеоанализа."
+            description="Загрузите видеофайл — он будет использован для транскрибации речи и, при необходимости, видеоанализа."
             accept=".mp4,.mov,.avi,.mkv,.webm,.m4v"
             icon={<Video className="h-5 w-5" />}
             file={state.speechVideoFile}
@@ -362,14 +395,14 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
             onRemove={() => actions.handleSpeechVideoFileChange(null)}
           />
 
-          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+          <div className="group/field rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-5 transition-colors hover:border-white/[0.14]">
             <div className="mb-3 flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white/75">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.05] text-white/60">
                 <LinkIcon className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-white">Или ссылка на RuTube</h4>
-                <p className="mt-1 text-sm text-white/50">Подойдёт формат `rutube.ru/video/...`.</p>
+                <h4 className="text-sm font-semibold text-white/90">Или ссылка на RuTube</h4>
+                <p className="mt-0.5 text-[13px] leading-5 text-white/40">Формат: rutube.ru/video/...</p>
               </div>
             </div>
 
@@ -378,29 +411,21 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
               value={state.speechVideoUrl}
               onChange={(event) => actions.handleSpeechVideoUrlChange(event.target.value)}
               placeholder="https://rutube.ru/video/..."
-              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-white/30"
+              className="w-full rounded-2xl border border-white/[0.08] bg-black/25 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-white/25 focus:bg-black/30"
             />
             {state.speechVideoUrl && !state.isValidRuTubeUrl && (
-              <p className="mt-2 text-xs text-amber-300">Пока ссылка не похожа на корректную ссылку RuTube.</p>
+              <p className="mt-2 text-xs text-amber-300/80">Пока ссылка не похожа на корректную ссылку RuTube.</p>
             )}
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <ToggleCard
-              active={state.needTextFromVideo}
-              title="Получить текст из видео"
-              description="Отправим `user_need_text_from_video=true` и дадим бэкенду вытащить речь из видео."
-              icon={<Wand2 className="h-5 w-5 text-white/80" />}
-              onClick={() => actions.setNeedTextFromVideo(true)}
-            />
-            <ToggleCard
-              active={!state.needTextFromVideo}
-              title="Не выгружать текст"
-              description="Используйте этот вариант, если сейчас нужен только видеоанализ или другой сценарий."
-              icon={<CircleDashed className="h-5 w-5 text-white/80" />}
-              onClick={() => actions.setNeedTextFromVideo(false)}
-            />
-          </div>
+          {state.hasSpeechVideo && (
+            <div className="flex items-center gap-3 rounded-[1.35rem] border border-sky-400/15 bg-sky-400/[0.06] px-5 py-4">
+              <Mic className="h-4 w-4 shrink-0 text-sky-300/70" />
+              <p className="text-[13px] leading-5 text-sky-100/80">
+                Транскрибация включена автоматически — текст выступления будет извлечён из видео.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -426,8 +451,8 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
           className={cn(
             "inline-flex h-14 items-center justify-center gap-2 rounded-2xl border px-6 text-sm font-semibold transition",
             sourceComplete
-              ? "border-white/10 bg-white/[0.04] text-white hover:border-white/25 hover:bg-white/[0.08]"
-              : "cursor-not-allowed border-white/10 bg-white/[0.02] text-white/30"
+              ? "border-white/[0.08] bg-white/[0.04] text-white hover:border-white/20 hover:bg-white/[0.07]"
+              : "cursor-not-allowed border-white/[0.06] bg-white/[0.02] text-white/30"
           )}
         >
           Продолжить настройку
@@ -454,7 +479,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
         <button
           type="button"
           onClick={goBack}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-5 text-sm font-semibold text-white/80 transition hover:border-white/20 hover:bg-white/[0.06]"
+          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-white/70 transition hover:border-white/[0.15] hover:bg-white/[0.06]"
         >
           <ChevronLeft className="h-4 w-4" />
           Назад
@@ -462,7 +487,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
         <button
           type="button"
           onClick={goNext}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-5 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/[0.06]"
+          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-white transition hover:border-white/[0.15] hover:bg-white/[0.06]"
         >
           {state.presentationFile ? "Дальше" : "Пропустить шаг"}
           <ChevronRight className="h-4 w-4" />
@@ -478,88 +503,133 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
     </div>
   );
 
-  const renderVideoStep = () => (
-    <div className="space-y-6">
-      <div className="grid gap-3 md:grid-cols-2">
-        <ToggleCard
-          active={state.needVideoAnalysis}
-          title="Анализировать видео"
-          description="Отправим `user_need_video_analysis=true` и добавим видео в обработку."
-          icon={<Video className="h-5 w-5 text-white/80" />}
-          onClick={() => actions.setNeedVideoAnalysis(true)}
-        />
-        <ToggleCard
-          active={!state.needVideoAnalysis}
-          title="Пропустить видеоанализ"
-          description="Оставим в запросе `user_need_video_analysis=false`."
-          icon={<CircleDashed className="h-5 w-5 text-white/80" />}
-          onClick={() => actions.setNeedVideoAnalysis(false)}
-        />
-      </div>
+  const renderVideoStep = () => {
+    const uploadedTextNotVideo = state.inputMode === "speech_text" && !state.hasSpeechVideo;
 
-      {state.needVideoAnalysis && (
-        <>
-          {state.hasSpeechVideo ? (
-            <div className="rounded-[1.5rem] border border-emerald-400/20 bg-emerald-400/10 p-5 text-sm text-emerald-100">
-              Для видеоанализа будет использовано уже добавленное видео. При желании можно заменить его новым файлом или ссылкой ниже.
-            </div>
-          ) : (
-            <div className="rounded-[1.5rem] border border-amber-400/20 bg-amber-400/10 p-5 text-sm text-amber-100">
-              Видео ещё не добавлено. Загрузите файл или вставьте ссылку на RuTube.
-            </div>
-          )}
-
-          <FileField
-            id="video-analysis-file"
-            title="Видео для анализа"
-            description="Если на первом шаге был только текст, здесь можно приложить отдельное видео."
-            accept=".mp4,.mov,.avi,.mkv,.webm,.m4v"
-            icon={<Video className="h-5 w-5" />}
-            file={state.speechVideoFile}
-            onChange={actions.handleSpeechVideoFileChange}
-            onRemove={() => actions.handleSpeechVideoFileChange(null)}
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-3 md:grid-cols-2">
+          <ToggleCard
+            active={state.needVideoAnalysis}
+            title="Анализировать видео"
+            description="Включим невербальный анализ подачи: жесты, мимика, контакт с аудиторией."
+            icon={<Video className="h-5 w-5 text-white/80" />}
+            onClick={() => actions.setNeedVideoAnalysis(true)}
           />
+          <ToggleCard
+            active={!state.needVideoAnalysis}
+            title="Пропустить видеоанализ"
+            description="Анализ будет проведён только по тексту и другим загруженным материалам."
+            icon={<CircleDashed className="h-5 w-5 text-white/80" />}
+            onClick={() => actions.setNeedVideoAnalysis(false)}
+          />
+        </div>
 
-          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-            <label className="mb-2 block text-sm font-semibold text-white">Ссылка на RuTube</label>
-            <input
-              type="text"
-              value={state.speechVideoUrl}
-              onChange={(event) => actions.handleSpeechVideoUrlChange(event.target.value)}
-              placeholder="https://rutube.ru/video/..."
-              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-white/30"
+        {state.needVideoAnalysis && (
+          <>
+            {state.hasSpeechVideo ? (
+              <div className="flex items-center gap-3 rounded-[1.35rem] border border-emerald-400/15 bg-emerald-400/[0.06] px-5 py-4">
+                <Check className="h-4 w-4 shrink-0 text-emerald-300/70" />
+                <p className="text-[13px] leading-5 text-emerald-100/80">
+                  Для видеоанализа будет использовано уже добавленное видео. При желании можно заменить его ниже.
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 rounded-[1.35rem] border border-amber-400/15 bg-amber-400/[0.06] px-5 py-4">
+                <Video className="h-4 w-4 shrink-0 text-amber-300/70" />
+                <p className="text-[13px] leading-5 text-amber-100/80">
+                  Видео ещё не добавлено. Загрузите файл или вставьте ссылку на RuTube.
+                </p>
+              </div>
+            )}
+
+            <FileField
+              id="video-analysis-file"
+              title="Видео для анализа"
+              description="Если на первом шаге был только текст, здесь можно приложить отдельное видео."
+              accept=".mp4,.mov,.avi,.mkv,.webm,.m4v"
+              icon={<Video className="h-5 w-5" />}
+              file={state.speechVideoFile}
+              onChange={actions.handleSpeechVideoFileChange}
+              onRemove={() => actions.handleSpeechVideoFileChange(null)}
             />
-          </div>
-        </>
-      )}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          onClick={goBack}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-5 text-sm font-semibold text-white/80 transition hover:border-white/20 hover:bg-white/[0.06]"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Назад
-        </button>
-        <button
-          type="button"
-          onClick={goNext}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-5 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/[0.06]"
-        >
-          Дальше
-          <ChevronRight className="h-4 w-4" />
-        </button>
-        <MagneticButton
-          onClick={actions.openReviewStep}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white text-sm font-semibold text-black px-6"
-        >
-          <Play className="h-4 w-4" />
-          К сводке
-        </MagneticButton>
+            <div className="group/field rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-5 transition-colors hover:border-white/[0.14]">
+              <div className="mb-3 flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.05] text-white/60">
+                  <LinkIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-white/90">Ссылка на RuTube</h4>
+                  <p className="mt-0.5 text-[13px] leading-5 text-white/40">Формат: rutube.ru/video/...</p>
+                </div>
+              </div>
+              <input
+                type="text"
+                value={state.speechVideoUrl}
+                onChange={(event) => actions.handleSpeechVideoUrlChange(event.target.value)}
+                placeholder="https://rutube.ru/video/..."
+                className="w-full rounded-2xl border border-white/[0.08] bg-black/25 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-white/25 focus:bg-black/30"
+              />
+            </div>
+
+            {uploadedTextNotVideo && state.hasSpeechVideo && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 rounded-[1.35rem] border border-violet-400/15 bg-violet-400/[0.06] px-5 py-4">
+                  <Wand2 className="h-4 w-4 shrink-0 text-violet-300/70" />
+                  <p className="text-[13px] leading-5 text-violet-100/80">
+                    Вы загрузили текст на первом шаге, но теперь добавили и видео. Хотите также получить текст из видео (транскрибация)?
+                  </p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <ToggleCard
+                    active={state.needTextFromVideo}
+                    title="Извлечь текст из видео"
+                    description="Бэкенд выполнит транскрибацию и добавит текст к анализу."
+                    icon={<Wand2 className="h-5 w-5 text-white/80" />}
+                    onClick={() => actions.setNeedTextFromVideo(true)}
+                  />
+                  <ToggleCard
+                    active={!state.needTextFromVideo}
+                    title="Не нужно"
+                    description="Используем только текст, загруженный ранее."
+                    icon={<CircleDashed className="h-5 w-5 text-white/80" />}
+                    onClick={() => actions.setNeedTextFromVideo(false)}
+                  />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={goBack}
+            className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-white/70 transition hover:border-white/[0.15] hover:bg-white/[0.06]"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Назад
+          </button>
+          <button
+            type="button"
+            onClick={goNext}
+            className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-white transition hover:border-white/[0.15] hover:bg-white/[0.06]"
+          >
+            Дальше
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <MagneticButton
+            onClick={actions.openReviewStep}
+            className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white text-sm font-semibold text-black px-6"
+          >
+            <Play className="h-4 w-4" />
+            К сводке
+          </MagneticButton>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderCriteriaStep = () => (
     <div className="space-y-6">
@@ -567,7 +637,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
         <ToggleCard
           active={state.criteriaMode === "none"}
           title="Без критериев"
-          description="Ничего не отправляем, шаг считается пропущенным."
+          description="Пропускаем — критерии не будут включены в анализ."
           icon={<CircleDashed className="h-5 w-5 text-white/80" />}
           onClick={() => {
             actions.setCriteriaMode("none");
@@ -577,7 +647,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
         <ToggleCard
           active={state.criteriaMode === "preset"}
           title="Готовый пресет"
-          description="Передадим выбранный `evaluation_criteria_id`."
+          description="Выберите один из предустановленных наборов критериев."
           icon={<FileCheck className="h-5 w-5 text-white/80" />}
           onClick={() => {
             actions.setCriteriaMode("preset");
@@ -587,19 +657,19 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
         <ToggleCard
           active={state.criteriaMode === "custom"}
           title="Свой файл"
-          description="Загрузим файл и отправим его как `evaluation_criteria_file`."
+          description="Загрузите документ с собственными критериями оценивания."
           icon={<FileStack className="h-5 w-5 text-white/80" />}
           onClick={() => actions.setCriteriaMode("custom")}
         />
       </div>
 
       {state.criteriaMode === "preset" && (
-        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-          <label className="mb-2 block text-sm font-semibold text-white">Пресет критериев</label>
+        <div className="group/field rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-5">
+          <label className="mb-2 block text-sm font-semibold text-white/90">Пресет критериев</label>
           <select
             value={state.selectedEvaluationPreset}
             onChange={(event) => actions.setSelectedEvaluationPreset(event.target.value as "default" | "urfu")}
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
+            className="w-full rounded-2xl border border-white/[0.08] bg-black/25 px-4 py-3 text-sm text-white outline-none transition focus:border-white/25"
           >
             {PRESETS.map((preset) => (
               <option key={preset.id} value={preset.id}>
@@ -627,7 +697,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
         <button
           type="button"
           onClick={goBack}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-5 text-sm font-semibold text-white/80 transition hover:border-white/20 hover:bg-white/[0.06]"
+          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-white/70 transition hover:border-white/[0.15] hover:bg-white/[0.06]"
         >
           <ChevronLeft className="h-4 w-4" />
           Назад
@@ -635,7 +705,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
         <button
           type="button"
           onClick={goNext}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-5 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/[0.06]"
+          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-white transition hover:border-white/[0.15] hover:bg-white/[0.06]"
         >
           Дальше
           <ChevronRight className="h-4 w-4" />
@@ -654,15 +724,15 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
   const renderSettingsStep = () => (
     <div className="space-y-6">
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-            <UserRound className="h-4 w-4 text-white/60" />
+        <div className="group/field rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-5 transition-colors hover:border-white/[0.14]">
+          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/90">
+            <UserRound className="h-4 w-4 text-white/50" />
             Персона
           </label>
           <select
             value={state.selectedPersona}
             onChange={(event) => actions.setSelectedPersona(event.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
+            className="w-full rounded-2xl border border-white/[0.08] bg-black/25 px-4 py-3 text-sm text-white outline-none transition focus:border-white/25"
           >
             {PERSONAS.map((persona) => (
               <option key={persona.id} value={persona.id}>
@@ -670,20 +740,20 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
               </option>
             ))}
           </select>
-          <p className="mt-3 text-sm text-white/50">
+          <p className="mt-3 text-[13px] leading-5 text-white/40">
             {PERSONAS.find((persona) => persona.id === state.selectedPersona)?.description}
           </p>
         </div>
 
-        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-            <Sparkles className="h-4 w-4 text-white/60" />
+        <div className="group/field rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-5 transition-colors hover:border-white/[0.14]">
+          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/90">
+            <Sparkles className="h-4 w-4 text-white/50" />
             Провайдер анализа
           </label>
           <select
             value={state.selectedAnalyzeProvider}
             onChange={(event) => actions.setSelectedAnalyzeProvider(event.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
+            className="w-full rounded-2xl border border-white/[0.08] bg-black/25 px-4 py-3 text-sm text-white outline-none transition focus:border-white/25"
           >
             {ANALYZE_PROVIDERS.map((provider) => (
               <option key={provider.id} value={provider.id}>
@@ -693,15 +763,15 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
           </select>
         </div>
 
-        <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
-          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-            <Wand2 className="h-4 w-4 text-white/60" />
+        <div className="group/field rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-5 transition-colors hover:border-white/[0.14]">
+          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/90">
+            <Wand2 className="h-4 w-4 text-white/50" />
             Провайдер транскрибации
           </label>
           <select
             value={state.selectedTranscribeProvider}
             onChange={(event) => actions.setSelectedTranscribeProvider(event.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none"
+            className="w-full rounded-2xl border border-white/[0.08] bg-black/25 px-4 py-3 text-sm text-white outline-none transition focus:border-white/25"
           >
             {TRANSCRIBE_PROVIDERS.map((provider) => (
               <option key={provider.id} value={provider.id}>
@@ -710,7 +780,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
             ))}
           </select>
           {state.selectedTranscribeProvider === "whisper_openai" && (
-            <p className="mt-3 text-sm text-amber-200">Осталось быстрых запросов: {state.fastRequestsCount}</p>
+            <p className="mt-3 text-[13px] text-amber-200/80">Осталось быстрых запросов: {state.fastRequestsCount}</p>
           )}
         </div>
       </div>
@@ -719,7 +789,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
         <button
           type="button"
           onClick={goBack}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-5 text-sm font-semibold text-white/80 transition hover:border-white/20 hover:bg-white/[0.06]"
+          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-white/70 transition hover:border-white/[0.15] hover:bg-white/[0.06]"
         >
           <ChevronLeft className="h-4 w-4" />
           Назад
@@ -745,6 +815,10 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
               ? `Текст: ${state.speechTextFile?.name ?? "не выбран"}`
               : `Видео: ${state.speechVideoFile?.name ?? state.speechVideoUrl ?? "не выбрано"}`
           }
+        />
+        <SummaryRow
+          label="Транскрибация"
+          value={state.inputMode === "speech_video" && state.needTextFromVideo ? "Да (текст из видео)" : "Нет"}
         />
         <SummaryRow
           label="Презентация"
@@ -777,25 +851,25 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
         />
       </div>
 
-      <div className="rounded-[1.75rem] border border-white/10 bg-black/25 p-5">
+      <div className="rounded-[1.75rem] border border-white/[0.08] bg-black/20 p-5">
         <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white/70">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04] text-white/60">
             <FileCheck className="h-5 w-5" />
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-white">Что уйдёт на бэкенд</h4>
-            <p className="mt-1 text-sm text-white/50">Если нужно что-то поправить, кликните по шагу в дорожной карте слева.</p>
+            <h4 className="text-sm font-semibold text-white/90">Что уйдёт на бэкенд</h4>
+            <p className="mt-0.5 text-[13px] leading-5 text-white/40">Если нужно что-то поправить, кликните по шагу в дорожной карте слева.</p>
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {reviewPayload.map((item) => (
             <div
               key={item.key}
-              className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-1 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
-              <code className="text-xs text-white/50">{item.key}</code>
-              <span className="text-sm text-white/90">{item.value}</span>
+              <code className="text-xs text-white/40">{item.key}</code>
+              <span className="text-sm text-white/85">{item.value}</span>
             </div>
           ))}
         </div>
@@ -805,7 +879,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
         <button
           type="button"
           onClick={goBack}
-          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-5 text-sm font-semibold text-white/80 transition hover:border-white/20 hover:bg-white/[0.06]"
+          className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-white/70 transition hover:border-white/[0.15] hover:bg-white/[0.06]"
         >
           <ChevronLeft className="h-4 w-4" />
           Назад к настройке
@@ -824,41 +898,41 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
   return (
     <section id="upload-hub" className="relative z-10 mb-32 w-full px-4 py-16 sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <SpotlightCard className="overflow-hidden rounded-[2.5rem] border border-white/10 bg-black/45 shadow-2xl backdrop-blur-3xl">
+        <SpotlightCard className="overflow-hidden rounded-[2.5rem] border border-white/[0.08] bg-black/50 shadow-2xl backdrop-blur-3xl">
           <div className="grid gap-0 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <aside className="border-b border-white/10 bg-white/[0.02] p-6 sm:p-8 lg:border-b-0 lg:border-r">
+            <aside className="border-b border-white/[0.07] bg-white/[0.015] p-6 sm:p-8 lg:border-b-0 lg:border-r">
               <div className="mb-8">
-                <p className="text-[11px] font-mono uppercase tracking-[0.28em] text-white/35">Roadmap</p>
+                <p className="text-[11px] font-mono uppercase tracking-[0.28em] text-white/25">Roadmap</p>
                 <h3 className="mt-3 text-2xl font-semibold text-white">Настройка анализа</h3>
-                <p className="mt-3 max-w-xs text-sm leading-6 text-white/50">
+                <p className="mt-3 max-w-xs text-[13px] leading-6 text-white/40">
                   После первого шага уже можно стартовать разбор, а остальные блоки можно дополнять или пропускать.
                 </p>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {STEPS.map((step, index) => (
                   <button
                     key={step.id}
                     type="button"
                     onClick={() => goToStep(step.id)}
                     className={cn(
-                      "flex w-full items-start gap-4 rounded-[1.5rem] border px-4 py-4 text-left transition",
+                      "flex w-full items-start gap-4 rounded-[1.5rem] border px-4 py-4 text-left transition-all",
                       step.id === state.currentStep
-                        ? "border-white/20 bg-white/[0.06]"
-                        : "border-transparent bg-transparent hover:border-white/10 hover:bg-white/[0.03]"
+                        ? "border-white/[0.15] bg-white/[0.05]"
+                        : "border-transparent bg-transparent hover:border-white/[0.08] hover:bg-white/[0.02]"
                     )}
                   >
                     <StepBadge status={stepStatus(step.id)} index={index} />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-white">{step.title}</p>
+                        <p className={cn("text-sm font-semibold", step.id === state.currentStep ? "text-white" : "text-white/80")}>{step.title}</p>
                         {step.optional && (
-                          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-white/35">
+                          <span className="rounded-full border border-white/[0.07] bg-white/[0.04] px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-white/30">
                             optional
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-sm leading-5 text-white/45">{step.description}</p>
+                      <p className="mt-1 text-[13px] leading-5 text-white/35">{step.description}</p>
                     </div>
                   </button>
                 ))}
@@ -866,25 +940,25 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
             </aside>
 
             <div className="p-6 sm:p-8 lg:p-10">
-              <div className="mb-8 flex flex-col gap-4 border-b border-white/10 pb-6">
+              <div className="mb-8 flex flex-col gap-4 border-b border-white/[0.07] pb-6">
                 <div className="flex items-center gap-3">
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-white/40">
+                  <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-white/35">
                     Шаг {currentStepIndex + 1} из {STEPS.length}
                   </span>
                   {currentStep.optional && (
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-white/30">
+                    <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-white/25">
                       Можно пропустить
                     </span>
                   )}
                 </div>
                 <div>
                   <h2 className="text-3xl font-semibold tracking-tight text-white">{currentStep.title}</h2>
-                  <p className="mt-3 max-w-3xl text-base leading-7 text-white/55">{currentStep.description}</p>
+                  <p className="mt-3 max-w-3xl text-base leading-7 text-white/45">{currentStep.description}</p>
                 </div>
               </div>
 
               {state.error && (
-                <div className="mb-6 rounded-[1.35rem] border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+                <div className="mb-6 rounded-[1.35rem] border border-rose-400/15 bg-rose-400/[0.08] px-4 py-3 text-sm text-rose-100/90">
                   {state.error}
                 </div>
               )}
