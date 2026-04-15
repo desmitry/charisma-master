@@ -1,0 +1,187 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs-master
+  namespace: charisma
+  labels:
+    app: seaweedfs-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seaweedfs-master
+  template:
+    metadata:
+      labels:
+        app: seaweedfs-master
+    spec:
+      containers:
+        - name: seaweedfs-master
+          image: chrislusf/seaweedfs:3.78
+          imagePullPolicy: IfNotPresent
+          command:
+            - master
+            - -ip=seaweedfs-master
+            - -port=9333
+          ports:
+            - containerPort: 9333
+              name: master
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9333
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs-volume
+  namespace: charisma
+  labels:
+    app: seaweedfs-volume
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: seaweedfs-volume
+  template:
+    metadata:
+      labels:
+        app: seaweedfs-volume
+    spec:
+      containers:
+        - name: seaweedfs-volume
+          image: chrislusf/seaweedfs:3.78
+          imagePullPolicy: IfNotPresent
+          command:
+            - volume
+            - -mserver=seaweedfs-master:9333
+            - -ip=seaweedfs-volume
+            - -port=8080
+            - -dir=/data
+            - -max=100
+          ports:
+            - containerPort: 8080
+              name: volume
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: 8080
+            initialDelaySeconds: 45
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: seaweedfs-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs-filer
+  namespace: charisma
+  labels:
+    app: seaweedfs-filer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seaweedfs-filer
+  template:
+    metadata:
+      labels:
+        app: seaweedfs-filer
+    spec:
+      containers:
+        - name: seaweedfs-filer
+          image: chrislusf/seaweedfs:3.78
+          imagePullPolicy: IfNotPresent
+          command:
+            - filer
+            - -master=seaweedfs-master:9333
+            - -ip=seaweedfs-filer
+          ports:
+            - containerPort: 8888
+              name: filer
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8888
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs-s3
+  namespace: charisma
+  labels:
+    app: seaweedfs-s3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seaweedfs-s3
+  template:
+    metadata:
+      labels:
+        app: seaweedfs-s3
+    spec:
+      containers:
+        - name: seaweedfs-s3
+          image: chrislusf/seaweedfs:3.78
+          imagePullPolicy: IfNotPresent
+          command:
+            - s3
+            - -filer=seaweedfs-filer:8888
+            - -ip.bind=0.0.0.0
+            - -port=8333
+          ports:
+            - containerPort: 8333
+              name: s3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8333
+            initialDelaySeconds: 25
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
