@@ -128,7 +128,7 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-/* ─── SlideTransition (measures height + slides content) ─── */
+/* ─── SlideTransition (slides content, reports height via ResizeObserver) ─── */
 function SlideTransition({
   children,
   direction,
@@ -141,8 +141,17 @@ function SlideTransition({
   const ref = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (ref.current) onHeightReady(ref.current.offsetHeight);
-  }, [children, onHeightReady]);
+    const el = ref.current;
+    if (!el) return;
+
+    onHeightReady(el.offsetHeight);
+
+    const ro = new ResizeObserver(() => {
+      onHeightReady(el.offsetHeight);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [onHeightReady]);
 
   return (
     <motion.div
