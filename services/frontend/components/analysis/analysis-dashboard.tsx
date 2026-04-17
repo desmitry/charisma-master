@@ -163,15 +163,20 @@ function ConfidenceBar({ score, max = 100 }: { score: number; max?: number }) {
 export function AnalysisDashboard({ result, onBack }: Props) {
   const playerRef = useRef<VideoPlayerRef>(null);
   const [currentTime, setCurrentTime] = useState(0);
-  const [videoSrc, setVideoSrc] = useState(() => resolveVideoUrl(result.video_path));
+  const [videoSrc, setVideoSrc] = useState(() => result.video_path ? resolveVideoUrl(result.video_path) : "");
   const [videoError, setVideoError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
+
+  const hasVideo = !!result.video_path;
+  const needVideoAnalysis = result.user_need_video_analysis;
+  const needTranscript = result.user_need_text_from_video;
 
   const speechReport = result.speech_report;
   const evaluationReport = result.evaluation_criteria_report;
   const confidence = result.confidence_index;
 
   useEffect(() => {
+    if (!result.video_path) return;
     const nextSrc = resolveVideoUrl(result.video_path);
     setVideoSrc(nextSrc);
     setVideoError(null);
@@ -231,11 +236,17 @@ export function AnalysisDashboard({ result, onBack }: Props) {
       : 0;
 
   const confidenceDetails = [
-    { key: "Громкость", score: confidence.components.volume_score, label: confidence.components.volume_label, extra: confidence.components.volume_level },
-    { key: "Паразиты", score: confidence.components.filler_score, label: confidence.components.filler_label, extra: `${result.fillers_summary.count} шт. · ${(result.fillers_summary.ratio * 100).toFixed(1)}%` },
-    { key: "Взгляд", score: confidence.components.gaze_score, label: confidence.components.gaze_label },
-    { key: "Жесты", score: confidence.components.gesture_score, label: confidence.components.gesture_label, extra: confidence.components.gesture_advice },
-    { key: "Интонация", score: confidence.components.tone_score, label: confidence.components.tone_label },
+    ...(needVideoAnalysis ? [
+      { key: "Громкость", score: confidence.components.volume_score, label: confidence.components.volume_label, extra: confidence.components.volume_level },
+    ] : []),
+    ...(needTranscript ? [
+      { key: "Паразиты", score: confidence.components.filler_score, label: confidence.components.filler_label, extra: `${result.fillers_summary.count} шт. · ${(result.fillers_summary.ratio * 100).toFixed(1)}%` },
+    ] : []),
+    ...(needVideoAnalysis ? [
+      { key: "Взгляд", score: confidence.components.gaze_score, label: confidence.components.gaze_label },
+      { key: "Жесты", score: confidence.components.gesture_score, label: confidence.components.gesture_label, extra: confidence.components.gesture_advice },
+      { key: "Интонация", score: confidence.components.tone_score, label: confidence.components.tone_label },
+    ] : []),
   ];
 
   const aiCards = [
@@ -255,9 +266,23 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   ].filter((c) => c.value);
 
   // avg wpm
-  const avgWpm = result.tempo.length
+  const avgWpm = needTranscript && result.tempo.length
     ? Math.round(result.tempo.reduce((s, p) => s + p.wpm, 0) / result.tempo.length)
     : 0;
+
+  // dynamic stat pills
+  const statPills = [
+    ...(needVideoAnalysis ? [{ label: "Индекс уверенности", value: Math.round(confidence.total), sub: confidence.total_label }] : []),
+    ...(needTranscript ? [
+      { label: "Паразиты", value: result.fillers_summary.count, sub: `${(result.fillers_summary.ratio * 100).toFixed(1)}%` },
+      { label: "Темп речи", value: avgWpm, sub: "WPM" },
+    ] : []),
+    { label: "Критерии ИИ", value: `${criteriaPercent}%`, sub: `${evaluationReport.total_score}/${evaluationReport.max_score}` },
+  ];
+
+  // columns for overview two-col layout
+  const hasLeftCol = needTranscript;
+  const hasRightCol = needTranscript || needVideoAnalysis || evaluationReport.criteria.length > 0;
 
   return (
     <div className="relative min-h-screen bg-[#080808] text-white w-full selection:bg-white/10" style={{ overscrollBehavior: "none" }}>
@@ -326,178 +351,189 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             <motion.div key="overview" variants={stagger} initial="hidden" animate="show" exit={{ opacity: 0 }} className="flex flex-col gap-4">
 
               {/* video + rings */}
-              <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4">
-                <div className="rounded-2xl border border-white/[0.06] bg-black overflow-hidden aspect-video flex items-center justify-center">
-                  <VideoPlayer
-                    ref={playerRef}
-                    src={videoSrc}
-                    error={videoError}
-                    onTimeUpdate={setCurrentTime}
-                    onError={setVideoError}
-                    fullWidth
-                    className="w-full h-full border-none shadow-none rounded-none"
-                  />
-                </div>
-                <ActivityRingsCard result={result} />
+              <motion.div variants={fadeUp} className={cn("grid gap-4", hasVideo ? "grid-cols-1 lg:grid-cols-[1fr_300px]" : "grid-cols-1")}>
+                {hasVideo && (
+                  <div className="rounded-2xl border border-white/[0.06] bg-black overflow-hidden aspect-video flex items-center justify-center">
+                    <VideoPlayer
+                      ref={playerRef}
+                      src={videoSrc}
+                      error={videoError}
+                      onTimeUpdate={setCurrentTime}
+                      onError={setVideoError}
+                      fullWidth
+                      className="w-full h-full border-none shadow-none rounded-none"
+                    />
+                  </div>
+                )}
+                <ActivityRingsCard result={result} needVideoAnalysis={needVideoAnalysis} needTranscript={needTranscript} />
               </motion.div>
 
               {/* quick stats strip */}
-              <motion.div variants={fadeUp} className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f0f] p-3.5 sm:px-5 sm:py-4">
-                  <StatPill label="Индекс уверенности" value={Math.round(confidence.total)} sub={confidence.total_label} />
-                </div>
-                <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f0f] p-3.5 sm:px-5 sm:py-4">
-                  <StatPill label="Паразиты" value={result.fillers_summary.count} sub={`${(result.fillers_summary.ratio * 100).toFixed(1)}%`} />
-                </div>
-                <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f0f] p-3.5 sm:px-5 sm:py-4">
-                  <StatPill label="Темп речи" value={avgWpm} sub="WPM" />
-                </div>
-                <div className="rounded-2xl border border-white/[0.06] bg-[#0f0f0f] p-3.5 sm:px-5 sm:py-4">
-                  <StatPill label="Критерии ИИ" value={`${criteriaPercent}%`} sub={`${evaluationReport.total_score}/${evaluationReport.max_score}`} />
-                </div>
-              </motion.div>
+              {statPills.length > 0 && (
+                <motion.div variants={fadeUp} className={cn(
+                  "grid gap-2 sm:gap-3",
+                  statPills.length === 1 ? "grid-cols-1" :
+                  statPills.length === 2 ? "grid-cols-2" :
+                  statPills.length === 3 ? "grid-cols-3" :
+                  "grid-cols-2 sm:grid-cols-4"
+                )}>
+                  {statPills.map((pill) => (
+                    <div key={pill.label} className="rounded-2xl border border-white/[0.06] bg-[#0f0f0f] p-3.5 sm:px-5 sm:py-4">
+                      <StatPill label={pill.label} value={pill.value} sub={pill.sub} />
+                    </div>
+                  ))}
+                </motion.div>
+              )}
 
               {/* two column layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-                {/* left col */}
-                <motion.div variants={stagger} className="flex flex-col gap-4">
+              {(hasLeftCol || hasRightCol) && (
+                <div className={cn("grid gap-4 items-start", hasLeftCol && hasRightCol ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1")}>
+                  {hasLeftCol && (
+                    <motion.div variants={stagger} className="flex flex-col gap-4">
 
-                  {/* transcript */}
-                  <Accordion
-                    title="Субтитры"
-                    defaultOpen
-                    icon={<IconBolt className="w-4 h-4" />}
-                    badge={
-                      <span className="text-[10px] font-mono text-white/25 ml-1">нажмите на слово для перемотки</span>
-                    }
-                  >
-                    <div className="max-h-[360px] overflow-y-auto transcript-scroll -mx-1 px-1">
-                      {groupedTranscript.map((group, gi) => (
-                        <div key={gi} className="mb-5 last:mb-0">
-                          <div className="text-[10px] font-mono text-white/20 mb-2 flex items-center gap-2">
-                            <span>{group.label}</span>
-                            <div className="flex-1 h-px bg-white/[0.05]" />
-                          </div>
-                          <div className="text-[14px] leading-[1.9] text-white/65">
-                            {group.items.map((item, ii) => {
-                              if (item.type === "pause") {
-                                const isActive = currentTime + 0.02 >= item.pause.start && currentTime < item.pause.end - 0.02;
-                                return (
-                                  <span
-                                    key={`p-${item.pause.start}-${ii}`}
-                                    onClick={() => { if (!playerRef.current) return; playerRef.current.seek(item.pause.start); playerRef.current.play(); setCurrentTime(item.pause.start); }}
-                                    className={cn(
-                                      "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono cursor-pointer mx-1 transition-colors",
-                                      isActive ? "bg-white/10 text-white/80" : "bg-white/[0.04] text-white/30 hover:bg-white/[0.08] hover:text-white/60"
-                                    )}
-                                  >
-                                    {item.pause.duration.toFixed(1)}s
-                                  </span>
-                                );
-                              }
-                              const isActive = currentTime + 0.02 >= item.word.start && currentTime < item.word.end - 0.02;
-                              const display = item.word.text.trim();
-                              if (!display) return null;
-                              return (
-                                <span
-                                  key={`${item.word.start}-${display}-${ii}`}
-                                  onClick={() => handleWordClick(item.word)}
-                                  className={cn(
-                                    "cursor-pointer rounded-sm px-0.5 transition-colors",
-                                    item.word.is_filler
-                                      ? "text-white/40 underline underline-offset-2 decoration-white/20 hover:text-white/70"
-                                      : "hover:text-white",
-                                    isActive && "bg-white/10 text-white"
-                                  )}
-                                >
-                                  {display}{" "}
-                                </span>
-                              );
-                            })}
-                          </div>
+                      {/* transcript */}
+                      <Accordion
+                        title="Субтитры"
+                        defaultOpen
+                        icon={<IconBolt className="w-4 h-4" />}
+                        badge={
+                          hasVideo ? <span className="text-[10px] font-mono text-white/25 ml-1">нажмите на слово для перемотки</span> : undefined
+                        }
+                      >
+                        <div className="max-h-[360px] overflow-y-auto transcript-scroll -mx-1 px-1">
+                          {groupedTranscript.map((group, gi) => (
+                            <div key={gi} className="mb-5 last:mb-0">
+                              <div className="text-[10px] font-mono text-white/20 mb-2 flex items-center gap-2">
+                                <span>{group.label}</span>
+                                <div className="flex-1 h-px bg-white/[0.05]" />
+                              </div>
+                              <div className="text-[14px] leading-[1.9] text-white/65">
+                                {group.items.map((item, ii) => {
+                                  if (item.type === "pause") {
+                                    const isActive = currentTime + 0.02 >= item.pause.start && currentTime < item.pause.end - 0.02;
+                                    return (
+                                      <span
+                                        key={`p-${item.pause.start}-${ii}`}
+                                        onClick={() => { if (!playerRef.current) return; playerRef.current.seek(item.pause.start); playerRef.current.play(); setCurrentTime(item.pause.start); }}
+                                        className={cn(
+                                          "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono cursor-pointer mx-1 transition-colors",
+                                          isActive ? "bg-white/10 text-white/80" : "bg-white/[0.04] text-white/30 hover:bg-white/[0.08] hover:text-white/60"
+                                        )}
+                                      >
+                                        {item.pause.duration.toFixed(1)}s
+                                      </span>
+                                    );
+                                  }
+                                  const isActive = currentTime + 0.02 >= item.word.start && currentTime < item.word.end - 0.02;
+                                  const display = item.word.text.trim();
+                                  if (!display) return null;
+                                  return (
+                                    <span
+                                      key={`${item.word.start}-${display}-${ii}`}
+                                      onClick={() => handleWordClick(item.word)}
+                                      className={cn(
+                                        "cursor-pointer rounded-sm px-0.5 transition-colors",
+                                        item.word.is_filler
+                                          ? "text-white/40 underline underline-offset-2 decoration-white/20 hover:text-white/70"
+                                          : "hover:text-white",
+                                        isActive && "bg-white/10 text-white"
+                                      )}
+                                    >
+                                      {display}{" "}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </Accordion>
+                      </Accordion>
 
-                  {/* filler words */}
-                  <Accordion
-                    title="Слова-паразиты"
-                    defaultOpen={fillerWordsList.length > 0}
-                    badge={
-                      <span className="text-[10px] font-mono text-white/30 border border-white/[0.08] px-2 py-0.5 rounded-full">
-                        {result.fillers_summary.count} · {(result.fillers_summary.ratio * 100).toFixed(1)}%
-                      </span>
-                    }
-                  >
-                    {fillerWordsList.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {fillerWordsList.map(([word, count]) => (
-                          <span key={word} className="inline-flex items-center gap-2 rounded-full bg-white/[0.05] border border-white/[0.08] px-3 py-1 text-xs text-white/70">
-                            {word}
-                            <span className="text-[10px] font-mono text-white/30">{count}×</span>
+                      {/* filler words */}
+                      <Accordion
+                        title="Слова-паразиты"
+                        defaultOpen={fillerWordsList.length > 0}
+                        badge={
+                          <span className="text-[10px] font-mono text-white/30 border border-white/[0.08] px-2 py-0.5 rounded-full">
+                            {result.fillers_summary.count} · {(result.fillers_summary.ratio * 100).toFixed(1)}%
                           </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-white/40">Слова-паразиты не обнаружены</p>
-                    )}
-                  </Accordion>
-
-                </motion.div>
-
-                {/* right col */}
-                <motion.div variants={stagger} className="flex flex-col gap-4">
-
-                  {/* criteria table */}
-                  <StandardCriteriaTable report={evaluationReport} />
-
-                  {/* tempo chart */}
-                  <Accordion title="Темп речи" defaultOpen>
-                    <TempoChart data={result.tempo} currentTime={currentTime} />
-                  </Accordion>
-
-                  {/* confidence index */}
-                  <Accordion title="Индекс уверенности" defaultOpen>
-                    <div className="flex flex-col gap-2">
-                      {/* total */}
-                      <div className="mb-3 flex items-center justify-between">
-                        <div>
-                          <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/30">Итог</div>
-                          <div className="mt-1 flex items-baseline gap-2">
-                            <span className="text-3xl font-semibold text-white">{Math.round(confidence.total)}</span>
-                            <span className="text-sm text-white/40">{confidence.total_label}</span>
+                        }
+                      >
+                        {fillerWordsList.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {fillerWordsList.map(([word, count]) => (
+                              <span key={word} className="inline-flex items-center gap-2 rounded-full bg-white/[0.05] border border-white/[0.08] px-3 py-1 text-xs text-white/70">
+                                {word}
+                                <span className="text-[10px] font-mono text-white/30">{count}×</span>
+                              </span>
+                            ))}
                           </div>
-                        </div>
-                        <div className="relative">
-                          <ScoreRing value={Math.round(confidence.total)} max={100} size={64} />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-xs font-mono text-white/50">{Math.round(confidence.total)}</span>
-                          </div>
-                        </div>
-                      </div>
+                        ) : (
+                          <p className="text-sm text-white/40">Слова-паразиты не обнаружены</p>
+                        )}
+                      </Accordion>
 
-                      {/* individual components */}
-                      {confidenceDetails.map((item) => (
-                        <div key={item.key} className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-                          <div className="flex items-center justify-between gap-3 mb-2">
-                            <span className="text-[11px] font-mono uppercase tracking-[0.15em] text-white/35">{item.key}</span>
-                            <span className="text-sm font-medium text-white/80">{Math.round(item.score)}<span className="text-white/25 text-xs">/100</span></span>
-                          </div>
-                          <ConfidenceBar score={item.score} />
-                          {item.label && (
-                            <p className="mt-2 text-[12px] leading-relaxed text-white/50">{item.label}</p>
-                          )}
-                          {item.extra && item.extra !== item.label && (
-                            <p className="mt-1 text-[11px] leading-relaxed text-white/35">{item.extra}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </Accordion>
+                    </motion.div>
+                  )}
 
-                </motion.div>
-              </div>
+                  {hasRightCol && (
+                    <motion.div variants={stagger} className="flex flex-col gap-4">
+
+                      {/* criteria table */}
+                      <StandardCriteriaTable report={evaluationReport} />
+
+                      {/* tempo chart */}
+                      {needTranscript && (
+                        <Accordion title="Темп речи" defaultOpen>
+                          <TempoChart data={result.tempo} currentTime={currentTime} />
+                        </Accordion>
+                      )}
+
+                      {/* confidence index */}
+                      {needVideoAnalysis && confidenceDetails.length > 0 && (
+                        <Accordion title="Индекс уверенности" defaultOpen>
+                          <div className="flex flex-col gap-2">
+                            {/* total */}
+                            <div className="mb-3 flex items-center justify-between">
+                              <div>
+                                <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/30">Итог</div>
+                                <div className="mt-1 flex items-baseline gap-2">
+                                  <span className="text-3xl font-semibold text-white">{Math.round(confidence.total)}</span>
+                                  <span className="text-sm text-white/40">{confidence.total_label}</span>
+                                </div>
+                              </div>
+                              <div className="relative">
+                                <ScoreRing value={Math.round(confidence.total)} max={100} size={64} />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <span className="text-xs font-mono text-white/50">{Math.round(confidence.total)}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* individual components */}
+                            {confidenceDetails.map((item) => (
+                              <div key={item.key} className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                                <div className="flex items-center justify-between gap-3 mb-2">
+                                  <span className="text-[11px] font-mono uppercase tracking-[0.15em] text-white/35">{item.key}</span>
+                                  <span className="text-sm font-medium text-white/80">{Math.round(item.score)}<span className="text-white/25 text-xs">/100</span></span>
+                                </div>
+                                <ConfidenceBar score={item.score} />
+                                {item.label && (
+                                  <p className="mt-2 text-[12px] leading-relaxed text-white/50">{item.label}</p>
+                                )}
+                                {item.extra && item.extra !== item.label && (
+                                  <p className="mt-1 text-[11px] leading-relaxed text-white/35">{item.extra}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </Accordion>
+                      )}
+
+                    </motion.div>
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -513,7 +549,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               )}
 
               {/* filler words from AI */}
-              {speechReport.dynamic_fillers.length > 0 && (
+              {needTranscript && speechReport.dynamic_fillers.length > 0 && (
                 <motion.div variants={fadeUp} className="rounded-2xl border border-white/[0.07] bg-[#0f0f0f] p-5">
                   <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30 mb-3">Слова-паразиты, замеченные ИИ</div>
                   <div className="flex flex-wrap gap-2">
@@ -527,56 +563,15 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               )}
 
               {/* accordion cards */}
-              {(() => {
-                const validCards = aiCards.filter((c) => c.text && c.title !== "Краткое резюме");
-                const fullWidthCards = validCards.filter((c) => 
-                  c.title.toLowerCase().includes("презентаци") || 
-                  c.title.toLowerCase().includes("полезные ссылки")
-                );
-                const gridCards = validCards.filter((c) => !fullWidthCards.includes(c));
-                
-                const col1: typeof gridCards = [];
-                const col2: typeof gridCards = [];
-                gridCards.forEach((card, i) => {
-                  if (i % 2 === 0) col1.push(card);
-                  else col2.push(card);
-                });
-
-                return (
-                  <div className="flex flex-col gap-4">
-                    {gridCards.length > 0 && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                        <div className="flex flex-col gap-4">
-                          {col1.map((card) => (
-                            <Accordion key={card.title} title={card.title} icon={card.icon} defaultOpen={false}>
-                              <div className="text-[13.5px] leading-[1.85] text-white/65 whitespace-pre-line">
-                                {card.text}
-                              </div>
-                            </Accordion>
-                          ))}
-                        </div>
-                        <div className="flex flex-col gap-4">
-                          {col2.map((card) => (
-                            <Accordion key={card.title} title={card.title} icon={card.icon} defaultOpen={false}>
-                              <div className="text-[13.5px] leading-[1.85] text-white/65 whitespace-pre-line">
-                                {card.text}
-                              </div>
-                            </Accordion>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {fullWidthCards.map((card) => (
-                      <Accordion key={card.title} title={card.title} icon={card.icon} defaultOpen={false}>
-                        <div className="text-[13.5px] leading-[1.85] text-white/65 whitespace-pre-line">
-                          {card.text}
-                        </div>
-                      </Accordion>
-                    ))}
-                  </div>
-                );
-              })()}
+              {aiCards
+                .filter((c) => c.text && c.title !== "Краткое резюме")
+                .map((card) => (
+                  <Accordion key={card.title} title={card.title} icon={card.icon} defaultOpen={false}>
+                    <div className="text-[13.5px] leading-[1.85] text-white/65 whitespace-pre-line">
+                      {card.text}
+                    </div>
+                  </Accordion>
+                ))}
             </motion.div>
           )}
 
