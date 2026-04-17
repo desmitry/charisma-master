@@ -229,9 +229,7 @@ def _download_user_speech_from_rutube(task_id: str, video_url: str) -> str:
             "description": "Внутренняя ошибка сервера",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "Ошибка преобразования видео"
-                    }
+                    "example": {"detail": "Ошибка преобразования видео"}
                 }
             },
         },

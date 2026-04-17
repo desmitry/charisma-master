@@ -31,12 +31,8 @@ os.environ.setdefault(
     "DATABASE_URL", "postgresql://test:test@localhost:5432/test"
 )
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
-os.environ.setdefault(
-    "CELERY_BROKER_URL", "redis://localhost:6379/0"
-)
-os.environ.setdefault(
-    "CELERY_RESULT_BACKEND", "redis://localhost:6379/0"
-)
+os.environ.setdefault("CELERY_BROKER_URL", "redis://localhost:6379/0")
+os.environ.setdefault("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
 os.environ.setdefault("GIGACHAT_CREDENTIALS", "test-creds")
 os.environ.setdefault("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")
 os.environ.setdefault("GIGACHAT_MODEL_NAME", "GigaChat")
