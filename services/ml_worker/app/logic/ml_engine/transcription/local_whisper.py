@@ -77,10 +77,7 @@ def transcribe_local_whisper(
         if seg.words:
             for w in seg.words:
                 clean = (
-                    w.word.strip()
-                    .lower()
-                    .replace(",", "")
-                    .replace(".", "")
+                    w.word.strip().lower().replace(",", "").replace(".", "")
                 )
                 is_filler = clean in BASE_FILLER_WORDS
                 words.append(

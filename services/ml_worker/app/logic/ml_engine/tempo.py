@@ -84,9 +84,7 @@ def calculate_tempo(
     points = []
     for t in np.arange(0, duration, 1.0):
         t_start, t_end = t, t + window_sec
-        count = sum(
-            1 for w in words if w.start >= t_start and w.end < t_end
-        )
+        count = sum(1 for w in words if w.start >= t_start and w.end < t_end)
         wpm = (count / window_sec) * 60
 
         # TODO: Move zone values to TempoColorEnum.

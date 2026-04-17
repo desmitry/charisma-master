@@ -102,9 +102,7 @@ async def health_check():
         404: {
             "description": "Видео не найдено",
             "content": {
-                "application/json": {
-                    "example": {"detail": "Video not found"}
-                }
+                "application/json": {"example": {"detail": "Video not found"}}
             },
         },
         416: {

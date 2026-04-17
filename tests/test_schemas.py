@@ -25,9 +25,7 @@ class TestTranscribeProvider:
     def test_has_all_members(self):
         assert TranscribeProvider.sber_gigachat.value == "sber_gigachat"
         assert TranscribeProvider.whisper_local.value == "whisper_local"
-        assert (
-            TranscribeProvider.whisper_openai.value == "whisper_openai"
-        )
+        assert TranscribeProvider.whisper_openai.value == "whisper_openai"
 
     def test_is_string_enum(self):
         assert isinstance(TranscribeProvider.sber_gigachat, str)
@@ -49,9 +47,7 @@ class TestPersonaRoles:
     def test_all_roles(self):
         assert PersonaRoles.strict_critic.value == "strict_critic"
         assert PersonaRoles.kind_mentor.value == "kind_mentor"
-        assert (
-            PersonaRoles.steve_jobs_style.value == "steve_jobs_style"
-        )
+        assert PersonaRoles.steve_jobs_style.value == "steve_jobs_style"
         assert (
             PersonaRoles.speech_review_specialist.value
             == "speech_review_specialist"
@@ -127,9 +123,7 @@ class TestTranscriptWord:
 
 class TestTranscriptSegment:
     def test_empty_words(self):
-        segment = TranscriptSegment(
-            start=0.0, end=0.5, text="", words=[]
-        )
+        segment = TranscriptSegment(start=0.0, end=0.5, text="", words=[])
         assert segment.words == []
 
 

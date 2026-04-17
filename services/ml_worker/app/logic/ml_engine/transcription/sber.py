@@ -124,9 +124,7 @@ def transcribe_sber(  # noqa: C901
     task_id = r_task.json()["result"]["id"]
     logger.info(f"Sber: Task started, id={task_id}")
 
-    status_url = (
-        f"https://smartspeech.sber.ru/rest/v1/task:get?id={task_id}"
-    )
+    status_url = f"https://smartspeech.sber.ru/rest/v1/task:get?id={task_id}"
     response_file_id = None
 
     for _ in range(90):

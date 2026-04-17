@@ -131,9 +131,7 @@ def analyze_audio(audio_path: str) -> Dict:
             float(volume_score_val)
         )
         audio_metrics["tone_score"] = float(tone_score_val)
-        audio_metrics["tone_label"] = get_score_label(
-            float(tone_score_val)
-        )
+        audio_metrics["tone_label"] = get_score_label(float(tone_score_val))
 
         return audio_metrics
     except Exception as e:

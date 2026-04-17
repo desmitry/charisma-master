@@ -14,9 +14,7 @@ class TestLLMClientConstants:
         assert llm_client_module.LLMClient.TRANSCRIPTION_LIMIT == 7_000
 
     def test_presentation_text_limit(self, llm_client_module):
-        assert (
-            llm_client_module.LLMClient.PRESENTATION_TEXT_LIMIT == 5_000
-        )
+        assert llm_client_module.LLMClient.PRESENTATION_TEXT_LIMIT == 5_000
 
 
 class TestLLMClientInstantiation:
@@ -49,9 +47,7 @@ class TestAnalyzeSpeech:
             '"useful_links": "link"}'
         )
 
-    async def test_analyze_speech_gigachat_path(
-        self, llm_client_module
-    ):
+    async def test_analyze_speech_gigachat_path(self, llm_client_module):
         with (
             patch("app.logic.llm_client.openai.AsyncOpenAI"),
             patch("app.logic.llm_client.GigaChat"),
@@ -105,9 +101,7 @@ class TestAnalyzeSpeech:
         client._call_openai.assert_awaited_once()
         client._call_gigachat.assert_not_awaited()
 
-    async def test_long_transcript_is_truncated(
-        self, llm_client_module
-    ):
+    async def test_long_transcript_is_truncated(self, llm_client_module):
         """Transcript longer than TRANSCRIPTION_LIMIT gets truncated."""
         long_text = "x" * 10_000
         presentation_text = "y" * 10_000
@@ -178,7 +172,8 @@ class TestAnalyzeSpeech:
         assert "GigaChat" in result.summary
 
     async def test_call_gigachat_api_error_propagates(
-        self, llm_client_module,
+        self,
+        llm_client_module,
     ):
         """GigaChat API exception propagates upward from _call_gigachat."""
         with (
@@ -235,7 +230,7 @@ class TestGetEvaluationCriteria:
             '{"criteria": ['
             '{"name": "Clarity", "description": "c", "max_value": 10},'
             '{"name": "Structure", "description": "s", "max_value": 5}'
-            ']}'
+            "]}"
         )
 
         with (
@@ -253,7 +248,9 @@ class TestGetEvaluationCriteria:
 
     @pytest.mark.asyncio
     async def test_empty_json_raises_runtime_error(
-        self, llm_client_module, tmp_path,
+        self,
+        llm_client_module,
+        tmp_path,
     ):
         """Empty JSON preset raises RuntimeError."""
         criteria_file = tmp_path / "empty.json"
@@ -277,7 +274,7 @@ class TestGetEvaluationCriteria:
         fake_response = (
             '```json\n{"criteria": ['
             '{"name": "Clarity", "description": "Speak", "max_value": 10}'
-            ']}\n```'
+            "]}\n```"
         )
 
         with (
@@ -310,7 +307,9 @@ class TestGetEvaluationCriteria:
 
     @pytest.mark.asyncio
     async def test_empty_llm_response_raises(
-        self, llm_client_module, tmp_path,
+        self,
+        llm_client_module,
+        tmp_path,
     ):
         """LLM returned empty criteria list raises RuntimeError."""
         criteria_file = tmp_path / "criteria.txt"
@@ -339,10 +338,14 @@ class TestAnalyzeWithEvaluationCriteria:
 
         criteria = [
             EvaluationCriterion(
-                name="Clarity", description="d", max_value=10,
+                name="Clarity",
+                description="d",
+                max_value=10,
             ),
             EvaluationCriterion(
-                name="Structure", description="d", max_value=5,
+                name="Structure",
+                description="d",
+                max_value=5,
             ),
         ]
 
@@ -350,7 +353,7 @@ class TestAnalyzeWithEvaluationCriteria:
             '{"criteria": ['
             '{"name": "Clarity", "current_value": 8, "feedback": "Good"},'
             '{"name": "Structure", "current_value": 4, "feedback": "OK"}'
-            ']}'
+            "]}"
         )
 
         with (
@@ -409,7 +412,7 @@ class TestAnalyzeWithEvaluationCriteria:
             '  {"name": "A", "current_value": 5, "feedback": "ok"},'
             '  {"name": "B", "current_value": 3, "feedback": "ok"},'
             '  {"name": "C", "current_value": 7, "feedback": "unexpected"}'
-            ']}'
+            "]}"
         )
 
         with (
@@ -443,7 +446,7 @@ class TestAnalyzeWithEvaluationCriteria:
         fake_response = (
             '{"criteria": ['
             '  {"name": "Clarity", "current_value": -1, "feedback": "bad"}'
-            ']}'
+            "]}"
         )
 
         with (
@@ -473,7 +476,8 @@ class TestReadDocumentText:
         txt.write_text("Line 1\nLine 2")
 
         result = llm_client_module.LLMClient._read_document_text(
-            str(txt), ".txt",
+            str(txt),
+            ".txt",
         )
         assert result == "Line 1\nLine 2"
 
@@ -488,13 +492,16 @@ class TestReadDocumentText:
         doc.save(str(docx))
 
         result = llm_client_module.LLMClient._read_document_text(
-            str(docx), ".docx",
+            str(docx),
+            ".docx",
         )
         assert "Hello world" in result
         assert "Second paragraph" in result
 
     def test_empty_docx_raises_runtime_error(
-        self, llm_client_module, tmp_path,
+        self,
+        llm_client_module,
+        tmp_path,
     ):
         """Empty DOCX raises RuntimeError."""
         from docx import Document
@@ -504,12 +511,14 @@ class TestReadDocumentText:
 
         with pytest.raises(RuntimeError):
             llm_client_module.LLMClient._read_document_text(
-                str(docx), ".docx",
+                str(docx),
+                ".docx",
             )
 
     def test_unsupported_format_raises(self, llm_client_module):
         """PDF extension raises RuntimeError."""
         with pytest.raises(RuntimeError):
             llm_client_module.LLMClient._read_document_text(
-                "/tmp/doc.pdf", ".pdf",
+                "/tmp/doc.pdf",
+                ".pdf",
             )
