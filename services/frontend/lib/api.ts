@@ -103,7 +103,9 @@ export function normalizeAnalysisResult(payload: any): AnalysisResult {
 
   return {
     task_id: payload?.task_id ?? "",
-    video_path: payload?.video_path ?? "",
+    video_path: payload?.video_path ?? null,
+    user_need_video_analysis: payload?.user_need_video_analysis ?? true,
+    user_need_text_from_video: payload?.user_need_text_from_video ?? true,
     transcript: payload?.transcript ?? [],
     tempo: payload?.tempo ?? [],
     long_pauses: payload?.long_pauses ?? [],

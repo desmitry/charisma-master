@@ -75,7 +75,9 @@ export interface SpeechReport {
 
 export interface AnalysisResult {
   task_id: string;
-  video_path: string;
+  video_path: string | null;
+  user_need_video_analysis: boolean;
+  user_need_text_from_video: boolean;
   transcript: TranscriptSegment[];
   tempo: TempoPoint[];
   fillers_summary: {
