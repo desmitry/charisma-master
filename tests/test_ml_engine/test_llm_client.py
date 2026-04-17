@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -176,6 +177,25 @@ class TestAnalyzeSpeech:
         # Error flow fills summary with the error message
         assert "GigaChat" in result.summary
 
+    async def test_call_gigachat_api_error_propagates(
+        self, llm_client_module,
+    ):
+        """GigaChat API exception propagates upward from _call_gigachat."""
+        with (
+            patch("app.logic.llm_client.openai.AsyncOpenAI"),
+            patch("app.logic.llm_client.GigaChat"),
+        ):
+            client = llm_client_module.LLMClient()
+            client.gigachat_client.achat = AsyncMock(
+                side_effect=RuntimeError("GigaChat rate limit exceeded"),
+            )
+
+            with pytest.raises(RuntimeError, match="rate limit"):
+                await client._call_gigachat(
+                    messages=[{"role": "user", "content": "test"}],
+                    model="GigaChat",
+                )
+
 
 class TestParseJsonResponse:
     def test_strips_markdown_fences(self, llm_client_module):
@@ -189,12 +209,307 @@ class TestParseJsonResponse:
         result = client._parse_json_response(raw)
         assert result == {"summary": "x"}
 
-    def test_invalid_json_raises(self, llm_client_module):
+    def test_invalid_json_raises_json_decode_error(self, llm_client_module):
+        """Invalid JSON raises json.JSONDecodeError, not generic Exception.
+
+        # BUG: Source code does `raise error_msg` which loses the traceback.
+        # This test documents the current behavior; a future fix should use
+        # bare `raise` to preserve the original traceback chain.
+        """
         with (
             patch("app.logic.llm_client.openai.AsyncOpenAI"),
             patch("app.logic.llm_client.GigaChat"),
         ):
             client = llm_client_module.LLMClient()
 
-        with pytest.raises(Exception):
+        with pytest.raises(json.JSONDecodeError):
             client._parse_json_response("not json")
+
+
+class TestGetEvaluationCriteria:
+    @pytest.mark.asyncio
+    async def test_from_json_preset(self, llm_client_module, tmp_path):
+        """JSON preset file yields list[EvaluationCriterion]."""
+        criteria_file = tmp_path / "criteria.json"
+        criteria_file.write_text(
+            '{"criteria": ['
+            '{"name": "Clarity", "description": "c", "max_value": 10},'
+            '{"name": "Structure", "description": "s", "max_value": 5}'
+            ']}'
+        )
+
+        with (
+            patch("app.logic.llm_client.openai.AsyncOpenAI"),
+            patch("app.logic.llm_client.GigaChat"),
+        ):
+            client = llm_client_module.LLMClient()
+            result = await client.get_evaluation_criteria(str(criteria_file))
+
+        assert len(result) == 2
+        assert result[0].name == "Clarity"
+        assert result[0].max_value == 10
+        assert result[0].current_value == 0
+        assert result[0].feedback == ""
+
+    @pytest.mark.asyncio
+    async def test_empty_json_raises_runtime_error(
+        self, llm_client_module, tmp_path,
+    ):
+        """Empty JSON preset raises RuntimeError."""
+        criteria_file = tmp_path / "empty.json"
+        criteria_file.write_text('{"criteria": []}')
+
+        with (
+            patch("app.logic.llm_client.openai.AsyncOpenAI"),
+            patch("app.logic.llm_client.GigaChat"),
+        ):
+            client = llm_client_module.LLMClient()
+
+            with pytest.raises(RuntimeError):
+                await client.get_evaluation_criteria(str(criteria_file))
+
+    @pytest.mark.asyncio
+    async def test_from_txt_uses_llm(self, llm_client_module, tmp_path):
+        """TXT file routes through LLM to extract criteria."""
+        criteria_file = tmp_path / "criteria.txt"
+        criteria_file.write_text("1. Speak clearly\n2. Don't use fillers")
+
+        fake_response = (
+            '```json\n{"criteria": ['
+            '{"name": "Clarity", "description": "Speak", "max_value": 10}'
+            ']}\n```'
+        )
+
+        with (
+            patch("app.logic.llm_client.openai.AsyncOpenAI"),
+            patch("app.logic.llm_client.GigaChat"),
+            patch(
+                "app.logic.llm_client.prompts.get_evaluation_criteria_identity_prompt",
+                return_value="sys",
+            ),
+        ):
+            client = llm_client_module.LLMClient()
+            client._call_gigachat = AsyncMock(return_value=fake_response)
+
+            result = await client.get_evaluation_criteria(str(criteria_file))
+
+        assert len(result) == 1
+        assert result[0].name == "Clarity"
+
+    @pytest.mark.asyncio
+    async def test_unsupported_format_raises(self, llm_client_module):
+        """Unsupported extension raises RuntimeError."""
+        with (
+            patch("app.logic.llm_client.openai.AsyncOpenAI"),
+            patch("app.logic.llm_client.GigaChat"),
+        ):
+            client = llm_client_module.LLMClient()
+
+            with pytest.raises(RuntimeError):
+                await client.get_evaluation_criteria("/tmp/criteria.pdf")
+
+    @pytest.mark.asyncio
+    async def test_empty_llm_response_raises(
+        self, llm_client_module, tmp_path,
+    ):
+        """LLM returned empty criteria list raises RuntimeError."""
+        criteria_file = tmp_path / "criteria.txt"
+        criteria_file.write_text("Some criteria")
+
+        with (
+            patch("app.logic.llm_client.openai.AsyncOpenAI"),
+            patch("app.logic.llm_client.GigaChat"),
+            patch(
+                "app.logic.llm_client.prompts.get_evaluation_criteria_identity_prompt",
+                return_value="sys",
+            ),
+        ):
+            client = llm_client_module.LLMClient()
+            client._call_gigachat = AsyncMock(return_value='{"criteria": []}')
+
+            with pytest.raises(RuntimeError):
+                await client.get_evaluation_criteria(str(criteria_file))
+
+
+class TestAnalyzeWithEvaluationCriteria:
+    @pytest.mark.asyncio
+    async def test_happy_path(self, llm_client_module):
+        """Normal scoring yields criteria with current_value and feedback."""
+        from charisma_schemas import EvaluationCriterion
+
+        criteria = [
+            EvaluationCriterion(
+                name="Clarity", description="d", max_value=10,
+            ),
+            EvaluationCriterion(
+                name="Structure", description="d", max_value=5,
+            ),
+        ]
+
+        fake_response = (
+            '{"criteria": ['
+            '{"name": "Clarity", "current_value": 8, "feedback": "Good"},'
+            '{"name": "Structure", "current_value": 4, "feedback": "OK"}'
+            ']}'
+        )
+
+        with (
+            patch("app.logic.llm_client.openai.AsyncOpenAI"),
+            patch("app.logic.llm_client.GigaChat"),
+            patch(
+                "app.logic.llm_client.prompts.get_evaluation_criteria_rate_prompt",
+                return_value="sys",
+            ),
+        ):
+            client = llm_client_module.LLMClient()
+            client._call_gigachat = AsyncMock(return_value=fake_response)
+
+            result = await client.analyze_with_evalution_criteria(
+                transcript_text="speech text",
+                presentation_text="slides",
+                provider=AnalyzeProvider.gigachat,
+                evaluation_criteria=criteria,
+            )
+
+        assert len(result) == 2
+        assert result[0].current_value == 8
+        assert result[0].feedback == "Good"
+        assert result[1].current_value == 4
+        assert result[1].feedback == "OK"
+
+    @pytest.mark.asyncio
+    async def test_empty_list_returns_empty(self, llm_client_module):
+        """Empty criteria list returns [] without calling the LLM."""
+        with (
+            patch("app.logic.llm_client.openai.AsyncOpenAI"),
+            patch("app.logic.llm_client.GigaChat"),
+        ):
+            client = llm_client_module.LLMClient()
+            result = await client.analyze_with_evalution_criteria(
+                transcript_text="text",
+                presentation_text="",
+                provider=AnalyzeProvider.gigachat,
+                evaluation_criteria=[],
+            )
+
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_count_mismatch_raises(self, llm_client_module):
+        """LLM returned a different number of criteria than requested."""
+        from charisma_schemas import EvaluationCriterion
+
+        criteria = [
+            EvaluationCriterion(name="A", description="d", max_value=10),
+            EvaluationCriterion(name="B", description="d", max_value=5),
+        ]
+
+        fake_response = (
+            '{"criteria": ['
+            '  {"name": "A", "current_value": 5, "feedback": "ok"},'
+            '  {"name": "B", "current_value": 3, "feedback": "ok"},'
+            '  {"name": "C", "current_value": 7, "feedback": "unexpected"}'
+            ']}'
+        )
+
+        with (
+            patch("app.logic.llm_client.openai.AsyncOpenAI"),
+            patch("app.logic.llm_client.GigaChat"),
+            patch(
+                "app.logic.llm_client.prompts.get_evaluation_criteria_rate_prompt",
+                return_value="sys",
+            ),
+        ):
+            client = llm_client_module.LLMClient()
+            client._call_gigachat = AsyncMock(return_value=fake_response)
+
+            with pytest.raises(RuntimeError):
+                await client.analyze_with_evalution_criteria(
+                    transcript_text="text",
+                    presentation_text="",
+                    provider=AnalyzeProvider.gigachat,
+                    evaluation_criteria=criteria,
+                )
+
+    @pytest.mark.asyncio
+    async def test_invalid_current_value_raises(self, llm_client_module):
+        """LLM returned current_value=-1 raises RuntimeError."""
+        from charisma_schemas import EvaluationCriterion
+
+        criteria = [
+            EvaluationCriterion(name="Clarity", description="d", max_value=10),
+        ]
+
+        fake_response = (
+            '{"criteria": ['
+            '  {"name": "Clarity", "current_value": -1, "feedback": "bad"}'
+            ']}'
+        )
+
+        with (
+            patch("app.logic.llm_client.openai.AsyncOpenAI"),
+            patch("app.logic.llm_client.GigaChat"),
+            patch(
+                "app.logic.llm_client.prompts.get_evaluation_criteria_rate_prompt",
+                return_value="sys",
+            ),
+        ):
+            client = llm_client_module.LLMClient()
+            client._call_gigachat = AsyncMock(return_value=fake_response)
+
+            with pytest.raises(RuntimeError):
+                await client.analyze_with_evalution_criteria(
+                    transcript_text="text",
+                    presentation_text="",
+                    provider=AnalyzeProvider.gigachat,
+                    evaluation_criteria=criteria,
+                )
+
+
+class TestReadDocumentText:
+    def test_txt_file(self, llm_client_module, tmp_path):
+        """TXT file returns full text."""
+        txt = tmp_path / "doc.txt"
+        txt.write_text("Line 1\nLine 2")
+
+        result = llm_client_module.LLMClient._read_document_text(
+            str(txt), ".txt",
+        )
+        assert result == "Line 1\nLine 2"
+
+    def test_docx_file(self, llm_client_module, tmp_path):
+        """DOCX file text extracted from paragraphs."""
+        from docx import Document
+
+        docx = tmp_path / "doc.docx"
+        doc = Document()
+        doc.add_paragraph("Hello world")
+        doc.add_paragraph("Second paragraph")
+        doc.save(str(docx))
+
+        result = llm_client_module.LLMClient._read_document_text(
+            str(docx), ".docx",
+        )
+        assert "Hello world" in result
+        assert "Second paragraph" in result
+
+    def test_empty_docx_raises_runtime_error(
+        self, llm_client_module, tmp_path,
+    ):
+        """Empty DOCX raises RuntimeError."""
+        from docx import Document
+
+        docx = tmp_path / "empty.docx"
+        Document().save(str(docx))
+
+        with pytest.raises(RuntimeError):
+            llm_client_module.LLMClient._read_document_text(
+                str(docx), ".docx",
+            )
+
+    def test_unsupported_format_raises(self, llm_client_module):
+        """PDF extension raises RuntimeError."""
+        with pytest.raises(RuntimeError):
+            llm_client_module.LLMClient._read_document_text(
+                "/tmp/doc.pdf", ".pdf",
+            )

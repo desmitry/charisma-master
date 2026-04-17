@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 
@@ -74,27 +75,63 @@ class TestGetAnalysis:
         assert body["analyze_model"] == "GigaChat"
         assert body["confidence_index"]["total"] == 80.0
 
-    def test_not_found(self, client: TestClient):
+    @pytest.mark.parametrize(
+        "exception",
+        [
+            RuntimeError("object does not exist"),
+            Exception("network error"),
+            ConnectionError("timeout"),
+            ValueError("bad data"),
+        ],
+        ids=["runtime", "generic", "connection", "value"],
+    )
+    def test_any_storage_error_returns_404(
+        self, client: TestClient, exception: Exception
+    ):
+        """Any storage error becomes a 404 with the generic detail."""
         with patch(
             "app.logic.endpoints.analysis.get_object_json",
-            side_effect=RuntimeError("object does not exist"),
+            side_effect=exception,
         ):
-            response = client.get("/api/v1/analysis/missing-task")
-
-        assert response.status_code == 404
-        body = response.json()
-        assert body["detail"] == "Analysis not found or still processing"
-
-    def test_storage_generic_exception(self, client: TestClient):
-        """Any exception from storage becomes a 404 with the same detail."""
-        with patch(
-            "app.logic.endpoints.analysis.get_object_json",
-            side_effect=Exception("network error"),
-        ):
-            response = client.get("/api/v1/analysis/task-fail")
+            response = client.get("/api/v1/analysis/t1")
 
         assert response.status_code == 404
         assert (
             response.json()["detail"]
             == "Analysis not found or still processing"
         )
+
+    def test_malformed_schema_returns_422(self, client: TestClient):
+        """Storage returned a JSON without required AnalysisResult fields.
+
+        FastAPI's ``response_model`` validation runs AFTER the handler
+        returns, so it is NOT caught by the handler's broad
+        ``except Exception`` block. In modern FastAPI/Pydantic v2 this
+        raises ``ResponseValidationError``. The TestClient propagates
+        server-side exceptions by default (``raise_server_exceptions=True``),
+        so we assert the exception is raised. In a real HTTP deployment the
+        client would see a 500. Historically (older FastAPI) this surfaced as
+        422.
+        """
+        from fastapi.exceptions import ResponseValidationError
+
+        # missing video_path, transcript, and other required fields
+        broken_payload = {"task_id": "t1"}
+        with patch(
+            "app.logic.endpoints.analysis.get_object_json",
+            return_value=broken_payload,
+        ):
+            with pytest.raises(ResponseValidationError):
+                client.get("/api/v1/analysis/t1")
+
+    def test_error_message_not_leaked(self, client: TestClient):
+        """Internal error details must NOT appear in the 404 response body."""
+        with patch(
+            "app.logic.endpoints.analysis.get_object_json",
+            side_effect=RuntimeError("SECRET_INTERNAL_PASSWORD_123"),
+        ):
+            response = client.get("/api/v1/analysis/t1")
+
+        body = response.json()
+        assert "SECRET_INTERNAL_PASSWORD_123" not in body["detail"]
+        assert body["detail"] == "Analysis not found or still processing"

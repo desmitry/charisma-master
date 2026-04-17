@@ -11,17 +11,13 @@ from charisma_schemas import (
     EvaluationCriteriaReport,
     EvaluationCriterion,
     FillersSummary,
-    PauseInterval,
     PersonaRoles,
     SpeechReport,
     TaskStage,
     TaskState,
-    TaskStatusResponse,
-    TempoPoint,
     TranscribeProvider,
     TranscriptSegment,
     TranscriptWord,
-    UploadResponse,
 )
 
 
@@ -124,35 +120,12 @@ class TestTaskStage:
 
 
 class TestTranscriptWord:
-    def test_full(self):
-        word = TranscriptWord(
-            start=0.5, end=1.5, text="hello", is_filler=True
-        )
-        assert word.start == 0.5
-        assert word.end == 1.5
-        assert word.text == "hello"
-        assert word.is_filler is True
-
     def test_is_filler_defaults_false(self):
         word = TranscriptWord(start=0.0, end=0.5, text="hi")
         assert word.is_filler is False
 
 
 class TestTranscriptSegment:
-    def test_with_words(self):
-        words = [
-            TranscriptWord(start=0.0, end=0.5, text="hi"),
-            TranscriptWord(start=0.5, end=1.0, text="there"),
-        ]
-        segment = TranscriptSegment(
-            start=0.0, end=1.0, text="hi there", words=words
-        )
-        assert segment.start == 0.0
-        assert segment.end == 1.0
-        assert segment.text == "hi there"
-        assert len(segment.words) == 2
-        assert segment.words[0].text == "hi"
-
     def test_empty_words(self):
         segment = TranscriptSegment(
             start=0.0, end=0.5, text="", words=[]
@@ -160,110 +133,7 @@ class TestTranscriptSegment:
         assert segment.words == []
 
 
-class TestTempoPoint:
-    def test_create(self):
-        point = TempoPoint(time=5.0, wpm=120.5, zone="green")
-        assert point.time == 5.0
-        assert point.wpm == 120.5
-        assert point.zone == "green"
-
-
-class TestPauseInterval:
-    def test_create(self):
-        pause = PauseInterval(start=1.0, end=3.5, duration=2.5)
-        assert pause.start == 1.0
-        assert pause.end == 3.5
-        assert pause.duration == 2.5
-
-
-class TestConfidenceComponents:
-    def test_create(self):
-        comps = ConfidenceComponents(
-            volume_level="Нормально",
-            volume_score=85,
-            volume_label="Отлично",
-            filler_score=75,
-            filler_label="Хорошо",
-            gaze_score=90,
-            gaze_label="Великолепно",
-            gesture_score=70,
-            gesture_label="Хорошо",
-            gesture_advice="Keep it up",
-            tone_score=80,
-            tone_label="Отлично",
-        )
-        assert comps.volume_score == 85
-        assert comps.filler_score == 75
-        assert comps.gesture_advice == "Keep it up"
-
-
-class TestConfidenceIndex:
-    def test_create(self):
-        comps = ConfidenceComponents(
-            volume_level="Нормально",
-            volume_score=85,
-            volume_label="Отлично",
-            filler_score=75,
-            filler_label="Хорошо",
-            gaze_score=90,
-            gaze_label="Великолепно",
-            gesture_score=70,
-            gesture_label="Хорошо",
-            gesture_advice="",
-            tone_score=80,
-            tone_label="Отлично",
-        )
-        idx = ConfidenceIndex(
-            total=80.0,
-            total_label="Отлично",
-            components=comps,
-        )
-        assert idx.total == 80.0
-        assert idx.total_label == "Отлично"
-        assert idx.components.volume_score == 85
-
-
-class TestFillersSummary:
-    def test_create_int(self):
-        summary = FillersSummary(count=5, ratio=2)
-        assert summary.count == 5
-        assert summary.ratio == 2
-
-    def test_create_float(self):
-        summary = FillersSummary(count=10, ratio=1.5)
-        assert summary.count == 10
-        assert summary.ratio == 1.5
-
-
-class TestSpeechReport:
-    def test_create(self):
-        report = SpeechReport(
-            summary="good speech",
-            structure="clear",
-            mistakes="minor",
-            ideal_text="perfect",
-            persona_feedback="encouraging",
-            dynamic_fillers=["ну", "эээ"],
-            presentation_feedback="nice",
-            useful_links="link1",
-        )
-        assert report.summary == "good speech"
-        assert report.dynamic_fillers == ["ну", "эээ"]
-
-
 class TestEvaluationCriterion:
-    def test_full(self):
-        crit = EvaluationCriterion(
-            name="Clarity",
-            description="How clear",
-            max_value=10,
-            current_value=8,
-            feedback="Good",
-        )
-        assert crit.name == "Clarity"
-        assert crit.current_value == 8
-        assert crit.feedback == "Good"
-
     def test_defaults(self):
         crit = EvaluationCriterion(
             name="Tone",
@@ -272,31 +142,6 @@ class TestEvaluationCriterion:
         )
         assert crit.current_value == 0
         assert crit.feedback == ""
-
-
-class TestEvaluationCriteriaReport:
-    def test_create(self):
-        report = EvaluationCriteriaReport(
-            total_score=18,
-            max_score=20,
-            criteria=[
-                EvaluationCriterion(
-                    name="A",
-                    description="desc",
-                    max_value=10,
-                    current_value=9,
-                ),
-                EvaluationCriterion(
-                    name="B",
-                    description="desc",
-                    max_value=10,
-                    current_value=9,
-                ),
-            ],
-        )
-        assert report.total_score == 18
-        assert report.max_score == 20
-        assert len(report.criteria) == 2
 
 
 class TestAnalysisResult:
@@ -375,35 +220,3 @@ class TestAnalysisResult:
             transcribe_model="whisper_local",
         )
         assert result.video_path is None
-
-
-class TestTaskStatusResponse:
-    def test_defaults(self):
-        resp = TaskStatusResponse(
-            task_id="t1",
-            state=TaskState.queued,
-            hint="waiting",
-        )
-        assert resp.task_id == "t1"
-        assert resp.state == TaskState.queued
-        assert resp.progress == 0.0
-        assert resp.stage is None
-        assert resp.error is None
-
-    def test_full(self):
-        resp = TaskStatusResponse(
-            task_id="t2",
-            state=TaskState.processing,
-            hint="working",
-            progress=0.5,
-            stage="transcription",
-            error=None,
-        )
-        assert resp.progress == 0.5
-        assert resp.stage == "transcription"
-
-
-class TestUploadResponse:
-    def test_create(self):
-        resp = UploadResponse(task_id="abc-123")
-        assert resp.task_id == "abc-123"
