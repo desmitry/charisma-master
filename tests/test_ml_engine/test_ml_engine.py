@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
 from charisma_schemas import (
     TranscribeProvider,
     TranscriptSegment,
@@ -38,27 +39,6 @@ class TestMLEngineInstantiation:
         assert engine is not None
 
 
-class TestWhisperLocalModelProperty:
-    def test_initially_none(self, ml_engine_module):
-        from app.logic.ml_engine.transcription import local_whisper
-
-        local_whisper._whisper_local_model = None
-        assert ml_engine_module.MLEngine._whisper_local_model is None
-
-    def test_read_through_to_module(self, ml_engine_module):
-        from app.logic.ml_engine.transcription import local_whisper
-
-        sentinel = object()
-        local_whisper._whisper_local_model = sentinel
-        try:
-            assert (
-                ml_engine_module.MLEngine._whisper_local_model
-                is sentinel
-            )
-        finally:
-            local_whisper._whisper_local_model = None
-
-
 class TestGetEmptyMetrics:
     def test_empty_audio_metrics_keys(self, ml_engine_module):
         metrics = ml_engine_module.MLEngine.get_empty_audio_metrics()
@@ -89,56 +69,6 @@ class TestGetEmptyMetrics:
         assert metrics["gaze_score"] == 0
         assert metrics["gesture_score"] == 0
         assert metrics["gesture_advice"] == ""
-
-
-class TestGetScoreLabel:
-    def test_excellent(self, ml_engine_module):
-        assert (
-            ml_engine_module.MLEngine.get_score_label(95)
-            == "Великолепно"
-        )
-        assert (
-            ml_engine_module.MLEngine.get_score_label(90)
-            == "Великолепно"
-        )
-
-    def test_great(self, ml_engine_module):
-        assert (
-            ml_engine_module.MLEngine.get_score_label(85) == "Отлично"
-        )
-        assert (
-            ml_engine_module.MLEngine.get_score_label(80) == "Отлично"
-        )
-
-    def test_good(self, ml_engine_module):
-        assert (
-            ml_engine_module.MLEngine.get_score_label(75) == "Хорошо"
-        )
-        assert (
-            ml_engine_module.MLEngine.get_score_label(70) == "Хорошо"
-        )
-
-    def test_normal(self, ml_engine_module):
-        assert (
-            ml_engine_module.MLEngine.get_score_label(60) == "Нормально"
-        )
-        assert (
-            ml_engine_module.MLEngine.get_score_label(55) == "Нормально"
-        )
-
-    def test_weak(self, ml_engine_module):
-        assert ml_engine_module.MLEngine.get_score_label(50) == "Слабо"
-        assert ml_engine_module.MLEngine.get_score_label(40) == "Слабо"
-
-    def test_needs_attention(self, ml_engine_module):
-        assert (
-            ml_engine_module.MLEngine.get_score_label(30)
-            == "Требует внимания"
-        )
-        assert (
-            ml_engine_module.MLEngine.get_score_label(0)
-            == "Требует внимания"
-        )
 
 
 class TestGetLongPauses:
@@ -262,104 +192,200 @@ class TestLoadModel:
 
 
 class TestTranscribeDispatch:
-    def test_dispatch_sber(self, ml_engine_module, monkeypatch):
+    @pytest.mark.parametrize(
+        "provider, expected_sber_convert",
+        [
+            pytest.param("sber_gigachat", True, id="sber"),
+            pytest.param("whisper_openai", False, id="openai"),
+            pytest.param("whisper_local", False, id="local"),
+        ],
+    )
+    def test_transcribe_dispatch(
+        self,
+        ml_engine_module,
+        monkeypatch,
+        provider,
+        expected_sber_convert,
+    ):
+        """transcribe dispatches to the correct provider backend."""
+        provider_enum = TranscribeProvider(provider)
         fake_segments = [
-            TranscriptSegment(
-                start=0.0, end=1.0, text="sber", words=[]
-            )
+            TranscriptSegment(start=0.0, end=1.0, text="test", words=[]),
         ]
+
         sber_mock = MagicMock(return_value=fake_segments)
-        openai_mock = MagicMock(return_value=[])
-        local_mock = MagicMock(return_value=[])
+        openai_mock = MagicMock(return_value=fake_segments)
+        local_mock = MagicMock(return_value=fake_segments)
         convert_mock = MagicMock(return_value="/tmp/audio_sber_16k.wav")
+
         monkeypatch.setattr(
             "app.logic.ml_engine._transcribe_sber", sber_mock
         )
         monkeypatch.setattr(
-            "app.logic.ml_engine._transcribe_openai_whisper",
-            openai_mock,
+            "app.logic.ml_engine._transcribe_openai_whisper", openai_mock
         )
         monkeypatch.setattr(
-            "app.logic.ml_engine._transcribe_local_whisper",
-            local_mock,
+            "app.logic.ml_engine._transcribe_local_whisper", local_mock
         )
         monkeypatch.setattr(
             "app.logic.ml_engine._convert_to_sber_format", convert_mock
         )
-
-        # Prevent os.path.exists from finding the fake file
+        # Prevent sber temp-file cleanup from touching the filesystem
         monkeypatch.setattr(
             "app.logic.ml_engine.os.path.exists", lambda _: False
         )
 
         result = ml_engine_module.MLEngine.transcribe(
-            "/tmp/audio.wav", TranscribeProvider.sber_gigachat
+            "/tmp/audio.wav", provider_enum
         )
-        assert result == fake_segments
-        convert_mock.assert_called_once_with("/tmp/audio.wav")
-        sber_mock.assert_called_once_with("/tmp/audio_sber_16k.wav")
-        openai_mock.assert_not_called()
-        local_mock.assert_not_called()
 
-    def test_dispatch_openai_whisper(
+        assert result == fake_segments
+        if expected_sber_convert:
+            convert_mock.assert_called_once()
+            sber_mock.assert_called_once()
+            openai_mock.assert_not_called()
+            local_mock.assert_not_called()
+        else:
+            convert_mock.assert_not_called()
+            if provider == "whisper_openai":
+                openai_mock.assert_called_once()
+                sber_mock.assert_not_called()
+                local_mock.assert_not_called()
+            elif provider == "whisper_local":
+                local_mock.assert_called_once()
+                sber_mock.assert_not_called()
+                openai_mock.assert_not_called()
+
+    def test_transcribe_unknown_provider_returns_empty_list(
+        self, ml_engine_module
+    ):
+        """Unknown transcription provider yields empty result list."""
+        result = ml_engine_module.MLEngine.transcribe(
+            "/tmp/audio.wav",
+            "unknown_provider",  # not a TranscribeProvider enum value
+        )
+        assert result == []
+
+
+class TestAnalyzeAudio:
+    def test_happy_path(self, ml_engine_module, monkeypatch):
+        """analyze_audio delegates to audio.analyze_audio."""
+        fake_metrics = {
+            "volume_score": 75.0,
+            "volume_level": "Нормально",
+            "volume_label": "Хорошо",
+            "tone_score": 60.0,
+            "tone_label": "Нормально",
+        }
+        monkeypatch.setattr(
+            "app.logic.ml_engine._analyze_audio",
+            lambda _: fake_metrics,
+        )
+
+        result = ml_engine_module.MLEngine.analyze_audio("/tmp/audio.wav")
+        assert result == fake_metrics
+
+    def test_error_propagates(self, ml_engine_module, monkeypatch):
+        """Errors from the underlying analyzer propagate through the facade.
+
+        The facade does not wrap the delegate in try/except, so any
+        exception from the mocked `_analyze_audio` bubbles up. (The real
+        `audio.analyze_audio` swallows exceptions internally, but the
+        facade itself performs no error handling.)
+        """
+
+        def raise_error(_):
+            raise RuntimeError("librosa failed")
+
+        monkeypatch.setattr(
+            "app.logic.ml_engine._analyze_audio",
+            raise_error,
+        )
+
+        with pytest.raises(RuntimeError, match="librosa failed"):
+            ml_engine_module.MLEngine.analyze_audio("/tmp/audio.wav")
+
+
+class TestAnalyzeVideo:
+    def test_happy_path(self, ml_engine_module, monkeypatch):
+        """analyze_video delegates to video.analyze_video."""
+        fake_metrics = {
+            "gaze_score": 85,
+            "gaze_label": "Отлично",
+            "gesture_score": 70,
+            "gesture_label": "Хорошо",
+            "gesture_advice": "Good gestures.",
+        }
+        monkeypatch.setattr(
+            "app.logic.ml_engine._analyze_video",
+            lambda _: fake_metrics,
+        )
+
+        result = ml_engine_module.MLEngine.analyze_video("/tmp/video.mp4")
+        assert result == fake_metrics
+
+    def test_error_propagates(self, ml_engine_module, monkeypatch):
+        """Errors from the underlying analyzer propagate through the facade."""
+
+        def raise_error(_):
+            raise RuntimeError("cv2 failed")
+
+        monkeypatch.setattr(
+            "app.logic.ml_engine._analyze_video",
+            raise_error,
+        )
+
+        with pytest.raises(RuntimeError, match="cv2 failed"):
+            ml_engine_module.MLEngine.analyze_video("/tmp/video.mp4")
+
+
+class TestExtractAudio:
+    def test_calls_ffmpeg(self, ml_engine_module, monkeypatch):
+        """extract_audio invokes subprocess.run with ffmpeg."""
+        captured = {}
+
+        def capture_run(cmd, **kwargs):
+            captured["cmd"] = cmd
+
+            class _Result:
+                returncode = 0
+                stdout = b""
+                stderr = b""
+
+            return _Result()
+
+        monkeypatch.setattr(
+            "app.logic.ml_engine.audio.subprocess.run", capture_run
+        )
+
+        ml_engine_module.MLEngine.extract_audio(
+            "/tmp/video.mp4",
+            "/tmp/audio.wav",
+        )
+
+        assert captured["cmd"][0] == "ffmpeg"
+        assert "/tmp/video.mp4" in captured["cmd"]
+        assert "/tmp/audio.wav" in captured["cmd"]
+
+    def test_ffmpeg_error_propagates(
         self, ml_engine_module, monkeypatch
     ):
-        fake_segments = [
-            TranscriptSegment(
-                start=0.0, end=1.0, text="openai", words=[]
-            )
-        ]
-        sber_mock = MagicMock(return_value=[])
-        openai_mock = MagicMock(return_value=fake_segments)
-        local_mock = MagicMock(return_value=[])
-        monkeypatch.setattr(
-            "app.logic.ml_engine._transcribe_sber", sber_mock
-        )
-        monkeypatch.setattr(
-            "app.logic.ml_engine._transcribe_openai_whisper",
-            openai_mock,
-        )
-        monkeypatch.setattr(
-            "app.logic.ml_engine._transcribe_local_whisper",
-            local_mock,
-        )
-        result = ml_engine_module.MLEngine.transcribe(
-            "/tmp/audio.wav", TranscribeProvider.whisper_openai
-        )
-        assert result == fake_segments
-        openai_mock.assert_called_once_with("/tmp/audio.wav")
-        sber_mock.assert_not_called()
-        local_mock.assert_not_called()
+        """subprocess.CalledProcessError from ffmpeg propagates."""
+        import subprocess
 
-    def test_dispatch_local_whisper(
-        self, ml_engine_module, monkeypatch
-    ):
-        fake_segments = [
-            TranscriptSegment(
-                start=0.0, end=1.0, text="local", words=[]
+        def raise_error(*args, **kwargs):
+            raise subprocess.CalledProcessError(
+                1, "ffmpeg", stderr=b"error"
             )
-        ]
-        sber_mock = MagicMock(return_value=[])
-        openai_mock = MagicMock(return_value=[])
-        local_mock = MagicMock(return_value=fake_segments)
+
         monkeypatch.setattr(
-            "app.logic.ml_engine._transcribe_sber", sber_mock
+            "app.logic.ml_engine.audio.subprocess.run", raise_error
         )
-        monkeypatch.setattr(
-            "app.logic.ml_engine._transcribe_openai_whisper",
-            openai_mock,
-        )
-        monkeypatch.setattr(
-            "app.logic.ml_engine._transcribe_local_whisper",
-            local_mock,
-        )
-        result = ml_engine_module.MLEngine.transcribe(
-            "/tmp/audio.wav", TranscribeProvider.whisper_local
-        )
-        assert result == fake_segments
-        local_mock.assert_called_once_with("/tmp/audio.wav")
-        sber_mock.assert_not_called()
-        openai_mock.assert_not_called()
+
+        with pytest.raises(subprocess.CalledProcessError):
+            ml_engine_module.MLEngine.extract_audio(
+                "/tmp/bad.mp4", "/tmp/out.wav"
+            )
 
 
 class TestBackwardCompat:

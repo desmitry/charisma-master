@@ -244,6 +244,6 @@ def _iter_range(response, start: int, length: int):
     response.release_conn()
 
 
-app.include_router(upload.router, prefix="/api/v1")
-app.include_router(status.router, prefix="/api/v1")
-app.include_router(analysis.router, prefix="/api/v1")
+app.include_router(upload.router, prefix="/api/v1", tags=["Processing"])
+app.include_router(status.router, prefix="/api/v1", tags=["Status"])
+app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"])

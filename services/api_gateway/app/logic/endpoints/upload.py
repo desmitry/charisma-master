@@ -203,7 +203,6 @@ def _download_user_speech_from_rutube(task_id: str, video_url: str) -> str:
 @router.post(
     "/process",
     response_model=UploadResponse,
-    tags=["Processing"],
     summary="Загрузить выступление на анализ",
     description=(
         "Принимает видео- или аудиофайл выступления (либо ссылку на RuTube), "
