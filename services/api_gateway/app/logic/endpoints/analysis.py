@@ -10,7 +10,6 @@ router = APIRouter()
 @router.get(
     "/analysis/{task_id}",
     response_model=AnalysisResult,
-    tags=["Analysis"],
     summary="Получить результаты анализа",
     description=(
         "Возвращает полный результат анализа выступления: "

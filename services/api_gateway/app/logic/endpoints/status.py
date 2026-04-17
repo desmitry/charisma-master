@@ -47,7 +47,6 @@ def _build_task_status_response(task_id: str) -> TaskStatusResponse:
 @router.get(
     "/tasks/{task_id}/status",
     response_model=TaskStatusResponse,
-    tags=["Status"],
     summary="Получить статус задачи",
     description=(
         "Возвращает текущее состояние задачи обработки выступления. "
@@ -68,7 +67,6 @@ async def get_task_status(task_id: str):
 @router.get(
     "/tasks/{task_id}/wait",
     response_model=TaskStatusResponse,
-    tags=["Status"],
     summary="Ожидать статус задачи (polling)",
     description=(
         "Dedicated endpoint для long-polling клиентов, ожидающих "
