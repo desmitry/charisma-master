@@ -77,22 +77,14 @@ class TestGetLongPauses:
         assert result == []
 
     def test_single_segment_no_pauses(self, ml_engine_module):
-        segments = [
-            TranscriptSegment(
-                start=0.0, end=5.0, text="hi", words=[]
-            )
-        ]
+        segments = [TranscriptSegment(start=0.0, end=5.0, text="hi", words=[])]
         result = ml_engine_module.MLEngine.get_long_pauses(segments)
         assert result == []
 
     def test_detects_long_pause(self, ml_engine_module):
         segments = [
-            TranscriptSegment(
-                start=0.0, end=1.0, text="one", words=[]
-            ),
-            TranscriptSegment(
-                start=5.0, end=6.0, text="two", words=[]
-            ),
+            TranscriptSegment(start=0.0, end=1.0, text="one", words=[]),
+            TranscriptSegment(start=5.0, end=6.0, text="two", words=[]),
         ]
         pauses = ml_engine_module.MLEngine.get_long_pauses(
             segments, threshold=2.0
@@ -104,12 +96,8 @@ class TestGetLongPauses:
 
     def test_ignores_short_pause(self, ml_engine_module):
         segments = [
-            TranscriptSegment(
-                start=0.0, end=1.0, text="one", words=[]
-            ),
-            TranscriptSegment(
-                start=1.5, end=2.0, text="two", words=[]
-            ),
+            TranscriptSegment(start=0.0, end=1.0, text="one", words=[]),
+            TranscriptSegment(start=1.5, end=2.0, text="two", words=[]),
         ]
         pauses = ml_engine_module.MLEngine.get_long_pauses(
             segments, threshold=2.0
@@ -124,17 +112,11 @@ class TestCalculateTempo:
 
     def test_segments_without_words(self, ml_engine_module):
         # Empty-words segments with empty text produce no tempo points
-        segments = [
-            TranscriptSegment(
-                start=0.0, end=1.0, text="", words=[]
-            )
-        ]
+        segments = [TranscriptSegment(start=0.0, end=1.0, text="", words=[])]
         result = ml_engine_module.MLEngine.calculate_tempo(segments)
         assert result == []
 
-    def test_segments_with_words_returns_points(
-        self, ml_engine_module
-    ):
+    def test_segments_with_words_returns_points(self, ml_engine_module):
         words = [
             TranscriptWord(start=0.1, end=0.5, text="hi"),
             TranscriptWord(start=0.6, end=1.0, text="there"),
@@ -159,17 +141,12 @@ class TestLoadModel:
     def test_load_model_none_returns_none(self, ml_engine_module):
         assert ml_engine_module.MLEngine.load_model(None) is None
 
-    def test_load_model_non_whisper_returns_none(
-        self, ml_engine_module
-    ):
+    def test_load_model_non_whisper_returns_none(self, ml_engine_module):
         assert (
-            ml_engine_module.MLEngine.load_model("some-other-provider")
-            is None
+            ml_engine_module.MLEngine.load_model("some-other-provider") is None
         )
 
-    def test_load_model_whisper_local(
-        self, ml_engine_module, monkeypatch
-    ):
+    def test_load_model_whisper_local(self, ml_engine_module, monkeypatch):
         """load_model caches a WhisperModel for whisper_local."""
         from app.logic.ml_engine.transcription import local_whisper
 
@@ -218,9 +195,7 @@ class TestTranscribeDispatch:
         local_mock = MagicMock(return_value=fake_segments)
         convert_mock = MagicMock(return_value="/tmp/audio_sber_16k.wav")
 
-        monkeypatch.setattr(
-            "app.logic.ml_engine._transcribe_sber", sber_mock
-        )
+        monkeypatch.setattr("app.logic.ml_engine._transcribe_sber", sber_mock)
         monkeypatch.setattr(
             "app.logic.ml_engine._transcribe_openai_whisper", openai_mock
         )
@@ -367,16 +342,12 @@ class TestExtractAudio:
         assert "/tmp/video.mp4" in captured["cmd"]
         assert "/tmp/audio.wav" in captured["cmd"]
 
-    def test_ffmpeg_error_propagates(
-        self, ml_engine_module, monkeypatch
-    ):
+    def test_ffmpeg_error_propagates(self, ml_engine_module, monkeypatch):
         """subprocess.CalledProcessError from ffmpeg propagates."""
         import subprocess
 
         def raise_error(*args, **kwargs):
-            raise subprocess.CalledProcessError(
-                1, "ffmpeg", stderr=b"error"
-            )
+            raise subprocess.CalledProcessError(1, "ffmpeg", stderr=b"error")
 
         monkeypatch.setattr(
             "app.logic.ml_engine.audio.subprocess.run", raise_error

@@ -67,9 +67,7 @@ class TestHappyPath:
         # Celery should have been dispatched once
         assert mock_send.called
         call_args = mock_send.call_args
-        assert (
-            call_args.args[0] == "app.logic.tasks.process_video_pipeline"
-        )
+        assert call_args.args[0] == "app.logic.tasks.process_video_pipeline"
         kwargs = call_args.kwargs["kwargs"]
         assert kwargs["task_id"] == body["task_id"]
         assert kwargs["need_video_analysis"] is True
@@ -339,7 +337,9 @@ class TestErrorPaths:
             patch(
                 "app.logic.endpoints.upload._convert_to_faststart",
                 side_effect=subprocess.CalledProcessError(
-                    1, "ffmpeg", stderr=ffmpeg_stderr,
+                    1,
+                    "ffmpeg",
+                    stderr=ffmpeg_stderr,
                 ),
             ),
             patch(

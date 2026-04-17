@@ -109,15 +109,20 @@ class TestStatusEndpoint:
         assert body["hint"] == "FAILURE"
         assert "Custom error message" in body["error"]
 
-    @pytest.mark.parametrize("unknown_state", [
-        "RETRY",
-        "REVOKED",
-        "STARTED",
-        "IGNORED",
-        "CUSTOM_STATE",
-    ])
+    @pytest.mark.parametrize(
+        "unknown_state",
+        [
+            "RETRY",
+            "REVOKED",
+            "STARTED",
+            "IGNORED",
+            "CUSTOM_STATE",
+        ],
+    )
     def test_unknown_celery_state_returns_as_queued(
-        self, client: TestClient, unknown_state: str,
+        self,
+        client: TestClient,
+        unknown_state: str,
     ):
         """Any Celery state outside the handled four falls through to PENDING.
 
@@ -241,12 +246,8 @@ class TestWaitEndpoint:
             "app.logic.endpoints.status.AsyncResult",
             return_value=mock_result,
         ):
-            status_resp = client.get(
-                "/api/v1/tasks/task-wait/status"
-            )
-            wait_resp = client.get(
-                "/api/v1/tasks/task-wait/wait"
-            )
+            status_resp = client.get("/api/v1/tasks/task-wait/status")
+            wait_resp = client.get("/api/v1/tasks/task-wait/wait")
 
         assert status_resp.status_code == 200
         assert wait_resp.status_code == 200
