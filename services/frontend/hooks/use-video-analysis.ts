@@ -9,7 +9,7 @@ export type InputMode = "speech_text" | "speech_video" | null;
 export type CriteriaMode = "none" | "preset" | "custom";
 export type WizardStepId = "source" | "presentation" | "video" | "criteria" | "settings" | "review";
 
-const DEMO_TASK_ID = "62a26154-2d3e-408d-8737-2dbe5255eac6";
+const DEMO_TASK_ID = "demo";
 
 export function useVideoAnalysis() {
   const [stage, setStage] = useState<Stage>("landing");

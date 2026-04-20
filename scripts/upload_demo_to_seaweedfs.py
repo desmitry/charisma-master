@@ -2,6 +2,7 @@
 # ruff: noqa: T201
 """
 Скрипт для загрузки демо-видео и результата анализа в SeaweedFS.
+Загружает файлы под именами demo.mp4 и demo.json.
 """
 
 import argparse
@@ -13,20 +14,12 @@ from minio import Minio
 BUCKET_UPLOADS = "uploads"
 BUCKET_RESULTS = "results"
 
-DEFAULT_TASK_ID = "62a26154-2d3e-408d-8737-2dbe5255eac6"
+DEMO_VIDEO_OBJECT = "demo.mp4"
+DEMO_RESULT_OBJECT = "demo.json"
+
 DEFAULT_SEAWEEDFS_ENDPOINT = "localhost:8333"
 DEFAULT_ACCESS_KEY = ""
 DEFAULT_SECRET_KEY = ""
-
-PROJECT_ROOT = Path(__file__).parent.parent
-DEFAULT_VIDEO_PATH = PROJECT_ROOT / f"{DEFAULT_TASK_ID}.mp4"
-DEFAULT_RESULT_PATH = (
-    PROJECT_ROOT
-    / "services"
-    / "frontend"
-    / "public"
-    / f"{DEFAULT_TASK_ID}.json"
-)
 
 
 def get_client(
@@ -59,25 +52,20 @@ def upload_file_to_seaweedfs(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Загрузка демо-видео и результата анализа в SeaweedFS"
+        description="Загрузка демо-видео и результата анализа в SeaweedFS под именами demo.mp4 и demo.json"
     )
     parser.add_argument(
-        "--video",
-        default=str(DEFAULT_VIDEO_PATH),
-        help="Путь к видео файлу (MP4)",
+        "video",
+        help="Путь к демо видео файлу (MP4)",
     )
     parser.add_argument(
-        "--result",
-        default=str(DEFAULT_RESULT_PATH),
-        help="Путь к JSON файлу с результатом анализа",
-    )
-    parser.add_argument(
-        "--task-id", default=DEFAULT_TASK_ID, help="Task ID для демо"
+        "result",
+        help="Путь к демо JSON файлу с результатом анализа",
     )
     parser.add_argument(
         "--endpoint",
         default=DEFAULT_SEAWEEDFS_ENDPOINT,
-        help="SeaweedFS S3 endpoint",
+        help="SeaweedFS S3 endpoint (default: localhost:8333)",
     )
     parser.add_argument(
         "--access-key", default=DEFAULT_ACCESS_KEY, help="SeaweedFS Access Key"
@@ -99,14 +87,16 @@ def main():
         sys.exit(1)
 
     if not result_path.exists():
-        print(f"JSON file not found: {result_path}")
+        print(f"Result file not found: {result_path}")
         sys.exit(1)
+
+    if video_path.suffix.lower() != ".mp4":
+        print(f"Warning: Expected .mp4 file, got {video_path.suffix}")
 
     print("Uploading demo data to SeaweedFS...")
     print(f"  Endpoint: {args.endpoint}")
-    print(f"  Task ID: {args.task_id}")
-    print(f"  Video: {video_path.name}")
-    print(f"  Result: {result_path.name}")
+    print(f"  Video: {video_path} -> {DEMO_VIDEO_OBJECT}")
+    print(f"  Result: {result_path} -> {DEMO_RESULT_OBJECT}")
 
     client = get_client(
         args.endpoint, args.access_key, args.secret_key, args.secure
@@ -115,27 +105,25 @@ def main():
     ensure_bucket_exists(client, BUCKET_UPLOADS)
     ensure_bucket_exists(client, BUCKET_RESULTS)
 
-    video_object_name = f"{args.task_id}.mp4"
-    print(f"Uploading video: {video_object_name}")
+    print(f"Uploading video: {DEMO_VIDEO_OBJECT}")
     upload_file_to_seaweedfs(
         client,
         BUCKET_UPLOADS,
-        video_object_name,
+        DEMO_VIDEO_OBJECT,
         str(video_path),
         content_type="video/mp4",
     )
 
-    result_object_name = f"{args.task_id}.json"
-    print(f"Uploading result: {result_object_name}")
+    print(f"Uploading result: {DEMO_RESULT_OBJECT}")
     upload_file_to_seaweedfs(
         client,
         BUCKET_RESULTS,
-        result_object_name,
+        DEMO_RESULT_OBJECT,
         str(result_path),
         content_type="application/json",
     )
 
-    print("Done.")
+    print("Done. Demo files uploaded as demo.mp4 and demo.json")
 
 
 if __name__ == "__main__":
