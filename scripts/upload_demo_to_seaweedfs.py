@@ -52,7 +52,8 @@ def upload_file_to_seaweedfs(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Загрузка демо-видео и результата анализа в SeaweedFS под именами demo.mp4 и demo.json"
+        description="Загрузка демо-видео и результата анализа в SeaweedFS под"
+        "именами demo.mp4 и demo.json"
     )
     parser.add_argument(
         "video",
