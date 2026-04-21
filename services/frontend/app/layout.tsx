@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
 import "./globals.css";
-import SurveyButton from "@/components/shared/survey-button";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -41,7 +40,6 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         {children}
-        <SurveyButton />
       </body>
     </html>
   );
