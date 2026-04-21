@@ -1,0 +1,48 @@
+---
+name: Сообщить об ошибке
+about: Что-то сломалось? Расскажите нам!
+labels: bug
+title: "[Bug] "
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Описание проблемы
+      description: Что сломалось?
+      placeholder: Кратко опишите проблему
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Шаги для воспроизведения
+      description: Как воспроизвести проблему?
+      value: |
+        1.
+        2.
+        3.
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемое поведение
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Фактическое поведение
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Версия приложения
+      placeholder: v1.0.0
+  - type: textarea
+    id: logs
+    attributes:
+      label: Скриншоты / логи
+      placeholder: Прикрепите скриншоты или логи
