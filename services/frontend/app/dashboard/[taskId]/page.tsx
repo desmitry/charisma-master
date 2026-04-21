@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { getAnalysis } from "@/lib/api";
 import { AnalysisResult } from "@/types/analysis";
 import { AnalysisDashboard } from "@/components/analysis/analysis-dashboard";
+import SurveyButton from "@/components/shared/survey-button";
 
 export default function DashboardPage() {
   const { taskId } = useParams<{ taskId: string }>();
@@ -57,5 +58,10 @@ export default function DashboardPage() {
     );
   }
 
-  return <AnalysisDashboard result={analysis} />;
+  return (
+    <>
+      <AnalysisDashboard result={analysis} />
+      <SurveyButton />
+    </>
+  );
 }
