@@ -15,6 +15,10 @@ import { UploadHub } from "@/components/upload/upload-hub";
 import { useVideoAnalysis } from "@/hooks/use-video-analysis";
 import GradualBlur from "@/components/GradualBlur";
 
+const AURORA_DESKTOP_COLORS = ["#ffffff", "#000000", "#ffffff"];
+const AURORA_MOBILE_COLORS = ["#ffffff", "#000000", "#ffffff"];
+const COLORBENDS_COLORS = ["#ffffff", "#000000"];
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -47,7 +51,7 @@ export default function Home() {
           {!isMobile && (
             <div className="pointer-events-none fixed inset-0 -z-20 w-full h-full bg-black overflow-hidden opacity-40">
               <Aurora
-                colorStops={["#ffffff", "#000000", "#ffffff"]}
+                colorStops={AURORA_DESKTOP_COLORS}
                 blend={1.0}
                 amplitude={1.0}
                 speed={1.0}
@@ -72,7 +76,7 @@ export default function Home() {
             <ColorBends
               rotation={0}
               speed={0.2}
-              colors={["#ffffff", "#000000"]}
+              colors={COLORBENDS_COLORS}
               transparent
               autoRotate={0.45}
               scale={1.1}
@@ -88,8 +92,12 @@ export default function Home() {
 
       {showLanding && (
         <>
-        <GradualBlur target="page" position="top" height="7rem" strength={1.5} divCount={3} curve="bezier" exponential opacity={1} />
-        <GradualBlur target="page" position="bottom" height="7rem" strength={1.5} divCount={3} curve="bezier" exponential opacity={1} />
+        {!isMobile && (
+          <>
+            <GradualBlur target="page" position="top" height="7rem" strength={1.5} divCount={2} curve="bezier" exponential opacity={1} />
+            <GradualBlur target="page" position="bottom" height="7rem" strength={1.5} divCount={2} curve="bezier" exponential opacity={1} />
+          </>
+        )}
         
         
         <div
@@ -112,7 +120,7 @@ export default function Home() {
                   }}
                 >
                   <Aurora
-                    colorStops={["#ffffff", "#000000", "#ffffff"]}
+                    colorStops={AURORA_MOBILE_COLORS}
                     blend={0.8}
                     amplitude={1.5}
                     speed={1.0}
@@ -130,7 +138,7 @@ export default function Home() {
                   }}
                 >
                   <Aurora
-                    colorStops={["#ffffff", "#000000", "#ffffff"]}
+                    colorStops={AURORA_MOBILE_COLORS}
                     blend={0.8}
                     amplitude={1.5}
                     speed={0.8}
@@ -141,9 +149,13 @@ export default function Home() {
           )}
 
           <Hero />
-          <FeaturesSection onStartDemo={actions.startMockFlow} />
+          <div className="cv-auto">
+            <FeaturesSection onStartDemo={actions.startMockFlow} />
+          </div>
 
-          <UploadHub videoAnalysis={videoAnalysis} />
+          <div className="cv-auto">
+            <UploadHub videoAnalysis={videoAnalysis} />
+          </div>
         </div>
         </>
       )}
