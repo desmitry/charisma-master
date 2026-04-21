@@ -13,6 +13,11 @@ const isTouchDevice = () => {
   );
 };
 
+const prefersReducedMotion = () => {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+};
+
 export function SmoothScroll() {
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -22,7 +27,7 @@ export function SmoothScroll() {
     const originalOverflow = document.body.style.overflow;
     const originalTouchAction = document.body.style.touchAction;
 
-    if (isTouchDevice()) {
+    if (isTouchDevice() || prefersReducedMotion()) {
       document.body.style.overflow = "auto";
       document.body.style.touchAction = "auto";
       return () => {
@@ -39,16 +44,35 @@ export function SmoothScroll() {
       smoothWheel: true,
     });
 
-    let rafId: number;
+    let rafId: number | null = null;
     const raf = (time: number) => {
       lenis.raf(time);
       rafId = requestAnimationFrame(raf);
     };
 
-    rafId = requestAnimationFrame(raf);
+    const start = () => {
+      if (rafId === null) {
+        rafId = requestAnimationFrame(raf);
+      }
+    };
+    const stop = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") stop();
+      else start();
+    };
+
+    start();
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
-      cancelAnimationFrame(rafId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      stop();
       lenis.destroy();
       document.body.style.overflow = originalOverflow;
       document.body.style.touchAction = originalTouchAction;
@@ -57,4 +81,3 @@ export function SmoothScroll() {
 
   return null;
 }
-

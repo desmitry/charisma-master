@@ -337,3 +337,17 @@ html, body {
   }
 }
 
+/* Skip layout/paint of off-screen sections */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 800px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eco-bg::before,
+  .eco-bg::after,
+  .cta-btn-glow {
+    animation: none !important;
+  }
+}
+
