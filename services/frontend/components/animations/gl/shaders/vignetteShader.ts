@@ -1,17 +1,17 @@
 export const VignetteShader = {
-  uniforms: {
-    tDiffuse: { value: null },
-    darkness: { value: 1.0 },
-    offset: { value: 1.0 },
-  },
-  vertexShader: /* glsl */`
+	uniforms: {
+		tDiffuse: { value: null },
+		darkness: { value: 1.0 },
+		offset: { value: 1.0 },
+	},
+	vertexShader: /* glsl */ `
     varying vec2 vUv;
     void main() {
       vUv = uv;
       gl_Position = vec4(position, 1.0);
     }
   `,
-  fragmentShader: /* glsl */`
+	fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
     uniform float darkness;
     uniform float offset;
@@ -27,5 +27,5 @@ export const VignetteShader = {
       
       gl_FragColor = vec4(texel.rgb * vignette, texel.a);
     }
-  `
+  `,
 };

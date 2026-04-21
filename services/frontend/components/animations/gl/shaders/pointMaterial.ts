@@ -1,11 +1,11 @@
-import * as THREE from 'three'
-import { periodicNoiseGLSL } from '@/components/animations/gl/shaders/utils'
+import * as THREE from "three";
+import { periodicNoiseGLSL } from "@/components/animations/gl/shaders/utils";
 
 export class DofPointsMaterial extends THREE.ShaderMaterial {
-  constructor(maxWaves: number = 4) {
-    const waveCount = Math.max(1, Math.min(8, Math.floor(maxWaves)));
-    super({
-      vertexShader: /* glsl */ `
+	constructor(maxWaves: number = 4) {
+		const waveCount = Math.max(1, Math.min(8, Math.floor(maxWaves)));
+		super({
+			vertexShader: /* glsl */ `
       uniform sampler2D positions;
       uniform sampler2D initialPositions;
       uniform float uTime;
@@ -39,7 +39,7 @@ export class DofPointsMaterial extends THREE.ShaderMaterial {
         
         gl_PointSize = max(vDistance * uBlur * uPointSize * sizeBoost, 3.0);
       }`,
-      fragmentShader: /* glsl */ `#define MAX_WAVES ${waveCount}
+			fragmentShader: /* glsl */ `#define MAX_WAVES ${waveCount}
       uniform float uOpacity;
       uniform float uRevealFactor;
       uniform float uRevealProgress;
@@ -162,32 +162,35 @@ export class DofPointsMaterial extends THREE.ShaderMaterial {
 
         gl_FragColor = vec4(color, mix(alpha, sparkleBrightness - 1.1, uTransition));
       }`,
-      uniforms: {
-        positions: { value: null },
-        initialPositions: { value: null },
-        uTime: { value: 0 },
-        uFocus: { value: 5.1 },
-        uFov: { value: 50 },
-        uBlur: { value: 30 },
-        uTransition: { value: 0.0 },
-        uPointSize: { value: 2.0 },
-        uOpacity: { value: 1.0 },
-        uRevealFactor: { value: 0.0 },
-        uRevealProgress: { value: 0.0 },
-        uMousePosition: { value: new THREE.Vector2(0, 0) },
-        uMouseActive: { value: 0.0 },
-        uClickIntensity: { value: 0.0 },
-        uPlaneScale: { value: 10.0 },
-        uScrollAmount: { value: 0 },
-        uWaveOrigins: {
-          value: Array.from({ length: waveCount }, () => new THREE.Vector2(0, 0)),
-        },
-        uWaveProgress: { value: Array.from({ length: waveCount }, () => 1.0) },
-        uWaveActive: { value: Array.from({ length: waveCount }, () => 0.0) },
-        uWaveIntensity: { value: Array.from({ length: waveCount }, () => 0.0) }
-      },
-      transparent: true,
-      depthWrite: false
-    })
-  }
+			uniforms: {
+				positions: { value: null },
+				initialPositions: { value: null },
+				uTime: { value: 0 },
+				uFocus: { value: 5.1 },
+				uFov: { value: 50 },
+				uBlur: { value: 30 },
+				uTransition: { value: 0.0 },
+				uPointSize: { value: 2.0 },
+				uOpacity: { value: 1.0 },
+				uRevealFactor: { value: 0.0 },
+				uRevealProgress: { value: 0.0 },
+				uMousePosition: { value: new THREE.Vector2(0, 0) },
+				uMouseActive: { value: 0.0 },
+				uClickIntensity: { value: 0.0 },
+				uPlaneScale: { value: 10.0 },
+				uScrollAmount: { value: 0 },
+				uWaveOrigins: {
+					value: Array.from(
+						{ length: waveCount },
+						() => new THREE.Vector2(0, 0),
+					),
+				},
+				uWaveProgress: { value: Array.from({ length: waveCount }, () => 1.0) },
+				uWaveActive: { value: Array.from({ length: waveCount }, () => 0.0) },
+				uWaveIntensity: { value: Array.from({ length: waveCount }, () => 0.0) },
+			},
+			transparent: true,
+			depthWrite: false,
+		});
+	}
 }

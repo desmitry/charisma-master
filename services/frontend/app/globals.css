@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #000000;
-  --foreground: #ffffff;
-  --primary: #FFC700;
-  --primary-foreground: #ffffff;
-  --border: #424242;
+	--background: #000000;
+	--foreground: #ffffff;
+	--primary: #ffc700;
+	--primary-foreground: #ffffff;
+	--border: #424242;
 }
 
 @utility container {
@@ -34,320 +34,394 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  overflow: hidden;
-  touch-action: auto;
+	background: var(--background);
+	color: var(--foreground);
+	font-family: Arial, Helvetica, sans-serif;
+	overflow: hidden;
+	touch-action: auto;
 }
 
 html {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
 }
 
 html::-webkit-scrollbar {
-  display: none;
+	display: none;
 }
 
-html.lenis, html.lenis body {
-  height: auto;
+html.lenis,
+html.lenis body {
+	height: auto;
 }
 
 .lenis.lenis-smooth {
-  scroll-behavior: auto !important;
+	scroll-behavior: auto !important;
 }
 
 .lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
+	overscroll-behavior: contain;
 }
 
 /* Видео плеер всегда должен принимать touch события */
 video {
-  touch-action: auto;
+	touch-action: auto;
 }
 
 .lenis.lenis-stopped {
-  overflow: hidden;
+	overflow: hidden;
 }
 
 .lenis.lenis-scrolling iframe {
-  pointer-events: none;
+	pointer-events: none;
 }
 
 .snap-section {
-  min-height: 100svh;
+	min-height: 100svh;
 }
 
 @keyframes dashReveal {
-  from {
-    stroke-dashoffset: 600;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
+	from {
+		stroke-dashoffset: 600;
+	}
+	to {
+		stroke-dashoffset: 0;
+	}
 }
 
 .dash-animate {
-  animation: dashReveal 1.2s ease-out forwards;
+	animation: dashReveal 1.2s ease-out forwards;
 }
 
 #webgl {
-  top: 0;
-  left: 0;
-  position: fixed;
-  height: 100svh;
-  width: 100%;
-  pointer-events: none;
+	top: 0;
+	left: 0;
+	position: fixed;
+	height: 100svh;
+	width: 100%;
+	pointer-events: none;
 }
 
 #webgl canvas {
-  width: 100%;
-  height: 100%;
+	width: 100%;
+	height: 100%;
 }
 
 @media (width <= 768px) {
-  body {
-    overflow-y: auto;
-    overflow-x: hidden;
-    touch-action: pan-y;
-  }
+	body {
+		overflow-y: auto;
+		overflow-x: hidden;
+		touch-action: pan-y;
+	}
 
-  #webgl {
-    height: 100svh;
-  }
+	#webgl {
+		height: 100svh;
+	}
 }
 
 /* Prevent horizontal overflow globally */
-html, body {
-  max-width: 100vw;
-  overflow-x: hidden !important;
+html,
+body {
+	max-width: 100vw;
+	overflow-x: hidden !important;
 }
 
 /* Word breaking for transcript */
 .transcript-word {
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  hyphens: auto;
+	word-break: break-word;
+	overflow-wrap: anywhere;
+	hyphens: auto;
 }
 
 /* Force transcript text to wrap on all devices */
 @media (max-width: 768px) {
-  .scroll-elegant,
-  .scroll-elegant * {
-    max-width: 100% !important;
-    overflow-wrap: break-word !important;
-    word-wrap: break-word !important;
-    word-break: break-word !important;
-  }
-  
-  /* Ensure grid items don't overflow */
-  [class*="grid"] > * {
-    min-width: 0 !important;
-    max-width: 100% !important;
-  }
-  
-  /* Force all main content to stay within viewport */
-  main,
-  main > *,
-  main > * > *,
-  main > * > * > * {
-    max-width: 100% !important;
-    overflow-x: hidden !important;
-    box-sizing: border-box !important;
-  }
-  
-  /* Specific fix for transcript text containers */
-  [data-lenis-prevent] {
-    max-width: 100% !important;
-    overflow-x: hidden !important;
-  }
-  
-  [data-lenis-prevent] > div {
-    max-width: 100% !important;
-    overflow: hidden !important;
-  }
-  
-  [data-lenis-prevent] > div > div {
-    max-width: 100% !important;
-    overflow-wrap: break-word !important;
-    word-break: break-word !important;
-    white-space: normal !important;
-  }
-  
-  /* Force spans to wrap */
-  [data-lenis-prevent] span {
-    display: inline !important;
-    white-space: normal !important;
-    word-break: break-word !important;
-  }
+	.scroll-elegant,
+	.scroll-elegant * {
+		max-width: 100% !important;
+		overflow-wrap: break-word !important;
+		word-wrap: break-word !important;
+		word-break: break-word !important;
+	}
+
+	/* Ensure grid items don't overflow */
+	[class*="grid"] > * {
+		min-width: 0 !important;
+		max-width: 100% !important;
+	}
+
+	/* Force all main content to stay within viewport */
+	main,
+	main > *,
+	main > * > *,
+	main > * > * > * {
+		max-width: 100% !important;
+		overflow-x: hidden !important;
+		box-sizing: border-box !important;
+	}
+
+	/* Specific fix for transcript text containers */
+	[data-lenis-prevent] {
+		max-width: 100% !important;
+		overflow-x: hidden !important;
+	}
+
+	[data-lenis-prevent] > div {
+		max-width: 100% !important;
+		overflow: hidden !important;
+	}
+
+	[data-lenis-prevent] > div > div {
+		max-width: 100% !important;
+		overflow-wrap: break-word !important;
+		word-break: break-word !important;
+		white-space: normal !important;
+	}
+
+	/* Force spans to wrap */
+	[data-lenis-prevent] span {
+		display: inline !important;
+		white-space: normal !important;
+		word-break: break-word !important;
+	}
 }
 
 .eco-bg {
-  background: linear-gradient(135deg, #000 0%, #0a0a0a 50%, #050505 100%);
-  position: relative;
-  overflow: hidden;
+	background: linear-gradient(135deg, #000 0%, #0a0a0a 50%, #050505 100%);
+	position: relative;
+	overflow: hidden;
 }
 
 .eco-bg::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: 
-    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(255,255,255,0.03) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(255,255,255,0.02) 0%, transparent 50%);
-  animation: eco-glow 8s ease-in-out infinite alternate;
+	content: "";
+	position: absolute;
+	inset: 0;
+	background:
+		radial-gradient(
+			ellipse 80% 50% at 20% 40%,
+			rgba(255, 255, 255, 0.03) 0%,
+			transparent 50%
+		),
+		radial-gradient(
+			ellipse 60% 40% at 80% 60%,
+			rgba(255, 255, 255, 0.02) 0%,
+			transparent 50%
+		);
+	animation: eco-glow 8s ease-in-out infinite alternate;
 }
 
 .eco-bg::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: 
-    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.15) 0%, transparent 100%),
-    radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,0.12) 0%, transparent 100%),
-    radial-gradient(1px 1px at 50% 30%, rgba(255,255,255,0.1) 0%, transparent 100%),
-    radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.08) 0%, transparent 100%),
-    radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.12) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 15% 85%, rgba(255,255,255,0.1) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 45% 15%, rgba(255,255,255,0.08) 0%, transparent 100%),
-    radial-gradient(1px 1px at 75% 55%, rgba(255,255,255,0.12) 0%, transparent 100%),
-    radial-gradient(1px 1px at 25% 45%, rgba(255,255,255,0.1) 0%, transparent 100%),
-    radial-gradient(1px 1px at 85% 25%, rgba(255,255,255,0.08) 0%, transparent 100%),
-    radial-gradient(1px 1px at 5% 65%, rgba(255,255,255,0.1) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 65% 5%, rgba(255,255,255,0.12) 0%, transparent 100%),
-    radial-gradient(1px 1px at 35% 95%, rgba(255,255,255,0.08) 0%, transparent 100%),
-    radial-gradient(1px 1px at 95% 75%, rgba(255,255,255,0.1) 0%, transparent 100%),
-    radial-gradient(1px 1px at 55% 45%, rgba(255,255,255,0.06) 0%, transparent 100%);
-  animation: eco-stars 12s linear infinite;
+	content: "";
+	position: absolute;
+	inset: 0;
+	background-image:
+		radial-gradient(
+			1px 1px at 10% 20%,
+			rgba(255, 255, 255, 0.15) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1px 1px at 30% 70%,
+			rgba(255, 255, 255, 0.12) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1px 1px at 50% 30%,
+			rgba(255, 255, 255, 0.1) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1px 1px at 70% 80%,
+			rgba(255, 255, 255, 0.08) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1px 1px at 90% 40%,
+			rgba(255, 255, 255, 0.12) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1.5px 1.5px at 15% 85%,
+			rgba(255, 255, 255, 0.1) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1.5px 1.5px at 45% 15%,
+			rgba(255, 255, 255, 0.08) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1px 1px at 75% 55%,
+			rgba(255, 255, 255, 0.12) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1px 1px at 25% 45%,
+			rgba(255, 255, 255, 0.1) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1px 1px at 85% 25%,
+			rgba(255, 255, 255, 0.08) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1px 1px at 5% 65%,
+			rgba(255, 255, 255, 0.1) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1.5px 1.5px at 65% 5%,
+			rgba(255, 255, 255, 0.12) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1px 1px at 35% 95%,
+			rgba(255, 255, 255, 0.08) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1px 1px at 95% 75%,
+			rgba(255, 255, 255, 0.1) 0%,
+			transparent 100%
+		),
+		radial-gradient(
+			1px 1px at 55% 45%,
+			rgba(255, 255, 255, 0.06) 0%,
+			transparent 100%
+		);
+	animation: eco-stars 12s linear infinite;
 }
 
 @keyframes eco-glow {
-  0% {
-    opacity: 0.6;
-    transform: scale(1) translateY(0);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1.05) translateY(-2%);
-  }
+	0% {
+		opacity: 0.6;
+		transform: scale(1) translateY(0);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1.05) translateY(-2%);
+	}
 }
 
 @keyframes eco-stars {
-  0% {
-    transform: translateY(0) rotate(0deg);
-    opacity: 0.8;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-5px) rotate(0.5deg);
-    opacity: 0.8;
-  }
+	0% {
+		transform: translateY(0) rotate(0deg);
+		opacity: 0.8;
+	}
+	50% {
+		opacity: 1;
+	}
+	100% {
+		transform: translateY(-5px) rotate(0.5deg);
+		opacity: 0.8;
+	}
 }
 
 /* CTA Button Shimmer Animation */
 @keyframes cta-shimmer {
-  0% {
-    transform: translateX(-100%) skewX(-15deg);
-  }
-  100% {
-    transform: translateX(200%) skewX(-15deg);
-  }
+	0% {
+		transform: translateX(-100%) skewX(-15deg);
+	}
+	100% {
+		transform: translateX(200%) skewX(-15deg);
+	}
 }
 
 .cta-btn-shimmer {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: 9999px;
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	border-radius: 9999px;
 }
 
 .cta-btn-shimmer::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.08) 40%,
-    rgba(255, 255, 255, 0.15) 50%,
-    rgba(255, 255, 255, 0.08) 60%,
-    transparent 100%
-  );
-  transform: translateX(-100%) skewX(-15deg);
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 50%;
+	height: 100%;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgba(255, 255, 255, 0.08) 40%,
+		rgba(255, 255, 255, 0.15) 50%,
+		rgba(255, 255, 255, 0.08) 60%,
+		transparent 100%
+	);
+	transform: translateX(-100%) skewX(-15deg);
 }
 
 .group:hover .cta-btn-shimmer::before {
-  animation: cta-shimmer 0.8s ease-in-out forwards;
+	animation: cta-shimmer 0.8s ease-in-out forwards;
 }
 
 /* CTA Button Glow Pulse */
 @keyframes cta-glow-pulse {
-  0%, 100% {
-    box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.4),
-      0 2px 8px rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-  50% {
-    box-shadow: 
-      0 12px 40px rgba(0, 0, 0, 0.35),
-      0 4px 12px rgba(0, 0, 0, 0.25),
-      0 0 30px rgba(255, 255, 255, 0.05),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  }
+	0%,
+	100% {
+		box-shadow:
+			0 8px 32px rgba(0, 0, 0, 0.4),
+			0 2px 8px rgba(0, 0, 0, 0.3),
+			inset 0 1px 0 rgba(255, 255, 255, 0.1);
+	}
+	50% {
+		box-shadow:
+			0 12px 40px rgba(0, 0, 0, 0.35),
+			0 4px 12px rgba(0, 0, 0, 0.25),
+			0 0 30px rgba(255, 255, 255, 0.05),
+			inset 0 1px 0 rgba(255, 255, 255, 0.15);
+	}
 }
 
 .cta-btn-glow {
-  animation: cta-glow-pulse 3s ease-in-out infinite;
+	animation: cta-glow-pulse 3s ease-in-out infinite;
 }
 
 .cta-btn-glow:hover {
-  animation: none;
-  box-shadow: 
-    0 12px 48px rgba(0, 0, 0, 0.35),
-    0 4px 16px rgba(0, 0, 0, 0.25),
-    0 0 40px rgba(255, 255, 255, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+	animation: none;
+	box-shadow:
+		0 12px 48px rgba(0, 0, 0, 0.35),
+		0 4px 16px rgba(0, 0, 0, 0.25),
+		0 0 40px rgba(255, 255, 255, 0.08),
+		inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
 /* Demo Button Shimmer */
 @keyframes demo-shimmer {
-  0% { left: -60%; }
-  100% { left: 140%; }
+	0% {
+		left: -60%;
+	}
+	100% {
+		left: 140%;
+	}
 }
 
 .demo-btn:hover .shimmer-line {
-  animation: demo-shimmer 0.65s ease forwards;
+	animation: demo-shimmer 0.65s ease forwards;
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 /* Skip layout/paint of off-screen sections */
 .cv-auto {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 800px;
+	content-visibility: auto;
+	contain-intrinsic-size: auto 800px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .eco-bg::before,
-  .eco-bg::after,
-  .cta-btn-glow {
-    animation: none !important;
-  }
+	.eco-bg::before,
+	.eco-bg::after,
+	.cta-btn-glow {
+		animation: none !important;
+	}
 }
-

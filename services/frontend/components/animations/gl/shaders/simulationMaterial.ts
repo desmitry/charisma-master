@@ -1,38 +1,49 @@
-import * as THREE from 'three'
-import { periodicNoiseGLSL } from '@/components/animations/gl/shaders/utils'
+import * as THREE from "three";
+import { periodicNoiseGLSL } from "@/components/animations/gl/shaders/utils";
 
-function getPlane(count: number, components: number, size: number = 512, scale: number = 1.0) {
-  const length = count * components
-  const data = new Float32Array(length)
-  
-  for (let i = 0; i < count; i++) {
-    const i4 = i * components
-    
-    const x = (i % size) / (size - 1)
-    const z = Math.floor(i / size) / (size - 1)
-    
-    data[i4 + 0] = (x - 0.5) * 2 * scale
-    data[i4 + 1] = 0
-    data[i4 + 2] = (z - 0.5) * 2 * scale
-    data[i4 + 3] = 1.0
-  }
-  
-  return data
+function getPlane(
+	count: number,
+	components: number,
+	size: number = 512,
+	scale: number = 1.0,
+) {
+	const length = count * components;
+	const data = new Float32Array(length);
+
+	for (let i = 0; i < count; i++) {
+		const i4 = i * components;
+
+		const x = (i % size) / (size - 1);
+		const z = Math.floor(i / size) / (size - 1);
+
+		data[i4 + 0] = (x - 0.5) * 2 * scale;
+		data[i4 + 1] = 0;
+		data[i4 + 2] = (z - 0.5) * 2 * scale;
+		data[i4 + 3] = 1.0;
+	}
+
+	return data;
 }
 
 export class SimulationMaterial extends THREE.ShaderMaterial {
-  constructor(scale: number = 10.0, maxWaves: number = 4) {
-    const waveCount = Math.max(1, Math.min(8, Math.floor(maxWaves)));
-    const positionsTexture = new THREE.DataTexture(getPlane(512 * 512, 4, 512, scale), 512, 512, THREE.RGBAFormat, THREE.FloatType)
-    positionsTexture.needsUpdate = true
+	constructor(scale: number = 10.0, maxWaves: number = 4) {
+		const waveCount = Math.max(1, Math.min(8, Math.floor(maxWaves)));
+		const positionsTexture = new THREE.DataTexture(
+			getPlane(512 * 512, 4, 512, scale),
+			512,
+			512,
+			THREE.RGBAFormat,
+			THREE.FloatType,
+		);
+		positionsTexture.needsUpdate = true;
 
-    super({
-      vertexShader: /* glsl */`varying vec2 vUv;
+		super({
+			vertexShader: /* glsl */ `varying vec2 vUv;
       void main() {
         vUv = uv;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }`,
-      fragmentShader: /* glsl */`#define MAX_WAVES ${waveCount}
+			fragmentShader: /* glsl */ `#define MAX_WAVES ${waveCount}
       uniform sampler2D positions;
       uniform float uTime;
       uniform float uNoiseScale;
@@ -107,25 +118,28 @@ export class SimulationMaterial extends THREE.ShaderMaterial {
         
         gl_FragColor = vec4(finalPos, 1.0);
       }`,
-      uniforms: {
-        positions: { value: positionsTexture },
-        uTime: { value: 0 },
-        uNoiseScale: { value: 1.0 },
-        uNoiseIntensity: { value: 0.5 },
-        uTimeScale: { value: 1 },
-        uLoopPeriod: { value: 24.0 },
-        uMousePosition: { value: new THREE.Vector2(0, 0) },
-        uMouseActive: { value: 0.0 },
-        uClickIntensity: { value: 0.0 },
-        uPlaneScale: { value: scale },
-        uScrollAmount: { value: 0 },
-        uWaveOrigins: {
-          value: Array.from({ length: waveCount }, () => new THREE.Vector2(0, 0)),
-        },
-        uWaveProgress: { value: Array.from({ length: waveCount }, () => 1.0) },
-        uWaveActive: { value: Array.from({ length: waveCount }, () => 0.0) },
-        uWaveIntensity: { value: Array.from({ length: waveCount }, () => 0.0) }
-      }
-    })
-  }
+			uniforms: {
+				positions: { value: positionsTexture },
+				uTime: { value: 0 },
+				uNoiseScale: { value: 1.0 },
+				uNoiseIntensity: { value: 0.5 },
+				uTimeScale: { value: 1 },
+				uLoopPeriod: { value: 24.0 },
+				uMousePosition: { value: new THREE.Vector2(0, 0) },
+				uMouseActive: { value: 0.0 },
+				uClickIntensity: { value: 0.0 },
+				uPlaneScale: { value: scale },
+				uScrollAmount: { value: 0 },
+				uWaveOrigins: {
+					value: Array.from(
+						{ length: waveCount },
+						() => new THREE.Vector2(0, 0),
+					),
+				},
+				uWaveProgress: { value: Array.from({ length: waveCount }, () => 1.0) },
+				uWaveActive: { value: Array.from({ length: waveCount }, () => 0.0) },
+				uWaveIntensity: { value: Array.from({ length: waveCount }, () => 0.0) },
+			},
+		});
+	}
 }

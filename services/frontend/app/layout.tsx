@@ -4,45 +4,56 @@ import "./globals.css";
 import SurveyButton from "@/components/shared/survey-button";
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+	variable: "--font-geist-mono",
+	subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Charisma Master - AI-анализ выступлений",
-  description: "Улучшай свою речь с помощью AI-анализа. Транскрипция речи, выявление слов-паразитов, анализ темпа речи, метрики уверенности и жестикуляции. Персонализированные рекомендации для улучшения выступлений.",
-  keywords: ["анализ выступлений", "AI-анализ речи", "транскрипция", "слова-паразиты", "метрики уверенности", "анализ жестикуляции", "улучшение речи"],
-  openGraph: {
-    title: "Charisma Master - AI-анализ выступлений",
-    description: "Улучшай свою речь с помощью AI-анализа. Транскрипция речи, выявление слов-паразитов, анализ темпа речи, метрики уверенности и жестикуляции.",
-    type: "website",
-    locale: "ru_RU",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Charisma Master - AI-анализ выступлений",
-    description: "Улучшай свою речь с помощью AI-анализа. Транскрипция речи, выявление слов-паразитов, анализ темпа речи, метрики уверенности и жестикуляции.",
-  },
-  icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-  },
+	title: "Charisma Master - AI-анализ выступлений",
+	description:
+		"Улучшай свою речь с помощью AI-анализа. Транскрипция речи, выявление слов-паразитов, анализ темпа речи, метрики уверенности и жестикуляции. Персонализированные рекомендации для улучшения выступлений.",
+	keywords: [
+		"анализ выступлений",
+		"AI-анализ речи",
+		"транскрипция",
+		"слова-паразиты",
+		"метрики уверенности",
+		"анализ жестикуляции",
+		"улучшение речи",
+	],
+	openGraph: {
+		title: "Charisma Master - AI-анализ выступлений",
+		description:
+			"Улучшай свою речь с помощью AI-анализа. Транскрипция речи, выявление слов-паразитов, анализ темпа речи, метрики уверенности и жестикуляции.",
+		type: "website",
+		locale: "ru_RU",
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: "Charisma Master - AI-анализ выступлений",
+		description:
+			"Улучшай свою речь с помощью AI-анализа. Транскрипция речи, выявление слов-паразитов, анализ темпа речи, метрики уверенности и жестикуляции.",
+	},
+	icons: {
+		icon: "/favicon.ico",
+		shortcut: "/favicon.ico",
+	},
 };
 
 export default function RootLayout({
-  children,
+	children,
 }: Readonly<{
-  children: React.ReactNode;
+	children: React.ReactNode;
 }>) {
-  return (
-    <html lang="ru">
-      <body
-        className={`${geistMono.variable} antialiased`}
-        suppressHydrationWarning
-      >
-        {children}
-        <SurveyButton />
-      </body>
-    </html>
-  );
+	return (
+		<html lang="ru">
+			<body
+				className={`${geistMono.variable} antialiased`}
+				suppressHydrationWarning
+			>
+				{children}
+				<SurveyButton />
+			</body>
+		</html>
+	);
 }
