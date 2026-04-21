@@ -10,7 +10,7 @@ data:
   REDIS_URL: "redis://redis:6379/0"
   CELERY_BROKER_URL: "redis://redis:6379/0"
   CELERY_RESULT_BACKEND: "redis://redis:6379/0"
-  SEAWEEDFS_ENDPOINT: "http://seaweedfs-s3:8333"
+  SEAWEEDFS_ENDPOINT: "seaweedfs-s3:8333"
   ORIGIN_URL: "https://charisma.example.com"
   GIGACHAT_SCOPE: "GIGACHAT_API_PERS"
   GIGACHAT_MODEL_NAME: "GigaChat"

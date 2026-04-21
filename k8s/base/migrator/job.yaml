@@ -16,7 +16,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: migrator
-          image: charisma-migrator:latest
+          image: ghcr.io/desmitry/charisma-master-migrator:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: DATABASE_URL
