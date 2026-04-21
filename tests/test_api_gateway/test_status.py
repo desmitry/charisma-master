@@ -93,7 +93,7 @@ class TestStatusEndpoint:
         assert body["error"] is None
 
     def test_failure_state_with_error(self, client: TestClient):
-        """FAILURE with a string info copies the string into error."""
+        """FAILURE with a string info returns generic error message."""
         mock_result = _mock_async_result(
             "FAILURE", info="Custom error message"
         )
@@ -107,7 +107,7 @@ class TestStatusEndpoint:
         body = response.json()
         assert body["state"] == "FAILURE"
         assert body["hint"] == "FAILURE"
-        assert "Custom error message" in body["error"]
+        assert body["error"] == "Processing failed. Please try again."
 
     @pytest.mark.parametrize(
         "unknown_state",
@@ -148,7 +148,7 @@ class TestStatusEndpoint:
         assert body["progress"] == 0.0
 
     def test_failure_with_exception_object_in_info(self, client: TestClient):
-        """FAILURE with Exception object in info yields str(exc) in error."""
+        """FAILURE with Exception in info returns generic error message."""
         mock_result = _mock_async_result(
             "FAILURE",
             info=ValueError("Database connection lost"),
@@ -162,8 +162,7 @@ class TestStatusEndpoint:
         assert response.status_code == 200
         body = response.json()
         assert body["state"] == "FAILURE"
-        # str(ValueError("...")) == "Database connection lost"
-        assert "Database connection lost" in body["error"]
+        assert body["error"] == "Processing failed. Please try again."
 
     def test_processing_with_info_string(self, client: TestClient):
         """PROCESSING with info as a string leaves stage/progress unset.
@@ -208,13 +207,7 @@ class TestStatusEndpoint:
         assert body["hint"] == "PROCESSING"
 
     def test_failure_with_no_info(self, client: TestClient):
-        """FAILURE with info=None yields the string 'None' in error.
-
-        # BUG: str(None) == 'None'. Clients get the literal string 'None' in
-        # the error field when the task failed without carrying an exception
-        # in info. Source should treat info=None as an empty error, not
-        # stringify it. This test documents the current behavior.
-        """
+        """FAILURE with info=None returns generic error message."""
         mock_result = _mock_async_result("FAILURE", info=None)
         with patch(
             "app.logic.endpoints.status.AsyncResult",
@@ -225,8 +218,7 @@ class TestStatusEndpoint:
         assert response.status_code == 200
         body = response.json()
         assert body["state"] == "FAILURE"
-        # Current behavior: str(None) == "None"
-        assert body["error"] == "None"
+        assert body["error"] == "Processing failed. Please try again."
 
 
 class TestWaitEndpoint:

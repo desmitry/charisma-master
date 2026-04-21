@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -168,8 +167,11 @@ class TestAnalyzeSpeech:
             )
 
         assert isinstance(result, SpeechReport)
-        # Error flow fills summary with the error message
-        assert "GigaChat" in result.summary
+        # Error flow returns generic error message
+        assert (
+            result.summary
+            == "Analysis could not be completed. Please try again."
+        )
 
     async def test_call_gigachat_api_error_propagates(
         self,
@@ -205,19 +207,14 @@ class TestParseJsonResponse:
         assert result == {"summary": "x"}
 
     def test_invalid_json_raises_json_decode_error(self, llm_client_module):
-        """Invalid JSON raises json.JSONDecodeError, not generic Exception.
-
-        # BUG: Source code does `raise error_msg` which loses the traceback.
-        # This test documents the current behavior; a future fix should use
-        # bare `raise` to preserve the original traceback chain.
-        """
+        """Invalid JSON raises RuntimeError with JSON decode error details."""
         with (
             patch("app.logic.llm_client.openai.AsyncOpenAI"),
             patch("app.logic.llm_client.GigaChat"),
         ):
             client = llm_client_module.LLMClient()
 
-        with pytest.raises(json.JSONDecodeError):
+        with pytest.raises(RuntimeError, match="LLM returned invalid JSON"):
             client._parse_json_response("not json")
 
 
