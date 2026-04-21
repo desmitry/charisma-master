@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   Check,
   ChevronLeft,
@@ -88,13 +89,13 @@ const PERSONAS = [
 
 const ANALYZE_PROVIDERS = [
   { id: "gigachat", label: "GigaChat" },
-  { id: "openai", label: "OpenAI" },
+  { id: "openai", label: "OpenAI", disabled: true },
 ];
 
 const TRANSCRIBE_PROVIDERS = [
   { id: "sber_gigachat", label: "Sber GigaChat" },
   { id: "whisper_local", label: "Whisper локально" },
-  { id: "whisper_openai", label: "Whisper Fast" },
+  { id: "whisper_openai", label: "Whisper Fast", disabled: true },
 ];
 
 const PRESETS = [
@@ -353,6 +354,93 @@ function PrimaryButton({
 /* ═══════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════ */
+
+function ProviderSelect({
+  providers,
+  value,
+  onChange,
+}: {
+  providers: { id: string; label: string; disabled?: boolean }[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [mouse, setMouse] = useState<{ x: number; y: number } | null>(null);
+  const [visible, setVisible] = useState(false);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const TW = tooltipRef.current?.offsetWidth ?? 160;
+    const TH = tooltipRef.current?.offsetHeight ?? 32;
+    const MARGIN = 12;
+    let x = e.clientX + 14;
+    let y = e.clientY - TH / 2;
+    if (x + TW + MARGIN > window.innerWidth) x = e.clientX - TW - 14;
+    if (y < MARGIN) y = MARGIN;
+    if (y + TH + MARGIN > window.innerHeight) y = window.innerHeight - TH - MARGIN;
+    setMouse({ x, y });
+  };
+
+  const tooltip = mounted && typeof document !== "undefined" ? createPortal(
+    <div
+      ref={tooltipRef}
+      className="fixed z-[9999] pointer-events-none whitespace-nowrap rounded-lg bg-[#1e1e22] border border-white/10 text-[11px] text-white/70 px-3 py-1.5 shadow-xl"
+      style={{
+        left: mouse?.x ?? 0,
+        top: mouse?.y ?? 0,
+        opacity: visible && mouse ? 1 : 0,
+        transform: visible && mouse ? "scale(1)" : "scale(0.92)",
+        transition: "opacity 0.15s ease, transform 0.15s ease",
+      }}
+    >
+      Временно недоступно
+    </div>,
+    document.body
+  ) : null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      {providers.map((p) =>
+        p.disabled ? (
+          <div
+            key={p.id}
+            className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-black/10 px-4 py-3 opacity-40 cursor-not-allowed select-none"
+            onMouseEnter={(e) => { handleMouseMove(e); setVisible(true); }}
+            onMouseLeave={() => setVisible(false)}
+            onMouseMove={handleMouseMove}
+          >
+            <span className="text-sm text-white/60">{p.label}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/40">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+        ) : (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onChange(p.id)}
+            className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition text-left ${
+              value === p.id
+                ? "border-white/20 bg-white/[0.08] text-white"
+                : "border-white/[0.06] bg-black/10 text-white/60 hover:border-white/10 hover:text-white/80"
+            }`}
+          >
+            <span>{p.label}</span>
+            {value === p.id && (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/70">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </button>
+        )
+      )}
+      {tooltip}
+    </div>
+  );
+}
 
 export function UploadHub({ videoAnalysis }: UploadHubProps) {
   const { state, actions } = videoAnalysis;
@@ -747,15 +835,11 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
             <Sparkles className="h-4 w-4 text-white/40" />
             Провайдер анализа
           </label>
-          <select
+          <ProviderSelect
+            providers={ANALYZE_PROVIDERS}
             value={state.selectedAnalyzeProvider}
-            onChange={(e) => actions.setSelectedAnalyzeProvider(e.target.value)}
-            className="w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-3 text-sm text-white outline-none transition focus:border-white/20"
-          >
-            {ANALYZE_PROVIDERS.map((p) => (
-              <option key={p.id} value={p.id}>{p.label}</option>
-            ))}
-          </select>
+            onChange={actions.setSelectedAnalyzeProvider}
+          />
         </div>
 
         <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.015] p-5 transition-colors hover:border-white/[0.12]">
@@ -763,18 +847,11 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
             <Wand2 className="h-4 w-4 text-white/40" />
             Транскрибация
           </label>
-          <select
+          <ProviderSelect
+            providers={TRANSCRIBE_PROVIDERS}
             value={state.selectedTranscribeProvider}
-            onChange={(e) => actions.setSelectedTranscribeProvider(e.target.value)}
-            className="w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-3 text-sm text-white outline-none transition focus:border-white/20"
-          >
-            {TRANSCRIBE_PROVIDERS.map((p) => (
-              <option key={p.id} value={p.id}>{p.label}</option>
-            ))}
-          </select>
-          {state.selectedTranscribeProvider === "whisper_openai" && (
-            <p className="mt-2 text-[13px] text-amber-200/70">Быстрых запросов: {state.fastRequestsCount}</p>
-          )}
+            onChange={actions.setSelectedTranscribeProvider}
+          />
         </div>
       </div>
 
