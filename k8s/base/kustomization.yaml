@@ -12,9 +12,6 @@ resources:
   - postgres/service.yaml
   - redis/deployment.yaml
   - redis/service.yaml
-  - seaweedfs/pvc.yaml
-  - seaweedfs/deployment.yaml
-  - seaweedfs/service.yaml
   - migrator/rbac.yaml
   - migrator/job.yaml
   - api-gateway/deployment.yaml
