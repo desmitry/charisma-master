@@ -36,11 +36,6 @@ body:
       label: Фактическое поведение
     validations:
       required: true
-  - type: input
-    id: version
-    attributes:
-      label: Версия приложения
-      placeholder: v1.0.0
   - type: textarea
     id: logs
     attributes:
