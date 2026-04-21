@@ -1,18 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 const SURVEY_URL = "https://forms.yandex.ru/cloud/69e625b590fa7b095e68ddbc";
 
 export default function SurveyButton() {
   const [visible, setVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const t = setTimeout(() => setVisible(true), 800);
     return () => clearTimeout(t);
   }, []);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       className="fixed bottom-0 right-0"
       style={{
@@ -201,6 +206,7 @@ export default function SurveyButton() {
           </a>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
