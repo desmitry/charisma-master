@@ -1,5 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { useShouldAnimate } from '@/hooks/use-visible-when';
+
+const TARGET_FPS = 30;
+const FRAME_INTERVAL = 1 / TARGET_FPS;
 
 type ColorBendsProps = {
   className?: string;
@@ -136,6 +140,9 @@ export default function ColorBends({
   const pointerTargetRef = useRef<THREE.Vector2>(new THREE.Vector2(0, 0));
   const pointerCurrentRef = useRef<THREE.Vector2>(new THREE.Vector2(0, 0));
   const pointerSmoothRef = useRef<number>(8);
+  const shouldAnimate = useShouldAnimate(containerRef);
+  const shouldAnimateRef = useRef(shouldAnimate);
+  shouldAnimateRef.current = shouldAnimate;
 
   useEffect(() => {
     const container = containerRef.current!;
@@ -178,7 +185,7 @@ export default function ColorBends({
     });
     rendererRef.current = renderer;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
     renderer.setClearColor(0x000000, transparent ? 0 : 1);
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
@@ -204,9 +211,18 @@ export default function ColorBends({
       (window as Window).addEventListener('resize', handleResize);
     }
 
+    let frameAccumulator = 0;
     const loop = () => {
+      rafRef.current = requestAnimationFrame(loop);
       timer.update();
       const dt = timer.getDelta();
+
+      if (!shouldAnimateRef.current) return;
+
+      frameAccumulator += dt;
+      if (frameAccumulator < FRAME_INTERVAL) return;
+      frameAccumulator = 0;
+
       const elapsed = timer.getElapsed();
       material.uniforms.uTime.value = elapsed;
 
@@ -222,7 +238,6 @@ export default function ColorBends({
       cur.lerp(tgt, amt);
       (material.uniforms.uPointer.value as THREE.Vector2).copy(cur);
       renderer.render(scene, camera);
-      rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
 
@@ -239,6 +254,9 @@ export default function ColorBends({
       }
     };
   }, []);
+
+  const colorKey = (colors || []).join('|');
+  const stableColors = useMemo(() => colors || [], [colorKey]);
 
   useEffect(() => {
     const material = materialRef.current;
@@ -264,7 +282,7 @@ export default function ColorBends({
       return new THREE.Vector3(v[0] / 255, v[1] / 255, v[2] / 255);
     };
 
-    const arr = (colors || []).filter(Boolean).slice(0, MAX_COLORS).map(toVec3);
+    const arr = stableColors.filter(Boolean).slice(0, MAX_COLORS).map(toVec3);
     for (let i = 0; i < MAX_COLORS; i++) {
       const vec = (material.uniforms.uColors.value as THREE.Vector3[])[i];
       if (i < arr.length) vec.copy(arr[i]);
@@ -284,7 +302,7 @@ export default function ColorBends({
     mouseInfluence,
     parallax,
     noise,
-    colors,
+    stableColors,
     transparent
   ]);
 
@@ -306,5 +324,11 @@ export default function ColorBends({
     };
   }, []);
 
-  return <div ref={containerRef} className={`w-full h-full relative overflow-hidden ${className}`} style={style} />;
+  return (
+    <div
+      ref={containerRef}
+      className={`w-full h-full relative overflow-hidden ${className}`}
+      style={{ ...style, visibility: shouldAnimate ? 'visible' : 'hidden' }}
+    />
+  );
 }
