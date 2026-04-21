@@ -50,11 +50,14 @@ export default function DashboardPage() {
 
   if (error || !analysis) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black text-white">
-        <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-white/70">
-          {error ?? "Анализ не найден"}
+      <>
+        <div className="flex min-h-screen items-center justify-center bg-black text-white">
+          <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-white/70">
+            {error ?? "Анализ не найден"}
+          </div>
         </div>
-      </div>
+        <SurveyButton />
+      </>
     );
   }
 
