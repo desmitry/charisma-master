@@ -1,0 +1,54 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types: [completed]
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_PREFIX: ghcr.io/desmitry/charisma-master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v0.1.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || '22' }}
+          script: |
+            cd charisma-master
+
+            git pull origin main
+
+            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+
+            export API_GATEWAY_IMAGE=${{ env.IMAGE_PREFIX }}-api-gateway:${{ github.event.workflow_run.head_sha }}
+            export ML_WORKER_IMAGE=${{ env.IMAGE_PREFIX }}-ml-worker:${{ github.event.workflow_run.head_sha }}
+            export FRONTEND_IMAGE=${{ env.IMAGE_PREFIX }}-frontend:${{ github.event.workflow_run.head_sha }}
+            export MIGRATOR_IMAGE=${{ env.IMAGE_PREFIX }}-migrator:${{ github.event.workflow_run.head_sha }}
+
+            docker compose pull api-gateway ml-worker frontend migrator
+            docker compose up -d --no-build
+
+            docker compose ps
