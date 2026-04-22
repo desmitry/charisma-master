@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 
 from charisma_storage import (
@@ -8,6 +9,9 @@ from charisma_storage import (
 )
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from starlette.middleware.cors import CORSMiddleware
 
 from app.config import settings
@@ -240,6 +244,16 @@ def _iter_range(response, start: int, length: int):
         yield chunk
     response.close()
     response.release_conn()
+
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri="redis://redis:6379",
+    default_limits=["200/minute"],
+    strategy="fixed-window",  # Simple and efficient
+)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # ty:ignore[invalid-argument-type]
+limiter.limit(f"{os.getenv('UPLOAD_DAILY_LIMIT', 5)}/day")(upload)
 
 
 app.include_router(upload.router, prefix="/api/v1", tags=["Processing"])
