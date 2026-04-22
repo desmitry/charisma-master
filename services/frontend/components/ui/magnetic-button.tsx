@@ -38,7 +38,8 @@ export function MagneticButton({
       onMouseMove={handleMouse}
       onMouseLeave={reset}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled ?? false}
+      suppressHydrationWarning
       animate={{ x: position.x, y: position.y }}
       transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.1 }}
       className={`relative ${className}`}

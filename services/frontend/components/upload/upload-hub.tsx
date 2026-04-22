@@ -308,7 +308,8 @@ function NextButton({ onClick, label, disabled = false }: { onClick: () => void;
   return (
     <button
       type="button"
-      disabled={disabled}
+      disabled={disabled ?? false}
+      suppressHydrationWarning
       onClick={onClick}
       className={cn(
         "inline-flex h-12 items-center justify-center gap-2 rounded-xl border px-5 text-sm font-semibold transition",
