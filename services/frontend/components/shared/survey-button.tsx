@@ -11,7 +11,11 @@ export default function SurveyButton() {
 
   useEffect(() => {
     setMounted(true);
-    const t = setTimeout(() => setVisible(true), 800);
+    console.log("опросник установлен");
+    const t = setTimeout(() => {
+      setVisible(true);
+      console.log("опросник отрендерился");
+    }, 800);
     return () => clearTimeout(t);
   }, []);
 
@@ -174,8 +178,7 @@ export default function SurveyButton() {
               border: "1px solid rgba(255,255,255,0.15)",
               backdropFilter: "blur(12px)",
               boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
-              transition:
-                "background 0.2s ease, box-shadow 0.2s ease",
+              transition: "background 0.2s ease, box-shadow 0.2s ease",
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.background =
@@ -207,6 +210,6 @@ export default function SurveyButton() {
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
