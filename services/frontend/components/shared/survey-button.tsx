@@ -5,16 +5,18 @@ import { createPortal } from "react-dom";
 
 const SURVEY_URL = "https://forms.yandex.ru/cloud/69e625b590fa7b095e68ddbc";
 
+console.log("инициализирован хотя бы модуль");
+
 export default function SurveyButton() {
   const [visible, setVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    console.log("опросник установлен");
+    console.log("получена кнопка");
     const t = setTimeout(() => {
       setVisible(true);
-      console.log("опросник отрендерился");
+      console.log("кнопка отображена");
     }, 800);
     return () => clearTimeout(t);
   }, []);
