@@ -5,6 +5,7 @@ import { Hero } from "@/components/landing/hero";
 import { Leva } from "leva";
 import { ProcessingOverlay } from "@/components/upload/processing-overlay";
 import { AnalysisDashboard } from "@/components/analysis/analysis-dashboard";
+import SurveyButton from "@/components/shared/survey-button";
 
 import ColorBends from "@/components/animations/color-bends";
 import Aurora from "@/components/animations/aurora";
@@ -45,6 +46,7 @@ export default function Home() {
     isUploading,
     showErrorPopup,
     serverErrorText,
+    isMockMode,
   } = state;
 
   const showLanding = stage === "landing";
@@ -199,15 +201,18 @@ export default function Home() {
       )}
 
       {stage === "result" && result && (
-        <div
-          className="transition-all duration-700 ease-[0.22,1,0.36,1] relative z-10"
-          style={{
-            opacity: showResult ? 1 : 0,
-            transform: showResult ? "translateY(0)" : "translateY(20px)",
-          }}
-        >
-          <AnalysisDashboard result={result} onBack={actions.resetState} />
-        </div>
+        <>
+          <div
+            className="transition-all duration-700 ease-[0.22,1,0.36,1] relative z-10"
+            style={{
+              opacity: showResult ? 1 : 0,
+              transform: showResult ? "translateY(0)" : "translateY(20px)",
+            }}
+          >
+            <AnalysisDashboard result={result} onBack={actions.resetState} />
+          </div>
+          {!isMockMode && <SurveyButton />}
+        </>
       )}
 
       <ComingSoonNotification
