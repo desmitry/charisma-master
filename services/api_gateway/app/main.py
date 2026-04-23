@@ -253,7 +253,7 @@ limiter = Limiter(
     strategy="fixed-window",  # Simple and efficient
 )
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # ty:ignore[invalid-argument-type]
-limiter.limit(f"{os.getenv('UPLOAD_DAILY_LIMIT', 5)}/day")(upload)
+limiter.limit(f"{os.getenv('UPLOAD_DAILY_LIMIT', 5)}/day")(upload.process)
 
 
 app.include_router(upload.router, prefix="/api/v1", tags=["Processing"])
