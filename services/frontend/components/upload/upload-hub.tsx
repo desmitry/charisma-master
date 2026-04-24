@@ -26,7 +26,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { MagneticButton } from "@/components/ui/magnetic-button";
 import { StepperIndicatorRow, StepperContent } from "@/components/ui/stepper";
 import { cn } from "@/lib/utils";
-import { type WizardStepId, useVideoAnalysis } from "@/hooks/use-video-analysis";
+import { type EvaluationPresetId, type WizardStepId, useVideoAnalysis } from "@/hooks/use-video-analysis";
 
 /* ═══════════════════════════════════════════════════════
    TYPES & CONFIG
@@ -100,8 +100,9 @@ const TRANSCRIBE_PROVIDERS = [
 
 const PRESETS = [
   { id: "default", label: "Базовые критерии" },
-  { id: "urfu", label: "Критерии УрФУ" },
-];
+  { id: "urfu_demo_1", label: "УРФУ Демо 1" },
+  { id: "urfu_demo_2", label: "УРФУ Демо 2" },
+] satisfies Array<{ id: EvaluationPresetId; label: string }>;
 
 /* ═══════════════════════════════════════════════════════
    SMALL REUSABLE PIECES
@@ -775,7 +776,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
               <label className="mb-2 block text-sm font-semibold text-white/90">Пресет критериев</label>
               <select
                 value={state.selectedEvaluationPreset}
-                onChange={(e) => actions.setSelectedEvaluationPreset(e.target.value as "default" | "urfu")}
+                onChange={(e) => actions.setSelectedEvaluationPreset(e.target.value as EvaluationPresetId)}
                 className="w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-3 text-sm text-white outline-none transition focus:border-white/20"
               >
                 {PRESETS.map((p) => (
