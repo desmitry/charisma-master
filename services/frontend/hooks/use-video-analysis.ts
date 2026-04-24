@@ -7,6 +7,7 @@ import { decrementFastRequests, getFastRequestsCount, hasFastRequestsAvailable }
 export type Stage = "landing" | "processing" | "result";
 export type InputMode = "speech_text" | "speech_video" | null;
 export type CriteriaMode = "none" | "preset" | "custom";
+export type EvaluationPresetId = "default" | "urfu_demo_1" | "urfu_demo_2";
 export type WizardStepId = "source" | "presentation" | "video" | "criteria" | "settings" | "review";
 
 const DEMO_TASK_ID = "demo";
@@ -25,7 +26,7 @@ export function useVideoAnalysis() {
 
   const [presentationFile, setPresentationFile] = useState<File | null>(null);
   const [criteriaMode, setCriteriaMode] = useState<CriteriaMode>("none");
-  const [selectedEvaluationPreset, setSelectedEvaluationPreset] = useState<"default" | "urfu">("default");
+  const [selectedEvaluationPreset, setSelectedEvaluationPreset] = useState<EvaluationPresetId>("default");
   const [evaluationCriteriaFile, setEvaluationCriteriaFile] = useState<File | null>(null);
 
   const [selectedPersona, setSelectedPersona] = useState<string>("speech_review_specialist");
