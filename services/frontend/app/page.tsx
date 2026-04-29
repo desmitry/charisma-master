@@ -14,7 +14,6 @@ import { SmoothScroll } from "@/components/ui/smooth-scroll";
 import { FeaturesSection } from "@/components/landing/features-section";
 import { UploadHub } from "@/components/upload/upload-hub";
 import { useVideoAnalysis } from "@/hooks/use-video-analysis";
-import GradualBlur from "@/components/GradualBlur";
 
 const AURORA_DESKTOP_COLORS = ["#ffffff", "#000000", "#ffffff"];
 const AURORA_MOBILE_COLORS = ["#ffffff", "#000000", "#ffffff"];
@@ -105,31 +104,6 @@ export default function Home() {
 
       {showLanding && (
         <>
-          {!isMobile && (
-            <>
-              <GradualBlur
-                target="page"
-                position="top"
-                height="7rem"
-                strength={1.5}
-                divCount={2}
-                curve="bezier"
-                exponential
-                opacity={1}
-              />
-              <GradualBlur
-                target="page"
-                position="bottom"
-                height="7rem"
-                strength={1.5}
-                divCount={2}
-                curve="bezier"
-                exponential
-                opacity={1}
-              />
-            </>
-          )}
-
           <div
             className="transition-all duration-700 ease-[0.22,1,0.36,1] relative"
             style={{
