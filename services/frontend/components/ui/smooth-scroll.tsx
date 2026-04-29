@@ -69,9 +69,13 @@ export function SmoothScroll() {
 
     start();
     document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("lenis:stop", lenis.stop.bind(lenis));
+    window.addEventListener("lenis:start", lenis.start.bind(lenis));
 
     return () => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("lenis:stop", lenis.stop.bind(lenis));
+      window.removeEventListener("lenis:start", lenis.start.bind(lenis));
       stop();
       lenis.destroy();
       document.body.style.overflow = originalOverflow;

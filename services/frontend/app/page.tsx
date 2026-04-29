@@ -14,6 +14,7 @@ import { SmoothScroll } from "@/components/ui/smooth-scroll";
 import { FeaturesSection } from "@/components/landing/features-section";
 import { UploadHub } from "@/components/upload/upload-hub";
 import { useVideoAnalysis } from "@/hooks/use-video-analysis";
+import { AuthPanel } from "@/components/auth/auth-panel";
 
 const AURORA_DESKTOP_COLORS = ["#ffffff", "#000000", "#ffffff"];
 const AURORA_MOBILE_COLORS = ["#ffffff", "#000000", "#ffffff"];
@@ -55,6 +56,8 @@ export default function Home() {
 
   return (
     <>
+      <AuthPanel />
+
       {showLanding && <SmoothScroll />}
 
       {/* Global Aurora Background */}
