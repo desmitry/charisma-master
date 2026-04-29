@@ -26,6 +26,26 @@ export interface UploadVideoPayload {
   transcribeProvider?: string;
 }
 
+export interface AuthCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterResponse {
+  user_id: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: "Bearer" | string;
+}
+
+export interface RefreshResponse {
+  access_token: string;
+  token_type: "Bearer" | string;
+}
+
 async function checkResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const text = await response.text().catch(() => "");
@@ -53,7 +73,84 @@ async function checkResponse<T>(response: Response): Promise<T> {
     (error as any).statusCode = response.status;
     throw error;
   }
-  return response.json() as Promise<T>;
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const text = await response.text();
+  if (!text) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text) as T;
+}
+
+export async function authRegister(payload: AuthCredentials): Promise<RegisterResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: payload.email,
+      password: payload.password,
+    }),
+  });
+
+  return checkResponse<RegisterResponse>(response);
+}
+
+export async function authLogin(payload: AuthCredentials): Promise<LoginResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: payload.email,
+      password: payload.password,
+    }),
+  });
+
+  return checkResponse<LoginResponse>(response);
+}
+
+export async function authRefresh(refreshToken: string): Promise<RefreshResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      refresh_token: refreshToken,
+    }),
+  });
+
+  return checkResponse<RefreshResponse>(response);
+}
+
+export async function authLogout({
+  accessToken,
+  refreshToken,
+}: {
+  accessToken?: string;
+  refreshToken?: string;
+}): Promise<void> {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+    method: "POST",
+    headers,
+    body: refreshToken ? JSON.stringify({ refresh_token: refreshToken }) : undefined,
+  });
+
+  await checkResponse<unknown>(response);
 }
 
 export function normalizeAnalysisResult(payload: any): AnalysisResult {

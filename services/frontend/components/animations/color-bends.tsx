@@ -217,26 +217,27 @@ export default function ColorBends({
       timer.update();
       const dt = timer.getDelta();
 
-      if (!shouldAnimateRef.current) return;
-
       frameAccumulator += dt;
       if (frameAccumulator < FRAME_INTERVAL) return;
       frameAccumulator = 0;
 
-      const elapsed = timer.getElapsed();
-      material.uniforms.uTime.value = elapsed;
+      if (shouldAnimateRef.current) {
+        const elapsed = timer.getElapsed();
+        material.uniforms.uTime.value = elapsed;
 
-      const deg = (rotationRef.current % 360) + autoRotateRef.current * elapsed;
-      const rad = (deg * Math.PI) / 180;
-      const c = Math.cos(rad);
-      const s = Math.sin(rad);
-      (material.uniforms.uRot.value as THREE.Vector2).set(c, s);
+        const deg = (rotationRef.current % 360) + autoRotateRef.current * elapsed;
+        const rad = (deg * Math.PI) / 180;
+        const c = Math.cos(rad);
+        const s = Math.sin(rad);
+        (material.uniforms.uRot.value as THREE.Vector2).set(c, s);
 
-      const cur = pointerCurrentRef.current;
-      const tgt = pointerTargetRef.current;
-      const amt = Math.min(1, dt * pointerSmoothRef.current);
-      cur.lerp(tgt, amt);
-      (material.uniforms.uPointer.value as THREE.Vector2).copy(cur);
+        const cur = pointerCurrentRef.current;
+        const tgt = pointerTargetRef.current;
+        const amt = Math.min(1, dt * pointerSmoothRef.current);
+        cur.lerp(tgt, amt);
+        (material.uniforms.uPointer.value as THREE.Vector2).copy(cur);
+      }
+
       renderer.render(scene, camera);
     };
     rafRef.current = requestAnimationFrame(loop);
@@ -328,7 +329,7 @@ export default function ColorBends({
     <div
       ref={containerRef}
       className={`w-full h-full relative overflow-hidden ${className}`}
-      style={{ ...style, visibility: shouldAnimate ? 'visible' : 'hidden' }}
+      style={{ ...style }}
     />
   );
 }

@@ -185,17 +185,18 @@ export default function Aurora(props: AuroraProps) {
     let animateId = 0;
     const update = (t: number) => {
       animateId = requestAnimationFrame(update);
-      if (!shouldAnimateRef.current) return;
-      const { time = t * 0.01, speed = 1.0 } = propsRef.current;
       if (program) {
-        program.uniforms.uTime.value = time * speed * 0.1;
-        program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? 1.0;
-        program.uniforms.uBlend.value = propsRef.current.blend ?? blend;
-        const stops = propsRef.current.colorStops ?? colorStops;
-        program.uniforms.uColorStops.value = stops.map((hex: string) => {
-          const c = new Color(hex);
-          return [c.r, c.g, c.b];
-        });
+        if (shouldAnimateRef.current) {
+          const { time = t * 0.01, speed = 1.0 } = propsRef.current;
+          program.uniforms.uTime.value = time * speed * 0.1;
+          program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? 1.0;
+          program.uniforms.uBlend.value = propsRef.current.blend ?? blend;
+          const stops = propsRef.current.colorStops ?? colorStops;
+          program.uniforms.uColorStops.value = stops.map((hex: string) => {
+            const c = new Color(hex);
+            return [c.r, c.g, c.b];
+          });
+        }
         renderer.render({ scene: mesh });
       }
     };
@@ -215,5 +216,5 @@ export default function Aurora(props: AuroraProps) {
     };
   }, [amplitude, blend, colorStops]);
 
-  return <div ref={ctnDom} className="w-full h-full" style={{ visibility: shouldAnimate ? 'visible' : 'hidden' }} />;
+  return <div ref={ctnDom} className="w-full h-full" />;
 }

@@ -52,6 +52,21 @@ export function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
+export function useModalOpen(): boolean {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const check = () => setOpen(document.body.hasAttribute("data-modal-open"));
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(document.body, { attributes: true, attributeFilter: ["data-modal-open"] });
+    return () => observer.disconnect();
+  }, []);
+
+  return open;
+}
+
 export function useShouldAnimate<T extends Element>(
   ref: RefObject<T | null>,
   options?: IntersectionObserverInit,
@@ -59,5 +74,6 @@ export function useShouldAnimate<T extends Element>(
   const inView = useInViewport(ref, options);
   const documentVisible = useDocumentVisible();
   const prefersReduced = usePrefersReducedMotion();
-  return inView && documentVisible && !prefersReduced;
+  const modalOpen = useModalOpen();
+  return inView && documentVisible && !prefersReduced && !modalOpen;
 }

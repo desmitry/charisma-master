@@ -351,3 +351,11 @@ html, body {
   }
 }
 
+/* Freeze background GL/CSS animations when modal is open */
+:root:has(body [data-modal-open]) canvas,
+:root:has(body [data-modal-open]) .cta-btn-glow,
+:root:has(body [data-modal-open]) .eco-bg::before,
+:root:has(body [data-modal-open]) .eco-bg::after {
+  animation-play-state: paused !important;
+}
+
