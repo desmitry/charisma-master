@@ -49,6 +49,13 @@ def create_tables(conn):
                 updated_at TIMESTAMPTZ DEFAULT now()
             )
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS algorithm_weights (
+                id TEXT PRIMARY KEY,
+                config JSONB NOT NULL,
+                updated_at TIMESTAMPTZ DEFAULT now()
+            )
+        """)
     logger.info("Tables created/verified")
 
 
