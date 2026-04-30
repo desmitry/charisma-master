@@ -32,30 +32,30 @@ function getErrorMessage(error: unknown): string {
 
 const overlayVariants: Variants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.3, ease: "easeOut" } },
-  exit: { opacity: 0, transition: { duration: 0.25, ease: "easeIn" } },
+  visible: { opacity: 1, transition: { duration: 0.15, ease: "easeOut" } },
+  exit: { opacity: 0, transition: { duration: 0.12, ease: "easeIn" } },
 };
 
 const panelVariants: Variants = {
-  hidden: { opacity: 0, scale: 0.97, y: 10 },
+  hidden: { opacity: 0, scale: 0.98, y: 8 },
   visible: {
     opacity: 1,
     scale: 1,
     y: 0,
-    transition: { duration: 0.3, ease: "easeOut" },
+    transition: { duration: 0.15, ease: "easeOut" },
   },
   exit: {
     opacity: 0,
-    scale: 0.97,
-    y: 6,
-    transition: { duration: 0.2, ease: "easeIn" },
+    scale: 0.98,
+    y: 4,
+    transition: { duration: 0.12, ease: "easeIn" },
   },
 };
 
 const contentVariants: Variants = {
-  hidden: { opacity: 0, y: 6 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: "easeOut" } },
-  exit: { opacity: 0, y: -4, transition: { duration: 0.18, ease: "easeIn" } },
+  hidden: { opacity: 0, y: 4 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.12, ease: "easeOut" } },
+  exit: { opacity: 0, y: -3, transition: { duration: 0.1, ease: "easeIn" } },
 };
 
 export function AuthPanel() {
@@ -235,7 +235,7 @@ export function AuthPanel() {
               animate="visible"
               exit="exit"
               onClick={() => setIsOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+              className="absolute inset-0 bg-black/70"
             />
 
             {/* Panel */}
@@ -244,7 +244,7 @@ export function AuthPanel() {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/[0.09] bg-[#0a0a0a]/95 shadow-[0_32px_80px_rgba(0,0,0,0.7)] backdrop-blur-2xl"
+              className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/[0.09] bg-[#0d0d0d] shadow-[0_32px_80px_rgba(0,0,0,0.7)]"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Subtle top glow line */}
@@ -255,9 +255,9 @@ export function AuthPanel() {
                 <div className="mb-6 flex items-center justify-between">
                   <motion.h2
                     key={session ? "account" : mode}
-                    initial={{ opacity: 0, x: -8 }}
+                    initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    transition={{ duration: 0.12, ease: "easeOut" }}
                     className="text-base font-semibold tracking-tight text-white"
                   >
                     {session ? "Аккаунт" : (mode === "login" ? "Вход" : "Регистрация")}
@@ -266,9 +266,9 @@ export function AuthPanel() {
                   <motion.button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    whileHover={{ scale: 1.08 }}
-                    whileTap={{ scale: 0.92 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    whileHover={{ scale: 1.06 }}
+                    whileTap={{ scale: 0.94 }}
+                    transition={{ duration: 0.1 }}
                     className="flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-white/40 transition-colors duration-150 hover:border-white/15 hover:bg-white/[0.08] hover:text-white/70 focus:outline-none"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -341,7 +341,7 @@ export function AuthPanel() {
                         <motion.div
                           className="absolute inset-y-1 left-1 right-[calc(50%+2px)] rounded-[9px] bg-white"
                           animate={{ x: mode === "login" ? 0 : "calc(100% + 4px)" }}
-                          transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                          transition={{ type: "tween", duration: 0.15, ease: "easeOut" }}
                         />
                         {(["login", "register"] as AuthMode[]).map((m) => (
                           <button
@@ -383,10 +383,10 @@ export function AuthPanel() {
                           {mode === "register" && (
                             <motion.div
                               key="confirm"
-                              initial={{ opacity: 0, height: 0, y: -6 }}
-                              animate={{ opacity: 1, height: "auto", y: 0 }}
-                              exit={{ opacity: 0, height: 0, y: -4 }}
-                              transition={{ duration: 0.28, ease: "easeOut" }}
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.15, ease: "easeOut" }}
                               style={{ overflow: "hidden" }}
                             >
                               <AuthInput
@@ -473,16 +473,16 @@ function AuthInput({ label, hasError, ...props }: AuthInputProps) {
       <span className={`mb-1.5 block text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-150 ${hasError ? "text-red-400/70" : "text-white/35"}`}>
         {label}
       </span>
-      <motion.div
-        animate={{
+      <div
+        style={{
+          borderRadius: 12,
           boxShadow: hasError
             ? "0 0 0 2px rgba(239,68,68,0.25)"
             : focused
             ? "0 0 0 2px rgba(255,255,255,0.12)"
-            : "0 0 0 0px rgba(255,255,255,0)",
+            : "none",
+          transition: "box-shadow 0.15s",
         }}
-        transition={{ duration: 0.18 }}
-        className="rounded-xl"
       >
         <input
           {...props}
@@ -494,7 +494,7 @@ function AuthInput({ label, hasError, ...props }: AuthInputProps) {
               : "border-white/[0.09] bg-white/[0.03] hover:border-white/15 focus:border-white/20"
           }`}
         />
-      </motion.div>
+      </div>
     </label>
   );
 }
@@ -507,34 +507,28 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 function PrimaryButton({ icon, fullWidth, children, disabled, type = "button", className = "", ...props }: ButtonProps) {
   return (
-    <motion.button
+    <button
       type={type}
-      {...(props as object)}
+      {...props}
       disabled={disabled}
-      whileHover={disabled ? {} : { scale: 1.015 }}
-      whileTap={disabled ? {} : { scale: 0.975 }}
-      transition={{ type: "spring", stiffness: 450, damping: 28 }}
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-white text-xs font-semibold text-black shadow-[0_4px_20px_rgba(255,255,255,0.12)] transition-opacity duration-200 disabled:pointer-events-none disabled:opacity-40 ${fullWidth ? "w-full" : ""} ${className}`}
+      className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-white text-xs font-semibold text-black shadow-[0_4px_20px_rgba(255,255,255,0.12)] transition-opacity duration-200 active:scale-[0.975] hover:opacity-90 disabled:pointer-events-none disabled:opacity-40 ${fullWidth ? "w-full" : ""} ${className}`}
     >
       {icon}
       {children}
-    </motion.button>
+    </button>
   );
 }
 
 function GhostButton({ icon, children, disabled, className = "", ...props }: ButtonProps) {
   return (
-    <motion.button
+    <button
       type="button"
-      {...(props as object)}
+      {...props}
       disabled={disabled}
-      whileHover={disabled ? {} : { scale: 1.02 }}
-      whileTap={disabled ? {} : { scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 450, damping: 28 }}
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.04] text-xs font-medium text-white/60 transition-colors duration-150 hover:border-white/15 hover:bg-white/[0.07] hover:text-white disabled:pointer-events-none disabled:opacity-40 ${className}`}
+      className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.04] text-xs font-medium text-white/60 transition-colors duration-150 hover:border-white/15 hover:bg-white/[0.07] hover:text-white active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40 ${className}`}
     >
       {icon}
       {children}
-    </motion.button>
+    </button>
   );
 }

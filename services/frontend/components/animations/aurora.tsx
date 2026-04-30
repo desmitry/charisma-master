@@ -183,20 +183,29 @@ export default function Aurora(props: AuroraProps) {
     ctn.appendChild(gl.canvas);
 
     let animateId = 0;
+    let pausedAt = 0;
+    let pauseOffset = 0;
     const update = (t: number) => {
       animateId = requestAnimationFrame(update);
+      if (!shouldAnimateRef.current) {
+        pausedAt = t;
+        return;
+      }
+      if (pausedAt > 0) {
+        pauseOffset += t - pausedAt;
+        pausedAt = 0;
+      }
+      const adjustedT = t - pauseOffset;
       if (program) {
-        if (shouldAnimateRef.current) {
-          const { time = t * 0.01, speed = 1.0 } = propsRef.current;
-          program.uniforms.uTime.value = time * speed * 0.1;
-          program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? 1.0;
-          program.uniforms.uBlend.value = propsRef.current.blend ?? blend;
-          const stops = propsRef.current.colorStops ?? colorStops;
-          program.uniforms.uColorStops.value = stops.map((hex: string) => {
-            const c = new Color(hex);
-            return [c.r, c.g, c.b];
-          });
-        }
+        const { time = adjustedT * 0.01, speed = 1.0 } = propsRef.current;
+        program.uniforms.uTime.value = time * speed * 0.1;
+        program.uniforms.uAmplitude.value = propsRef.current.amplitude ?? 1.0;
+        program.uniforms.uBlend.value = propsRef.current.blend ?? blend;
+        const stops = propsRef.current.colorStops ?? colorStops;
+        program.uniforms.uColorStops.value = stops.map((hex: string) => {
+          const c = new Color(hex);
+          return [c.r, c.g, c.b];
+        });
         renderer.render({ scene: mesh });
       }
     };
