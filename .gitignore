@@ -186,3 +186,10 @@ Desktop.ini
 
 # VS Code
 .vscode/
+
+# AI Agent configuration
+AGENTS.md
+.agent
+
+# Local Docker Overrides
+docker-compose.override.yaml
