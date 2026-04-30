@@ -212,8 +212,18 @@ export default function ColorBends({
     }
 
     let frameAccumulator = 0;
+    let pauseStart = 0;
+    let pausedTime = 0;
     const loop = () => {
       rafRef.current = requestAnimationFrame(loop);
+      if (!shouldAnimateRef.current) {
+        if (pauseStart === 0) pauseStart = performance.now();
+        return;
+      }
+      if (pauseStart > 0) {
+        pausedTime += performance.now() - pauseStart;
+        pauseStart = 0;
+      }
       timer.update();
       const dt = timer.getDelta();
 
@@ -222,7 +232,7 @@ export default function ColorBends({
       frameAccumulator = 0;
 
       if (shouldAnimateRef.current) {
-        const elapsed = timer.getElapsed();
+        const elapsed = timer.getElapsed() - pausedTime / 1000;
         material.uniforms.uTime.value = elapsed;
 
         const deg = (rotationRef.current % 360) + autoRotateRef.current * elapsed;
