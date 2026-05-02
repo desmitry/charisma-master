@@ -43,6 +43,7 @@ class TestAnalyzeSpeech:
             '"persona_feedback": "encouraging", '
             '"dynamic_fillers": [], '
             '"presentation_feedback": "nice", '
+            '"competition_analysis": "market context", '
             '"useful_links": "link"}'
         )
 
@@ -114,7 +115,8 @@ class TestAnalyzeSpeech:
                 '{"summary": "ok", "structure": "", '
                 '"mistakes": "", "ideal_text": "", '
                 '"persona_feedback": "", "dynamic_fillers": [], '
-                '"presentation_feedback": "", "useful_links": ""}'
+                '"presentation_feedback": "", "competition_analysis": "", '
+                '"useful_links": ""}'
             )
 
         with (
@@ -145,6 +147,41 @@ class TestAnalyzeSpeech:
         assert user_msg.count("y") == 5_000
         assert "ТРАНСКРИПЦИЯ" in user_msg
         assert "ТЕКСТ ПРЕЗЕНТАЦИИ" in user_msg
+        assert "ИССЛЕДОВАНИЕ КОНКУРЕНТОВ" in user_msg
+
+    async def test_analyze_speech_includes_competition_context(
+        self, llm_client_module
+    ):
+        captured_messages = {}
+
+        async def capture_call(messages, model):
+            captured_messages["messages"] = messages
+            captured_messages["model"] = model
+            return self._valid_speech_report_json()
+
+        with (
+            patch("app.logic.llm_client.openai.AsyncOpenAI"),
+            patch("app.logic.llm_client.GigaChat"),
+            patch(
+                "app.logic.llm_client.prompts.get_analyze_speech_system_prompt",
+                return_value="sys",
+            ),
+        ):
+            client = llm_client_module.LLMClient()
+            client._call_openai = AsyncMock(side_effect=capture_call)
+
+            result = await client.analyze_speech(
+                transcript_text="hi",
+                presentation_text="slides",
+                provider=AnalyzeProvider.openai,
+                persona=PersonaRoles.strict_critic,
+                competition_analysis="Competitor A is stronger in distribution.",
+            )
+
+        assert result.competition_analysis == "market context"
+        user_msg = captured_messages["messages"][1]["content"]
+        assert "ИССЛЕДОВАНИЕ КОНКУРЕНТОВ" in user_msg
+        assert "Competitor A is stronger in distribution." in user_msg
 
     async def test_gigachat_not_initialized_returns_error_report(
         self, llm_client_module
@@ -333,6 +370,7 @@ class TestAnalyzeWithEvaluationCriteria:
         """Normal scoring yields criteria with current_value and feedback."""
         from charisma_schemas import EvaluationCriterion
 
+        captured_messages = {}
         criteria = [
             EvaluationCriterion(
                 name="Clarity",
@@ -353,6 +391,11 @@ class TestAnalyzeWithEvaluationCriteria:
             "]}"
         )
 
+        async def capture_call(messages, model):
+            captured_messages["messages"] = messages
+            captured_messages["model"] = model
+            return fake_response
+
         with (
             patch("app.logic.llm_client.openai.AsyncOpenAI"),
             patch("app.logic.llm_client.GigaChat"),
@@ -362,13 +405,14 @@ class TestAnalyzeWithEvaluationCriteria:
             ),
         ):
             client = llm_client_module.LLMClient()
-            client._call_gigachat = AsyncMock(return_value=fake_response)
+            client._call_gigachat = AsyncMock(side_effect=capture_call)
 
             result = await client.analyze_with_evalution_criteria(
                 transcript_text="speech text",
                 presentation_text="slides",
                 provider=AnalyzeProvider.gigachat,
                 evaluation_criteria=criteria,
+                competition_analysis="Competitor B targets the same segment.",
             )
 
         assert len(result) == 2
@@ -376,6 +420,40 @@ class TestAnalyzeWithEvaluationCriteria:
         assert result[0].feedback == "Good"
         assert result[1].current_value == 4
         assert result[1].feedback == "OK"
+        user_msg = captured_messages["messages"][1]["content"]
+        assert "ИССЛЕДОВАНИЕ КОНКУРЕНТОВ" in user_msg
+        assert "Competitor B targets the same segment." in user_msg
+
+    @pytest.mark.asyncio
+    async def test_identify_competition_subject_fills_default_query(
+        self, llm_client_module
+    ):
+        with (
+            patch("app.logic.llm_client.openai.AsyncOpenAI"),
+            patch("app.logic.llm_client.GigaChat"),
+            patch(
+                "app.logic.llm_client.prompts.get_competition_product_prompt",
+                return_value="sys",
+            ),
+        ):
+            client = llm_client_module.LLMClient()
+            client._call_openai = AsyncMock(
+                return_value=(
+                    '{"can_identify": true, "product_name": "Acme CRM", '
+                    '"product_description": "CRM for small sales teams", '
+                    '"search_query": ""}'
+                )
+            )
+
+            result = await client.identify_competition_subject(
+                transcript_text="text",
+                presentation_text="slides",
+                provider=AnalyzeProvider.openai,
+            )
+
+        assert result["can_identify"] is True
+        assert result["product_name"] == "Acme CRM"
+        assert result["search_query"] == "Acme CRM конкуренты"
 
     @pytest.mark.asyncio
     async def test_empty_list_returns_empty(self, llm_client_module):

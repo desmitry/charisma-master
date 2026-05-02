@@ -11,6 +11,9 @@ export function SummaryBlocks({ data }: { data: AnalysisResult }) {
     { title: "Ideal text", text: speechReport.ideal_text, accent: "text-emerald-300" },
     { title: "Persona feedback", text: speechReport.persona_feedback },
     { title: "Presentation feedback", text: speechReport.presentation_feedback, accent: "text-sky-300" },
+    speechReport.competition_analysis
+      ? { title: "Competition analysis", text: speechReport.competition_analysis, accent: "text-cyan-300" }
+      : null,
     data.confidence_index.components.gesture_advice
       ? { title: "Gesture advice", text: data.confidence_index.components.gesture_advice, accent: "text-amber-300" }
       : null,

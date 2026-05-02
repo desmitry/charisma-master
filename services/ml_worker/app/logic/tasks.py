@@ -30,11 +30,22 @@ from charisma_storage import (
 )
 
 from app.config import settings
+from app.logic.competition_research import CompetitionResearchAgent
 from app.logic.llm_client import LLMClient
 from app.logic.ml_engine import MLEngine
 from app.logic.prompts import load_prompts_from_db
 
 logger = logging.getLogger(__name__)
+
+
+def _run_async(coro):
+    loop = asyncio.new_event_loop()
+    try:
+        asyncio.set_event_loop(loop)
+        return loop.run_until_complete(coro)
+    finally:
+        asyncio.set_event_loop(None)
+        loop.close()
 
 
 def _get_presentation_text(presentation_path: Optional[str]) -> list[str]:
@@ -256,6 +267,7 @@ def process_video_pipeline(  # noqa: C901
             )
 
     evaluation_criteria_list = list()
+    llm_client = LLMClient()
     self.update_state(
         state=TaskState.processing.value,
         meta=TaskStage.evaluation_criteria_report.meta,
@@ -267,17 +279,10 @@ def process_video_pipeline(  # noqa: C901
     elif evaluation_criteria_key:
         criteria_path = None
         try:
-            llm_client = LLMClient()
-
             criteria_path = _download_to_temp(evaluation_criteria_key)
-
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            evaluation_criteria_list = loop.run_until_complete(
+            evaluation_criteria_list = _run_async(
                 llm_client.get_evaluation_criteria(criteria_path)
             )
-            loop.close()
-
         except Exception as e:
             logger.error(
                 "Failed to extract evaluation criteria: %s", e, exc_info=True
@@ -287,6 +292,29 @@ def process_video_pipeline(  # noqa: C901
         if criteria_path and os.path.exists(criteria_path):
             os.unlink(criteria_path)
 
+    competition_analysis = ""
+    if full_text:
+        self.update_state(
+            state=TaskState.processing.value,
+            meta=TaskStage.competition_research.meta,
+        )
+        try:
+            competition_agent = CompetitionResearchAgent(llm_client=llm_client)
+            competition_analysis = _run_async(
+                competition_agent.run(
+                    transcript_text=full_text,
+                    presentation_text=presentation_text,
+                    provider=analyze_provider,
+                )
+            )
+        except Exception as e:
+            logger.warning(
+                "Competition research failed, continuing without it: %s",
+                e,
+                exc_info=True,
+            )
+            competition_analysis = ""
+
     llm_speech_report = LLMClient._get_empty_speech_analysis_response()
     self.update_state(
         state=TaskState.processing.value,
@@ -295,19 +323,20 @@ def process_video_pipeline(  # noqa: C901
 
     if full_text:
         try:
-            llm_client = LLMClient()
-
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            llm_speech_report = loop.run_until_complete(
+            llm_speech_report = _run_async(
                 llm_client.analyze_speech(
                     transcript_text=full_text,
                     presentation_text=presentation_text,
                     provider=analyze_provider,
                     persona=persona,
+                    competition_analysis=competition_analysis,
                 )
             )
-            loop.close()
+            if (
+                competition_analysis
+                and not llm_speech_report.competition_analysis.strip()
+            ):
+                llm_speech_report.competition_analysis = competition_analysis
         except Exception as e:
             logger.error("LLM speech analysis failed: %s", e, exc_info=True)
             raise RuntimeError("Speech analysis failed")
@@ -320,18 +349,15 @@ def process_video_pipeline(  # noqa: C901
     )
     if full_text and evaluation_criteria_list:
         try:
-            llm_client = LLMClient()
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            evaluation_criteria_list = loop.run_until_complete(
+            evaluation_criteria_list = _run_async(
                 llm_client.analyze_with_evalution_criteria(
                     transcript_text=full_text,
                     presentation_text=presentation_text,
                     provider=analyze_provider,
                     evaluation_criteria=evaluation_criteria_list,
+                    competition_analysis=competition_analysis,
                 )
             )
-            loop.close()
 
             evaluation_criteria_total_score = sum(
                 c.current_value for c in evaluation_criteria_list

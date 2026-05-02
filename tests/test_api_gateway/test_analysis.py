@@ -45,6 +45,7 @@ def _make_analysis_result_dict(task_id: str = "t1") -> dict:
             "persona_feedback": "",
             "dynamic_fillers": [],
             "presentation_feedback": "",
+            "competition_analysis": "",
             "useful_links": "",
         },
         "evaluation_criteria_report": {
