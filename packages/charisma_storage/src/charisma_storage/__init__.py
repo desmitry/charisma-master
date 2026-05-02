@@ -14,7 +14,7 @@ BUCKET_RESULTS = "results"
 
 def _require_minio():
     try:
-        from minio import Minio as minio_client
+        from minio import Minio as minio_client  # noqa: N813
     except ModuleNotFoundError as exc:
         raise ModuleNotFoundError(
             "The 'minio' package is required for charisma_storage operations."
