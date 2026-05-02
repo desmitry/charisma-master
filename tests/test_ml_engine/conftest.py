@@ -29,3 +29,9 @@ def ml_engine_module():
 def llm_client_module():
     """Return the app.logic.llm_client module (imported from ml_worker)."""
     return load_ml_worker_module("app.logic.llm_client")
+
+
+@pytest.fixture
+def competition_research_module():
+    """Return app.logic.competition_research from ml_worker."""
+    return load_ml_worker_module("app.logic.competition_research")

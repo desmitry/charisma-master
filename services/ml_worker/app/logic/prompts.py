@@ -56,7 +56,11 @@ def get_analyze_speech_system_prompt(persona: PersonaRoles) -> str:
     base_prompt = _prompt_cache.get("speech_analysis", "")
     persona_prompt = get_persona_prompt(persona)
 
-    tools = ""
+    tools = (
+        "Система может передать заранее подготовленное исследование "
+        "конкурентов проекта. Используй его только как дополнительный "
+        "источник фактов по рынку."
+    )
 
     return base_prompt.format(persona=persona_prompt, tools=tools)
 
@@ -82,6 +86,25 @@ def get_evaluation_criteria_rate_prompt() -> str:
     """
     base_prompt = _prompt_cache.get("criteria_evaluation", "")
 
-    tools = ""
+    tools = (
+        "Система может передать заранее подготовленное исследование "
+        "конкурентов проекта. Используй его только как дополнительный "
+        "источник фактов по рынку."
+    )
 
     return base_prompt.format(tools=tools)
+
+
+def get_competition_product_prompt() -> str:
+    """Get prompt for identifying the product discussed in the speech."""
+    return _prompt_cache.get("competition_product", "")
+
+
+def get_competition_source_prompt() -> str:
+    """Get prompt for reviewing a fetched competition source."""
+    return _prompt_cache.get("competition_source", "")
+
+
+def get_competition_summary_prompt() -> str:
+    """Get prompt for synthesizing competition research results."""
+    return _prompt_cache.get("competition_summary", "")

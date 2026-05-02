@@ -104,6 +104,11 @@ class TestTaskStage:
         assert meta["stage"] == "evaluation_criteria_report"
         assert meta["progress"] == pytest.approx(0.5)
 
+    def test_competition_research(self):
+        meta = TaskStage.competition_research.meta
+        assert meta["stage"] == "competition_research"
+        assert meta["progress"] == pytest.approx(0.6)
+
     def test_llm_speech_report(self):
         meta = TaskStage.llm_speech_report.meta
         assert meta["stage"] == "llm_speech_report"
@@ -167,6 +172,7 @@ class TestAnalysisResult:
             persona_feedback="",
             dynamic_fillers=[],
             presentation_feedback="",
+            competition_analysis="",
             useful_links="",
         )
 

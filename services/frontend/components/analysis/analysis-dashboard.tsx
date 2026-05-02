@@ -256,7 +256,12 @@ export function AnalysisDashboard({ result, onBack }: Props) {
     { title: "Идеальный текст", text: speechReport.ideal_text, icon: <Wand2 className="w-4 h-4 text-fuchsia-400" /> },
     { title: "Фидбэк персоны", text: speechReport.persona_feedback, icon: <User className="w-4 h-4 text-blue-400" /> },
     { title: "Фидбэк по презентации", text: speechReport.presentation_feedback, icon: <Presentation className="w-4 h-4 text-indigo-400" /> },
-    ...(speechReport.useful_links.length > 0 ? [{ title: "Полезные ссылки", text: speechReport.useful_links.join("\n"), icon: <LinkIcon className="w-4 h-4 text-zinc-400" /> }] : []),
+    ...(speechReport.competition_analysis.trim()
+      ? [{ title: "Анализ конкурентов", text: speechReport.competition_analysis, icon: <FileText className="w-4 h-4 text-cyan-400" /> }]
+      : []),
+    ...(speechReport.useful_links.trim()
+      ? [{ title: "Полезные ссылки", text: speechReport.useful_links, icon: <LinkIcon className="w-4 h-4 text-zinc-400" /> }]
+      : []),
   ];
 
   const metadataChips = [

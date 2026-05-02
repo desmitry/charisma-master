@@ -12,6 +12,17 @@ BUCKET_UPLOADS = "uploads"
 BUCKET_RESULTS = "results"
 
 
+def _require_minio():
+    try:
+        from minio import Minio as minio_client
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "The 'minio' package is required for charisma_storage operations."
+        ) from exc
+
+    return minio_client
+
+
 def get_client(
     endpoint: str,
     access_key: str,
@@ -20,7 +31,8 @@ def get_client(
 ) -> Minio:
     global _client
     if _client is None:
-        _client = Minio(
+        minio_client = _require_minio()
+        _client = minio_client(
             endpoint,
             access_key=access_key,
             secret_key=secret_key,
@@ -35,7 +47,12 @@ def ensure_buckets_exist(
     secret_key: str,
     secure: bool = False,
 ):
-    from minio.error import S3Error
+    try:
+        from minio.error import S3Error
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError(
+            "The 'minio' package is required for charisma_storage operations."
+        ) from exc
 
     client = get_client(endpoint, access_key, secret_key, secure)
     for bucket in [BUCKET_UPLOADS, BUCKET_RESULTS]:

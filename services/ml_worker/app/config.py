@@ -124,6 +124,30 @@ class Settings(BaseSettings):
         validate_default=True,
         frozen=False,
     )
+    competition_search_results: int = Field(
+        key="COMPETITION_SEARCH_RESULTS",
+        default=5,
+        validate_default=True,
+        frozen=False,
+    )
+    competition_sources_to_analyze: int = Field(
+        key="COMPETITION_SOURCES_TO_ANALYZE",
+        default=3,
+        validate_default=True,
+        frozen=False,
+    )
+    competition_fetch_timeout_seconds: int = Field(
+        key="COMPETITION_FETCH_TIMEOUT_SECONDS",
+        default=10,
+        validate_default=True,
+        frozen=False,
+    )
+    competition_source_text_limit: int = Field(
+        key="COMPETITION_SOURCE_TEXT_LIMIT",
+        default=6_000,
+        validate_default=True,
+        frozen=False,
+    )
 
     sber_speech_scope: str = Field(
         key="SBER_SPEECH_SCOPE",

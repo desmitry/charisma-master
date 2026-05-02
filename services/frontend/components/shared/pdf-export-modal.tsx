@@ -21,6 +21,7 @@ type ExportOptions = {
   idealText: boolean;
   personaFeedback: boolean;
   presentationFeedback: boolean;
+  competitionAnalysis: boolean;
   criteria: boolean;
   longPauses: boolean;
   dynamicFillers: boolean;
@@ -52,6 +53,7 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
     idealText: true,
     personaFeedback: true,
     presentationFeedback: true,
+    competitionAnalysis: result.speech_report.competition_analysis.length > 0,
     criteria: true,
     longPauses: result.long_pauses.length > 0,
     dynamicFillers: result.speech_report.dynamic_fillers.length > 0,
@@ -176,6 +178,7 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
     { key: "idealText" as const, label: "Идеальный текст" },
     { key: "personaFeedback" as const, label: "Фидбэк персоны" },
     { key: "presentationFeedback" as const, label: "Фидбэк по презентации" },
+    { key: "competitionAnalysis" as const, label: "Анализ конкурентов", disabled: result.speech_report.competition_analysis.length === 0 },
     { key: "longPauses" as const, label: "Долгие паузы", disabled: result.long_pauses.length === 0 },
     { key: "dynamicFillers" as const, label: "Слова-паразиты", disabled: result.speech_report.dynamic_fillers.length === 0 },
   ];
@@ -482,6 +485,10 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
 
           {options.presentationFeedback && result.speech_report.presentation_feedback && (
             <TextBlock title="Отчет по выступлению от ИИ" text={result.speech_report.presentation_feedback} borderColor="rgba(14,165,233,0.25)" backgroundColor="rgba(14,165,233,0.08)" />
+          )}
+
+          {options.competitionAnalysis && result.speech_report.competition_analysis && (
+            <TextBlock title="Анализ конкурентов" text={result.speech_report.competition_analysis} borderColor="rgba(34,211,238,0.25)" backgroundColor="rgba(34,211,238,0.08)" />
           )}
 
           {options.longPauses && result.long_pauses.length > 0 && (

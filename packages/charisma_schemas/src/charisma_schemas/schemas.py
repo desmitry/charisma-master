@@ -78,6 +78,11 @@ class TaskStage(Enum):
         0.5,
         "Изучение критериев оценивания...",
     )
+    competition_research = (
+        "competition_research",
+        0.6,
+        "Исследование конкурентов проекта...",
+    )
     llm_speech_report = (
         "llm_speech_report",
         0.7,
@@ -183,6 +188,7 @@ class SpeechReport(BaseModel):
     persona_feedback: str
     dynamic_fillers: list[str]
     presentation_feedback: str
+    competition_analysis: str
     useful_links: str
 
 
