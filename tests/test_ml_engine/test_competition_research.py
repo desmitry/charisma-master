@@ -99,10 +99,7 @@ class TestCompetitionResearchAgent:
             provider=AnalyzeProvider.openai,
         )
 
-        assert (
-            result
-            == "BetaCRM appears to be the closest direct competitor."
-        )
+        assert result == "BetaCRM appears to be the closest direct competitor."
         llm_client.synthesize_competition_report.assert_awaited_once()
         synth_kwargs = (
             llm_client.synthesize_competition_report.await_args.kwargs

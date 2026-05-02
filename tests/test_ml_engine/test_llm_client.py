@@ -175,7 +175,8 @@ class TestAnalyzeSpeech:
                 presentation_text="slides",
                 provider=AnalyzeProvider.openai,
                 persona=PersonaRoles.strict_critic,
-                competition_analysis="Competitor A is stronger in distribution.",
+                competition_analysis="Competitor A is stronger "
+                "in distribution.",
             )
 
         assert result.competition_analysis == "market context"
