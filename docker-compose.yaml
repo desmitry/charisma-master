@@ -108,7 +108,7 @@ services:
                 "-A",
                 "app.celery_app",
                 "worker",
-                "--loglevel=info",
+                "--loglevel=${CELERY_LOG_LEVEL:-info}",
                 "--pool=solo",
             ]
         restart: unless-stopped
