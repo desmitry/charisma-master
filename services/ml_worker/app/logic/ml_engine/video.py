@@ -9,6 +9,7 @@ import mediapipe as mp
 import numpy as np
 import psycopg2
 
+from app.config import settings
 from app.logic.ml_engine.constants import (
     MOVEMENT_THRESHOLD,
     TARGET_FRAME_WIDTH,
@@ -20,10 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_gaze_config_from_db(weight_id: str) -> dict:
-    db_url = os.environ.get(
-        "DATABASE_URL",
-        "postgresql://charisma:charisma@localhost:5432/charisma",
-    )
+    db_url = settings.database_url
+
     try:
         conn = psycopg2.connect(db_url)
         with conn.cursor() as cur:
