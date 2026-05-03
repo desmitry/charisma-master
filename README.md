@@ -6,14 +6,18 @@
 
 ## Архитектура
 
-Микросервисная архитектура, для управления проектом используется uv workspaces. Проект предоставляет собой монорепозиторий, состоит из 3-х Python-сервисов, общих Python-пакетов, а также обособленного фронтенда на NodeJS.
+[![Build Status](https://github.com/desmitry/charisma-master/actions/workflows/build.yaml/badge.svg)](https://github.com/desmitry/charisma-master/actions/workflows/build.yaml)
+[![Deploy Status](https://github.com/desmitry/charisma-master/actions/workflows/deploy.yaml/badge.svg)](https://github.com/desmitry/charisma-master/actions/workflows/deploy.yaml)
+
+
+Микросервисная архитектура, для управления проектом используется uv workspaces. Проект предоставляет собой монорепозиторий. Состоит из 3-х Python-сервисов, общих Python-пакетов, а также фронтенда на NodeJS.
 
 ### Сервисы
 
 | Сервис | Описание | Стек |
 |--------|----------|------|
 | `services/api_gateway` | FastAPI-бэкенд. Приём файлов, запуск задач, опрос статуса, выдача результатов и стриминг видео | FastAPI, Celery, uvicorn |
-| `services/ml_worker` | Celery-воркер. Транскрибация, анализ видео/аудио, оценка выступления через LLM | Celery, Whisper, MediaPipe, GigaChat, OpenAI |
+| `services/ml_worker` | Celery-воркер. Транскрибация, анализ видео/аудио, оценка выступления через LLM | Celery, Whisper, MediaPipe, GigaChat, OpenAI, LangGraph |
 | `services/migrator` | Одноразовый сервис. Загружает промпты и пресеты из `docs/` в Postgres при старте | psycopg2 |
 | `services/frontend` | Веб-приложение. Интерфейс загрузки, индикатор прогресса, дашборд результатов | Next.js, React, Tailwind CSS |
 
@@ -28,7 +32,7 @@
 
 | Компонент | Назначение |
 |-----------|------------|
-| Postgres | Хранит промпты (таблица `prompts`) и пресеты критериев оценивания (таблица `presets`) |
+| Postgres | Хранит промпты (таблица `prompts`), пресеты критериев оценивания (таблица `presets`), веса для Data Driven алгоритмов (таблица `algorithm_weights`) |
 | SeaweedFS | Объектное хранилище для загруженных видео, презентаций, файлов критериев и результатов анализа |
 | Redis | Брокер сообщений Celery и бэкенд результатов |
 
@@ -45,29 +49,26 @@
 
 ```
 charisma-master/
-├── pyproject.toml              # корень uv workspace
-├── uv.lock                     # зафиксированные зависимости
-├── docker-compose.yaml         # все сервисы и инфраструктура
-├── docker-compose.gpu.yaml     # оверлей: включение GPU для ml_worker
-├── .dockerignore
-│
-├── packages/
-│   ├── charisma_schemas/       # общие Pydantic-модели
-│   └── charisma_storage/       # общий клиент SeaweedFS
-│
-├── services/
-│   ├── api_gateway/            # FastAPI + отправка Celery-задач
-│   ├── ml_worker/              # Celery-воркер (ML-обработка)
-│   ├── migrator/               # мигратор БД (промпты и пресеты)
-│   └── frontend/               # Next.js веб-приложение
-│
-└── docs/
-    ├── prompts/                # системные промпты для LLM-анализа
-    │   ├── personas/           # промпты для разных ролей
-    │   ├── speech_analysis.txt
-    │   ├── criteria_extraction.txt
-    │   └── criteria_evaluation.txt
-    └── presets/                # пресеты критериев оценивания (JSON)
+├── .github/                     # GitHub Actions, GitHub Templates
+├── scripts/                     # Вспомогательные скрипты
+├── docker-compose.yaml          # Основная конфигурация Docker Compose
+├── docker-compose.gpu.yaml      # Оверлей для использования GPU
+├── .dockerignore                # Исключения для сборки
+├── pyproject.toml               # Корневой uv‑workspace
+├── uv.lock                      # Lock для uv-пакетов
+├── packages/                    # Общие Python‑пакеты
+│   ├── charisma_schemas/        # Pydantic‑модели
+│   └── charisma_storage/        # Клиент SeaweedFS (S3‑совместимый)
+├── services/                    # Микросервисы проекта
+│   ├── api_gateway/             # FastAPI‑бэкенд, маршрутизация задач, взаимодействие с SeaweedFS
+│   ├── ml_worker/               # Celery‑воркер, обработка медиа, LLM‑анализ, интеграция LangChain
+│   ├── migrator/                # Одноразовый сервис, загружает промпты и пресеты в БД
+│   └── frontend/                # Next.js фронтенд (React, Tailwind CSS)
+├── docs/                        # Документация, промпты и пресеты
+│   ├── prompts/                 # Промпты для LLM
+│   │   └── personas/            # Специфические промпты для ролей
+│   └── presets/                 # Готовые пресеты оценивания
+└── example.env                  # Пример Docker Compose env-файла
 ```
 
 ## Требования
@@ -86,7 +87,7 @@ uv sync --group dev
 uv run pre-commit install
 ```
 
-Хуки запускают `ruff check --fix` и `ruff format` для всех изменённых Python-файлов.
+Хуки запускают `ruff check --fix` и `ruff format` для всех изменённых Python-файлов. Также происходит проверка на утечку секретов в git-историю.
 
 ## Деплой
 
@@ -134,43 +135,98 @@ npm run dev
 
 ## Конфигурация
 
-Каждый Python-сервис читает настройки из переменных окружения через pydantic-settings. Для локальной разработки используются файлы `.env`, для Docker Compose — `.docker.env`.
+Проект использует переменные окружения для настройки сервисов.  
 
-Скопируйте example-файлы перед первым запуском:
+Docker Compose читает переменные из файла `.env` в корне проекта (создаётся из `example.docker.env`). Каждый Python-сервис также имеет свои `.docker.env` или `.env` файлы для специфичных настроек.
+
+### Локальная разработка (не рекомендуется)
+
+Для локальной разработки используйте файлы `.env` в директориях сервисов:
 
 ```bash
-# Для локальной разработки
 cp services/api_gateway/example.env services/api_gateway/.env
 cp services/ml_worker/example.env services/ml_worker/.env
+```
 
+### Быстрый старт с Docker Compose
+
+Скопируйте примеры конфигурации перед первым запуском:
+
+```bash
 # Для Docker Compose
+cp example.docker.env .env
+
+# Для сервисов
 cp services/api_gateway/example.docker.env services/api_gateway/.docker.env
 cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
 ```
 
-Отредактируйте скопированные файлы, указав реальные API-ключи и учётные данные.
+### Переменные окружения Docker Compose
+
+Файл `example.docker.env` в корне проекта содержит переменные, используемые непосредственно в `docker-compose.yaml`:
+
+| Переменная | По умолчанию | Описание |
+|------------|--------------|----------|
+| `POSTGRES_USER` | `charisma` | Пользователь PostgreSQL |
+| `POSTGRES_PASSWORD` | `charisma` | Пароль PostgreSQL |
+| `POSTGRES_DB` | `charisma` | Название базы данных |
+| `MIGRATOR_IMAGE` | `ghcr.io/desmitry/charisma-master-migrator:latest` | Образ мигратора |
+| `ML_WORKER_IMAGE` | `ghcr.io/desmitry/charisma-master-ml-worker:latest` | Образ ML Worker |
+| `API_GATEWAY_IMAGE` | `ghcr.io/desmitry/charisma-master-api-gateway:latest` | Образ API Gateway |
+| `FRONTEND_IMAGE` | `ghcr.io/desmitry/charisma-master-frontend:latest` | Образ Frontend |
+| `CELERY_LOG_LEVEL` | `info` | Уровень логирования Celery (`debug`, `info`, `warning`, `error`, `critical`) |
 
 ### API Gateway
 
 | Переменная | По умолчанию | Описание |
 |------------|--------------|----------|
+| `SERVICE_HOST` | `0.0.0.0` | Хост для запуска uvicorn |
+| `SERVICE_PORT` | `8000` | Порт для запуска uvicorn |
+| `ORIGIN_URL` | `http://localhost:3000` | Разрешённый origin для CORS |
+| `MODE` | `dev`/`prod` | Режим работы (для локальной разработки или Docker) |
+| `REDIS_URL` | `redis://localhost:6379/0` | URL подключения к Redis |
+| `CELERY_BROKER_URL` | `redis://localhost:6379/0` | Redis-брокер Celery |
+| `CELERY_RESULT_BACKEND` | `redis://localhost:6379/0` | Бэкенд результатов Celery |
 | `DATABASE_URL` | `postgresql://charisma:charisma@localhost:5432/charisma` | Подключение к Postgres |
-| `SEAWEEDFS_ENDPOINT` | `localhost:9222` | Адрес S3-шлюза SeaweedFS |
-| `SEAWEEDFS_ACCESS_KEY` | "" | Ключ доступа S3 (пусто — без аутентификации) |
+| `SEAWEEDFS_ENDPOINT` | `localhost:8333` | Адрес S3-шлюза SeaweedFS |
+| `SEAWEEDFS_ACCESS_KEY` | "" | Ключ доступа S3 |
 | `SEAWEEDFS_SECRET_KEY` | "" | Секретный ключ S3 |
-| `CELERY_BROKER_URL` | `redis://localhost:6379/0` | Redis-брокер |
-| `ORIGIN_URL` | `*` | Разрешённый origin для CORS |
 
 ### ML Worker
 
 | Переменная | По умолчанию | Описание |
 |------------|--------------|----------|
+| `REDIS_URL` | `redis://localhost:6379/0` | URL подключения к Redis |
+| `CELERY_BROKER_URL` | `redis://localhost:6379/0` | Redis-брокер Celery |
+| `CELERY_RESULT_BACKEND` | `redis://localhost:6379/0` | Бэкенд результатов Celery |
 | `DATABASE_URL` | `postgresql://charisma:charisma@localhost:5432/charisma` | Подключение к Postgres (для промптов) |
-| `SEAWEEDFS_ENDPOINT` | `localhost:9222` | Адрес S3-шлюза SeaweedFS |
-| `WHISPER_MODEL_TYPE` | `medium` | Размер локальной модели Whisper |
-| `WHISPER_DEVICE` | `cuda` | `cuda` или `cpu` |
-| `GIGACHAT_CREDENTIALS` | "" | Base64-кодированные учётные данные GigaChat |
+| `SEAWEEDFS_ENDPOINT` | `localhost:8333` | Адрес S3-шлюза SeaweedFS |
+| `SEAWEEDFS_ACCESS_KEY` | "" | Ключ доступа S3 |
+| `SEAWEEDFS_SECRET_KEY` | "" | Секретный ключ S3 |
+| `WHISPER_MODEL_NAME` | `whisper-1` | Название модели Whisper |
+| `WHISPER_MODEL_TYPE` | `base` | Размер локальной модели Whisper (`tiny`, `base`, `small`, `medium`, `large`) |
+| `WHISPER_DEVICE` | `cpu` | Устройство для Whisper (`cuda` или `cpu`) |
+| `WHISPER_COMPUTE_TYPE` | `int8` | Тип вычислений (`float16`, `int8`, `default`) |
+| `OPENAI_API_BASE` | `https://api.openai.com/v1` | Базовый URL OpenAI API |
 | `OPENAI_API_KEY` | "" | API-ключ OpenAI |
+| `OPENAI_MODEL_NAME` | `gpt-4o-mini` | Модель OpenAI для анализа |
+| `GIGACHAT_CREDENTIALS` | "" | Base64-кодированные учётные данные GigaChat |
+| `GIGACHAT_SCOPE` | `GIGACHAT_API_PERS` | Область доступа GigaChat |
+| `GIGACHAT_MODEL_NAME` | `GigaChat` | Модель GigaChat для анализа |
+| `GIGACHAT_VERIFY_SSL` | `false` | Проверка SSL-сертификатов GigaChat |
+| `SBER_SALUTE_CREDENTIALS` | "" | Учётные данные Sber Salute |
+| `SBER_SPEECH_SCOPE` | `SALUTE_SPEECH_PERS` | Область доступа Sber Salute Speech |
+| `COMPETITION_SEARCH_RESULTS` | `5` | Количество результатов поиска конкурентов |
+| `COMPETITION_SOURCES_TO_ANALYZE` | `3` | Количество источников для анализа |
+| `COMPETITION_FETCH_TIMEOUT_SECONDS` | `10` | Таймаут загрузки источника (сек) |
+| `COMPETITION_SOURCE_TEXT_LIMIT` | `6000` | Лимит текста источника (символов) |
+
+## Скрипты
+
+Существует два вспомогательных скрипта, которые упрощают работу с инфраструктурой:
+
+- **`scripts/load_weight_json.py`** – загружает конфигурацию весов алгоритма в PostgreSQL. Принимает путь к JSON‑файлу и идентификатор конфигурации. Таблица `algorithm_weights` будет создана автоматически, если её ещё нет.
+- **`scripts/upload_demo_to_seaweedfs.py`** – загружает демонстрационное видео и JSON‑результат анализа в SeaweedFS под именами `demo.mp4` и `demo.json` соответственно.
 
 ## API эндпоинты
 
@@ -201,6 +257,14 @@ cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
 | `description` | TEXT | Описание пресета |
 | `criteria` | JSONB | Массив критериев оценивания |
 | `created_at` | TIMESTAMPTZ | Время создания |
+| `updated_at` | TIMESTAMPTZ | Время последнего обновления |
+
+### `algorithm_weights`
+
+| Столбец | Тип | Описание |
+|---------|-----|----------|
+| `id` | TEXT | Уникальный идентификатор конфигурации (например, `default`, `v1`) |
+| `config` | JSONB | JSON‑конфигурация весов алгоритма |
 | `updated_at` | TIMESTAMPTZ | Время последнего обновления |
 
 ## SeaweedFS buckets
