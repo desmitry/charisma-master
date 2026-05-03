@@ -11,7 +11,8 @@ __pycache__/
 # C extensions
 *.so
 
-media/
+media/*
+!media/*.png
 !services/frontend/**/media
 
 # Distribution / packaging
