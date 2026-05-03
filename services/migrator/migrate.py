@@ -18,7 +18,7 @@ DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql://charisma:charisma@postgres:5432/charisma"
 )
 
-DOCS_DIR = Path(__file__).resolve().parents[2] / "docs"
+DOCS_DIR = Path(__file__).resolve().parent / "docs"
 PROMPTS_DIR = DOCS_DIR / "prompts"
 PERSONAS_DIR = PROMPTS_DIR / "personas"
 PRESETS_DIR = DOCS_DIR / "presets"

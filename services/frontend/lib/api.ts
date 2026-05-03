@@ -235,6 +235,8 @@ export function normalizeAnalysisResult(payload: any): AnalysisResult {
       ideal_text: speechReport.ideal_text ?? "",
       persona_feedback: speechReport.persona_feedback ?? "",
       dynamic_fillers: speechReport.dynamic_fillers ?? [],
+      presentation_feedback: speechReport.presentation_feedback ?? "",
+      competition_analysis: speechReport.competition_analysis ?? "",
       useful_links:
         Array.isArray(speechReport.useful_links)
           ? speechReport.useful_links

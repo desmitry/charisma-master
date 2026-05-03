@@ -38,16 +38,6 @@ from app.logic.prompts import load_prompts_from_db
 logger = logging.getLogger(__name__)
 
 
-def _run_async(coro):
-    loop = asyncio.new_event_loop()
-    try:
-        asyncio.set_event_loop(loop)
-        return loop.run_until_complete(coro)
-    finally:
-        asyncio.set_event_loop(None)
-        loop.close()
-
-
 def _get_presentation_text(presentation_path: Optional[str]) -> list[str]:
     """Obtaining the presentation text by slides.
 
@@ -280,7 +270,7 @@ def process_video_pipeline(  # noqa: C901
         criteria_path = None
         try:
             criteria_path = _download_to_temp(evaluation_criteria_key)
-            evaluation_criteria_list = _run_async(
+            evaluation_criteria_list = asyncio.run(
                 llm_client.get_evaluation_criteria(criteria_path)
             )
         except Exception as e:
@@ -300,7 +290,7 @@ def process_video_pipeline(  # noqa: C901
         )
         try:
             competition_agent = CompetitionResearchAgent(llm_client=llm_client)
-            competition_analysis = _run_async(
+            competition_analysis = asyncio.run(
                 competition_agent.run(
                     transcript_text=full_text,
                     presentation_text=presentation_text,
@@ -323,7 +313,7 @@ def process_video_pipeline(  # noqa: C901
 
     if full_text:
         try:
-            llm_speech_report = _run_async(
+            llm_speech_report = asyncio.run(
                 llm_client.analyze_speech(
                     transcript_text=full_text,
                     presentation_text=presentation_text,
@@ -349,7 +339,7 @@ def process_video_pipeline(  # noqa: C901
     )
     if full_text and evaluation_criteria_list:
         try:
-            evaluation_criteria_list = _run_async(
+            evaluation_criteria_list = asyncio.run(
                 llm_client.analyze_with_evalution_criteria(
                     transcript_text=full_text,
                     presentation_text=presentation_text,
