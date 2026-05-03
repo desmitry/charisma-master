@@ -259,8 +259,8 @@ export function AnalysisDashboard({ result, onBack }: Props) {
     ...(speechReport.competition_analysis.trim()
       ? [{ title: "Анализ конкурентов", text: speechReport.competition_analysis, icon: <FileText className="w-4 h-4 text-cyan-400" /> }]
       : []),
-    ...(speechReport.useful_links.trim()
-      ? [{ title: "Полезные ссылки", text: speechReport.useful_links, icon: <LinkIcon className="w-4 h-4 text-zinc-400" /> }]
+    ...(speechReport.useful_links && speechReport.useful_links.length > 0
+      ? [{ title: "Полезные ссылки", text: Array.isArray(speechReport.useful_links) ? speechReport.useful_links.join(", ") : String(speechReport.useful_links).trim(), icon: <LinkIcon className="w-4 h-4 text-zinc-400" /> }]
       : []),
   ];
 

@@ -321,18 +321,18 @@ class CompetitionResearchAgent:
         if not shortlisted_results:
             return []
 
-        reviews = await asyncio.gather(
-            *[
-                self._review_single_source(
-                    product_name=product_name,
-                    product_description=product_description,
-                    search_result=search_result,
-                    provider=provider,
-                )
-                for search_result in shortlisted_results
-            ]
-        )
-        return [review for review in reviews if review]
+        reviews = []
+        for search_result in shortlisted_results:
+            review = await self._review_single_source(
+                product_name=product_name,
+                product_description=product_description,
+                search_result=search_result,
+                provider=provider,
+            )
+            if review:
+                reviews.append(review)
+            await asyncio.sleep(1)  # Rate limiting delay
+        return reviews
 
     async def _review_single_source(
         self,

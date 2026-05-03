@@ -8,6 +8,7 @@ dependencies = [
     "celery-types==0.23.0",
     "charisma-schemas",
     "charisma-storage",
+    "ddgs>=9.14.1",
     "duckduckgo-search>=6.3.0",
     "faster-whisper>=1.2.1",
     "gigachat==0.1.43",

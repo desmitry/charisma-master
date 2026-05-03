@@ -18,21 +18,15 @@ class TestLLMClientConstants:
 
 class TestLLMClientInstantiation:
     def test_instantiates_with_patched_clients(self, llm_client_module):
-        with (
-            patch(
-                "app.logic.llm_client.openai.AsyncOpenAI",
-                return_value=MagicMock(name="openai_client"),
-            ) as mock_openai,
-            patch(
-                "app.logic.llm_client.GigaChat",
-                return_value=MagicMock(name="gigachat_client"),
-            ) as mock_gigachat,
-        ):
+        with patch(
+            "app.logic.llm_client.openai.AsyncOpenAI",
+            return_value=MagicMock(name="openai_client"),
+        ) as mock_openai:
             client = llm_client_module.LLMClient()
 
         assert client is not None
         mock_openai.assert_called_once()
-        mock_gigachat.assert_called_once()
+        # GigaChat is no longer initialized in __init__; created per call
 
 
 class TestAnalyzeSpeech:
@@ -216,14 +210,18 @@ class TestAnalyzeSpeech:
         llm_client_module,
     ):
         """GigaChat API exception propagates upward from _call_gigachat."""
+        mock_gigachat_instance = MagicMock()
+        mock_gigachat_instance.achat = AsyncMock(
+            side_effect=RuntimeError("GigaChat rate limit exceeded"),
+        )
         with (
             patch("app.logic.llm_client.openai.AsyncOpenAI"),
-            patch("app.logic.llm_client.GigaChat"),
+            patch(
+                "app.logic.llm_client.GigaChat",
+                return_value=mock_gigachat_instance,
+            ),
         ):
             client = llm_client_module.LLMClient()
-            client.gigachat_client.achat = AsyncMock(
-                side_effect=RuntimeError("GigaChat rate limit exceeded"),
-            )
 
             with pytest.raises(RuntimeError, match="rate limit"):
                 await client._call_gigachat(

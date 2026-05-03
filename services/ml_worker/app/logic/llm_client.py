@@ -30,11 +30,10 @@ class LLMClient:
             base_url=settings.openai_api_base,
             api_key=settings.openai_api_key,
         )
-        self.gigachat_client = GigaChat(
-            credentials=settings.gigachat_credentials,
-            verify_ssl_certs=settings.gigachat_verify_ssl,
-            scope=settings.gigachat_scope,
-        )
+        # Store credentials for creating GigaChat client later
+        self._gigachat_credentials = settings.gigachat_credentials
+        self._gigachat_verify_ssl = settings.gigachat_verify_ssl
+        self._gigachat_scope = settings.gigachat_scope
 
     async def analyze_speech(
         self,
@@ -356,15 +355,20 @@ class LLMClient:
 
     async def _call_gigachat(self, messages: list, model: str) -> str:
         """Send a chat completion request to GigaChat API."""
-        if not self.gigachat_client:
-            raise ValueError(
-                "GigaChat client is not initialized. Check credentials."
-            )
-
-        response = await self.gigachat_client.achat(
+        # Create a new client per call to avoid event loop mismatch
+        client = GigaChat(
+            credentials=self._gigachat_credentials,
+            verify_ssl_certs=self._gigachat_verify_ssl,
+            scope=self._gigachat_scope,
+        )
+        logger.debug("GigaChat request messages: %s", messages)
+        response = await client.achat(
             payload={"messages": messages, "model": model}
         )
-        return response.choices[0].message.content
+        logger.debug("GigaChat full response: %s", response)
+        content = response.choices[0].message.content
+        logger.debug("GigaChat content: %s", content)
+        return content
 
     def _parse_json_response(self, content: str) -> dict:
         """Clean and parse the JSON string returned by LLM."""
@@ -373,6 +377,11 @@ class LLMClient:
         try:
             return json.loads(cleaned)
         except json.JSONDecodeError as exc:
+            logger.error(
+                "JSON parse error: %s. Content (first 500 chars): %s",
+                exc,
+                cleaned[:500],
+            )
             raise RuntimeError("LLM returned invalid JSON response") from exc
 
     @staticmethod

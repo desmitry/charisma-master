@@ -378,6 +378,7 @@ dependencies = [
     { name = "celery-types" },
     { name = "charisma-schemas" },
     { name = "charisma-storage" },
+    { name = "ddgs" },
     { name = "duckduckgo-search" },
     { name = "faster-whisper" },
     { name = "gigachat" },
@@ -404,6 +405,7 @@ requires-dist = [
     { name = "celery-types", specifier = "==0.23.0" },
     { name = "charisma-schemas", editable = "packages/charisma_schemas" },
     { name = "charisma-storage", editable = "packages/charisma_storage" },
+    { name = "ddgs", specifier = ">=9.14.1" },
     { name = "duckduckgo-search", specifier = ">=6.3.0" },
     { name = "faster-whisper", specifier = ">=1.2.1" },
     { name = "gigachat", specifier = "==0.1.43" },
@@ -651,6 +653,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/64/a4/f71d9cf3a5ac257c993b5ca3f93df5f7fb395c725e7f1e6479d2514173c3/dataclasses_json-0.6.7.tar.gz", hash = "sha256:b6b3e528266ea45b9535223bc53ca645f5208833c29229e847b3f26a1cc55fc0", size = 32227, upload-time = "2024-06-09T16:20:19.103Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c3/be/d0d44e092656fe7a06b55e6103cbce807cdbdee17884a5367c68c9860853/dataclasses_json-0.6.7-py3-none-any.whl", hash = "sha256:0dbf33f26c8d5305befd61b39d2b3414e8a407bedc2834dea9b8d642666fb40a", size = 28686, upload-time = "2024-06-09T16:20:16.715Z" },
+]
+
+[[package]]
+name = "ddgs"
+version = "9.14.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "lxml" },
+    { name = "primp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c9/f2/aa1f5af106ea0ef0351d11a2fe05d28618463160137326eeb3073b7d788b/ddgs-9.14.1.tar.gz", hash = "sha256:85b878225a622ba145aff33c0f2f0dceb90d6cfaa291af253021d10cb261a8bb", size = 57157, upload-time = "2026-04-20T12:09:21.313Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4f/a0/c0b568acd6ec819ec94ecfd4eebd00edc855efab06e589ad17d0412ff4ce/ddgs-9.14.1-py3-none-any.whl", hash = "sha256:e6b853be092532add9c0d611c4b121f0b27092de66756401057c2100f6b1ab44", size = 67019, upload-time = "2026-04-20T12:09:19.867Z" },
 ]
 
 [[package]]
