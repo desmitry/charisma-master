@@ -1,8 +1,18 @@
+[build-system]
+requires = ["setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "charisma-migrator"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Database migrator for prompts and presets"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "psycopg2-binary>=2.9.10",
 ]
+
+[tool.setuptools]
+packages = []
+
+[tool.setuptools_scm]
+root = "../.."

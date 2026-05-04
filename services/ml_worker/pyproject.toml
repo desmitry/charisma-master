@@ -1,6 +1,10 @@
+[build-system]
+requires = ["setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "charisma-ml-worker"
-version = "0.1.1"
+dynamic = ["version"]
 description = "Charisma Master ML Worker - Celery worker for speech/video analysis"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -28,6 +32,12 @@ dependencies = [
     "redis>=7.1.0",
     "requests>=2.32.5",
 ]
+
+[tool.setuptools]
+packages = []
+
+[tool.setuptools_scm]
+root = "../.."
 
 [tool.uv.sources]
 charisma-schemas = { workspace = true }

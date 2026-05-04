@@ -1,8 +1,11 @@
 FROM python:3.12-slim AS builder
 
 ARG UV_VERSION=0.11.3
+ARG VERSION=0.0.0
 
 WORKDIR /build
+
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=${VERSION}
 
 RUN apt-get update -y && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
