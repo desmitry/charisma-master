@@ -75,6 +75,8 @@ services:
         build:
             context: .
             dockerfile: services/migrator/Dockerfile
+            args:
+                VERSION: ${VERSION:-0.0.0}
         container_name: migrator
         environment:
             DATABASE_URL: postgresql://${POSTGRES_USER:-charisma}:${POSTGRES_PASSWORD:-charisma}@postgres:5432/${POSTGRES_DB:-charisma}
@@ -100,6 +102,8 @@ services:
         build:
             context: .
             dockerfile: ./services/ml_worker/Dockerfile
+            args:
+                VERSION: ${VERSION:-0.0.0}
         container_name: ml_worker
         user: "1000:1000"
         command:
@@ -129,6 +133,8 @@ services:
         build:
             context: .
             dockerfile: ./services/api_gateway/Dockerfile
+            args:
+                VERSION: ${VERSION:-0.0.0}
         container_name: api_gateway
         command:
             [

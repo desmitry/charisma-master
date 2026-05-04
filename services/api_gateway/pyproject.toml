@@ -1,6 +1,10 @@
+[build-system]
+requires = ["setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "charisma-api-gateway"
-version = "0.1.1"
+dynamic = ["version"]
 description = "Charisma Master API Gateway"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -17,6 +21,12 @@ dependencies = [
     "uvicorn[standard]>=0.38.0",
     "slowapi>=0.1.9",
 ]
+
+[tool.setuptools]
+packages = []
+
+[tool.setuptools_scm]
+root = "../.."
 
 [tool.uv.sources]
 charisma-schemas = { workspace = true }

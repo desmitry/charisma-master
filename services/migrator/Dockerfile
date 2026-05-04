@@ -1,8 +1,11 @@
 FROM python:3.12-slim
 
 ARG UV_VERSION=0.11.3
+ARG VERSION=0.0.0
 
 WORKDIR /migrator
+
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=${VERSION}
 
 RUN apt-get update -y && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
