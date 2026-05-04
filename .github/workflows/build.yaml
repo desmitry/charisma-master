@@ -61,7 +61,7 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          uvx semantic-release version --no-commit
+          uvx --from python-semantic-release semantic-release version --no-commit
           version=$(git describe --tags --abbrev=0 | sed 's/^v//')
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "Version: $version"
