@@ -75,11 +75,10 @@ services:
         build:
             context: .
             dockerfile: services/migrator/Dockerfile
-            args:
-                VERSION: ${VERSION:-0.0.0}
         container_name: migrator
         environment:
             DATABASE_URL: postgresql://${POSTGRES_USER:-charisma}:${POSTGRES_PASSWORD:-charisma}@postgres:5432/${POSTGRES_DB:-charisma}
+            PROJECT_ROOT: /app
         depends_on:
             postgres:
                 condition: service_healthy

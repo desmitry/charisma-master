@@ -41,7 +41,7 @@
 |--------|----------|------|
 | `services/api_gateway` | FastAPI-бэкенд. Приём файлов, запуск задач, опрос статуса, выдача результатов и стриминг видео | FastAPI, Celery, uvicorn |
 | `services/ml_worker` | Celery-воркер. Транскрибация, анализ видео/аудио, оценка выступления через LLM | Celery, Whisper, MediaPipe, GigaChat, OpenAI, LangGraph |
-| `services/migrator` | Одноразовый сервис. Загружает промпты и пресеты из `docs/` в Postgres при старте | psycopg2 |
+| `services/migrator` | Сервис миграции БД. Выполняет SQL-миграции через sqlx и загружает промпты/пресеты из `docs/` в Postgres | Rust, sqlx |
 | `services/frontend` | Веб-приложение. Интерфейс загрузки, индикатор прогресса, дашборд результатов | Next.js, React, Tailwind CSS |
 
 ### Общие пакеты
@@ -94,7 +94,7 @@ charisma-master/
 ├── services/                    # Микросервисы проекта
 │   ├── api_gateway/             # FastAPI‑бэкенд, маршрутизация задач, взаимодействие с SeaweedFS
 │   ├── ml_worker/               # Celery‑воркер, обработка медиа, LLM‑анализ, интеграция LangChain
-│   ├── migrator/                # Одноразовый сервис, загружает промпты и пресеты в БД
+│   ├── migrator/                # Сервис миграции БД (sqlx + seed)
 │   └── frontend/                # Next.js фронтенд (React, Tailwind CSS)
 ├── docs/                        # Документация, промпты и пресеты
 │   ├── prompts/                 # Промпты для LLM
@@ -129,7 +129,7 @@ docker compose up -d
 
 Запускает все сервисы: Postgres, SeaweedFS (master, volume, filer, s3), migrator, Redis, ml_worker, api_gateway и frontend.
 
-Мигратор запускается один раз при старте, создаёт необходимые таблицы, загружает промпты и пресеты из `docs/`, после чего завершается со статусом `service_completed_successfully`.
+Сервис migrator выполняет SQL-миграции (создание схемы, таблиц, ролей и прав) и загружает промпты и пресеты из `docs/` в БД. Завершается со статусом `service_completed_successfully`.
 
 Для включения GPU-поддержки ML Worker:
 
@@ -202,7 +202,7 @@ cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
 | `POSTGRES_USER` | `charisma` | Пользователь PostgreSQL |
 | `POSTGRES_PASSWORD` | `charisma` | Пароль PostgreSQL |
 | `POSTGRES_DB` | `charisma` | Название базы данных |
-| `MIGRATOR_IMAGE` | `ghcr.io/desmitry/charisma-master-migrator:latest` | Образ мигратора |
+| `MIGRATOR_IMAGE` | `ghcr.io/desmitry/charisma-master-migrator:latest` | Образ сервиса миграции БД |
 | `ML_WORKER_IMAGE` | `ghcr.io/desmitry/charisma-master-ml-worker:latest` | Образ ML Worker |
 | `API_GATEWAY_IMAGE` | `ghcr.io/desmitry/charisma-master-api-gateway:latest` | Образ API Gateway |
 | `FRONTEND_IMAGE` | `ghcr.io/desmitry/charisma-master-frontend:latest` | Образ Frontend |
