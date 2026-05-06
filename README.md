@@ -123,11 +123,25 @@ uv run pre-commit install
 
 ## Деплой
 
+Перед первым запуском убедитесь, что:
+
+1. DNS-записи `charisma-master.ru` и `www.charisma-master.ru` указывают на публичный IP сервера (`dig +short charisma-master.ru`).
+2. На сервере открыты порты `80` и `443`.
+3. Однократно выпущен TLS-сертификат Let's Encrypt:
+
+```bash
+docker compose --profile init up certbot-init
+```
+
+Сервис `certbot-init` поднимет временный HTTP-сервер на порту `80`, пройдёт ACME-челлендж и сохранит сертификат в named volume `certbot_certs`. После завершения контейнер остановится. Шаг выполняется один раз; повторный запуск не нужен — продление сертификатов делает фоновый сервис `certbot` (проверка раз в 12 часов, после успешного обновления — `nginx -s reload`).
+
+Затем поднимаем продакшен:
+
 ```bash
 docker compose up -d
 ```
 
-Запускает все сервисы: Postgres, SeaweedFS (master, volume, filer, s3), migrator, Redis, ml_worker, api_gateway и frontend.
+Запускает все сервисы: Postgres, SeaweedFS (master, volume, filer, s3), migrator, Redis, ml_worker, api_gateway, frontend, nginx и certbot. Nginx терминирует TLS, проксирует трафик на frontend, ограничивает rate (10 r/s на IP, burst 20) и размер тела запроса (700 МБ).
 
 Мигратор запускается один раз при старте, создаёт необходимые таблицы, загружает промпты и пресеты из `docs/`, после чего завершается со статусом `service_completed_successfully`.
 

@@ -186,8 +186,67 @@ services:
             api_gateway:
                 condition: service_healthy
 
+    nginx:
+        image: nginx:1.27.3-alpine
+        container_name: nginx
+        restart: unless-stopped
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+            - ./nginx/conf.d:/etc/nginx/conf.d:ro
+            - certbot_certs:/etc/letsencrypt:ro
+            - certbot_www:/var/www/certbot:ro
+        depends_on:
+            frontend:
+                condition: service_healthy
+
+    certbot-init:
+        image: certbot/certbot:v2.11.0
+        container_name: certbot-init
+        profiles: ["init"]
+        command: >
+            certonly --standalone
+            --non-interactive --agree-tos
+            --email slend_bro56@mail.ru
+            -d charisma-master.ru -d www.charisma-master.ru
+            --rsa-key-size 4096
+        ports:
+            - "80:80"
+        volumes:
+            - certbot_certs:/etc/letsencrypt
+            - certbot_www:/var/www/certbot
+
+    certbot:
+        build:
+            context: ./nginx
+            dockerfile: certbot.Dockerfile
+        image: charisma-certbot:v2.11.0
+        container_name: certbot
+        restart: unless-stopped
+        entrypoint: /bin/sh -c
+        command:
+            - |
+              trap exit TERM
+              while :; do
+                certbot renew --webroot --webroot-path=/var/www/certbot \
+                  --deploy-hook "docker exec nginx nginx -s reload"
+                sleep 12h & wait $${!}
+              done
+        volumes:
+            - certbot_certs:/etc/letsencrypt
+            - certbot_www:/var/www/certbot
+            - /var/run/docker.sock:/var/run/docker.sock
+        depends_on:
+            - nginx
+
 volumes:
     postgres_data:
         driver: local
     seaweedfs_data:
+        driver: local
+    certbot_certs:
+        driver: local
+    certbot_www:
         driver: local
