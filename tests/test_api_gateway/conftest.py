@@ -8,6 +8,8 @@ swapped the `app` package in sys.modules between test runs.
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -52,6 +54,7 @@ def client(_ensure_api_gateway_loaded) -> TestClient:
     Auth dependencies (require_create_analysis, require_view_own_analysis)
     are overridden with a mock user to avoid needing JWT tokens or NATS
     during unit tests.
+    ``get_redis_client`` is patched to avoid requiring a running Redis.
     """
     from app.auth.dependencies import (  # noqa: PLC0415
         require_create_analysis,
@@ -66,4 +69,8 @@ def client(_ensure_api_gateway_loaded) -> TestClient:
         _mock_require_view_own_analysis
     )
 
-    return TestClient(app)
+    with patch("app.logic.endpoints.upload.get_redis_client") as mock:
+        mock_redis = MagicMock()
+        mock_redis.get.return_value = "0"
+        mock.return_value = mock_redis
+        yield TestClient(app)
