@@ -258,10 +258,15 @@ async fn test_get_permissions_with_roles(pool: sqlx::PgPool) {
     let user_id = repo.create(email, password_hash).await.unwrap();
 
     // Assign moderator role
-    repo.assign_role(user_id, "moderator".to_string()).await.unwrap();
+    repo.assign_role(user_id, "moderator".to_string())
+        .await
+        .unwrap();
 
     let (roles, permissions) = repo.get_permissions_by_id(user_id).await.unwrap();
     assert!(roles.contains(&"user".to_string()));
     assert!(roles.contains(&"moderator".to_string()));
-    assert!(!permissions.is_empty(), "should have permissions from both roles");
+    assert!(
+        !permissions.is_empty(),
+        "should have permissions from both roles"
+    );
 }

@@ -14,9 +14,8 @@ struct Preset {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgresql://charisma:charisma@postgresql:5432/charisma".to_string()
-    });
+    let database_url = env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgresql://charisma:charisma@postgresql:5432/charisma".to_string());
 
     let pool = PgPoolOptions::new()
         .max_connections(5)

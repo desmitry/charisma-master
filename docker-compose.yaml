@@ -110,7 +110,7 @@ services:
             retries: 3
 
     account:
-        image: ${ACCOUNT_IMAGE:-ghcr.io/desmitry/charisma-master-account-service:latest}
+        image: ${ACCOUNT_IMAGE:-ghcr.io/desmitry/charisma-master-account:latest}
         build:
             context: .
             dockerfile: services/account/Dockerfile

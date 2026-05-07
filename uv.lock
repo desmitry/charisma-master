@@ -11,7 +11,6 @@ resolution-markers = [
 members = [
     "charisma-api-gateway",
     "charisma-master",
-    "charisma-migrator",
     "charisma-ml-worker",
     "charisma-schemas",
     "charisma-storage",
@@ -357,16 +356,6 @@ dev = [
     { name = "python-semantic-release", specifier = ">=10.5.3" },
     { name = "ruff", specifier = ">=0.14.8" },
 ]
-
-[[package]]
-name = "charisma-migrator"
-source = { editable = "services/migrator" }
-dependencies = [
-    { name = "psycopg2-binary" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "psycopg2-binary", specifier = ">=2.9.10" }]
 
 [[package]]
 name = "charisma-ml-worker"

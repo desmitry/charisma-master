@@ -52,7 +52,6 @@ members = [
     "packages/charisma_storage",
     "services/api_gateway",
     "services/ml_worker",
-    "services/migrator",
 ]
 
 [tool.ruff.lint.per-file-ignores]
