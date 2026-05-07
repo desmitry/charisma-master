@@ -56,6 +56,7 @@ def _make_analysis_result_dict(task_id: str = "t1") -> dict:
         "analyze_provider": "gigachat",
         "analyze_model": "GigaChat",
         "transcribe_model": "sber_gigachat",
+        "user_id": "test-user-id",
     }
 
 
@@ -117,7 +118,7 @@ class TestGetAnalysis:
         from fastapi.exceptions import ResponseValidationError
 
         # missing video_path, transcript, and other required fields
-        broken_payload = {"task_id": "t1"}
+        broken_payload = {"task_id": "t1", "user_id": "test-user-id"}
         with patch(
             "app.logic.endpoints.analysis.get_object_json",
             return_value=broken_payload,

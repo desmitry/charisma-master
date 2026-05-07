@@ -194,6 +194,7 @@ class TestAnalysisResult:
             analyze_provider="gigachat",
             analyze_model="GigaChat",
             transcribe_model="sber_gigachat",
+            user_id="test-user",
         )
         assert result.task_id == "abc-123"
         assert result.video_path == "videos/abc.mp4"
@@ -218,5 +219,6 @@ class TestAnalysisResult:
             analyze_provider="openai",
             analyze_model="gpt-4",
             transcribe_model="whisper_local",
+            user_id="test-user",
         )
         assert result.video_path is None
