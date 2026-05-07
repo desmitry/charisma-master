@@ -145,6 +145,7 @@ def process_video_pipeline(  # noqa: C901
     persona: str | Enum,
     analyze_provider: str | Enum,
     transcribe_provider: str | Enum,
+    user_id: str,
 ):
     persona = PersonaRoles(persona)
     analyze_provider = AnalyzeProvider(analyze_provider)
@@ -423,6 +424,7 @@ def process_video_pipeline(  # noqa: C901
         analyze_provider=analyze_provider.value,
         analyze_model=analyze_provider.model_name,
         transcribe_model=transcribe_provider.value,
+        user_id=user_id,
     )
 
     put_object_json(

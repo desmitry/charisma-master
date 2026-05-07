@@ -75,6 +75,41 @@ class Settings(BaseSettings):
         frozen=True,
     )
 
+    nats_url: str = Field(
+        key="NATS_URL",
+        default="nats://nats:4222",
+        validate_default=True,
+        frozen=True,
+    )
+
+    jwt_secret: str = Field(
+        key="JWT_SECRET",
+        default="dev-secret-key",
+        validate_default=True,
+        frozen=True,
+    )
+
+    jwt_algorithm: str = Field(
+        key="JWT_ALGORITHM",
+        default="HS256",
+        validate_default=True,
+        frozen=True,
+    )
+
+    access_token_expire_mins: int = Field(
+        key="ACCESS_TOKEN_EXPIRE_MINS",
+        default=15,
+        validate_default=True,
+        frozen=True,
+    )
+
+    refresh_token_expire_mins: int = Field(
+        key="REFRESH_TOKEN_EXPIRE_MINS",
+        default=10080,
+        validate_default=True,
+        frozen=True,
+    )
+
     model_config = SettingsConfigDict(env_file=".env")
 
 

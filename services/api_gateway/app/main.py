@@ -14,6 +14,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.middleware.cors import CORSMiddleware
 
+from app.auth.endpoints import router as auth_router
 from app.config import settings
 from app.logic.endpoints import analysis, status, upload
 
@@ -259,3 +260,4 @@ limiter.limit(f"{os.getenv('UPLOAD_DAILY_LIMIT', 5)}/day")(upload.process)
 app.include_router(upload.router, prefix="/api/v1", tags=["Processing"])
 app.include_router(status.router, prefix="/api/v1", tags=["Status"])
 app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"])
+app.include_router(auth_router, tags=["Authentication"])
