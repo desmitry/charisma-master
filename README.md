@@ -124,6 +124,8 @@ charisma-master/
 - uv (для локальной разработки)
 - Python 3.12
 - Node.js 25 (для разработки фронтенда)
+- Cargo 1.94.x
+- Cargo Clippy + Cargo Formatter
 
 ### Pre-commit хуки
 
