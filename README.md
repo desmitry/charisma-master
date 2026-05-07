@@ -134,7 +134,7 @@ uv sync --group dev
 uv run pre-commit install
 ```
 
-Хуки запускают `ruff check --fix` и `ruff format` для всех изменённых Python-файлов. Также происходит проверка на утечку секретов в git-историю.
+Хуки запускают `ruff check --fix` и `ruff format` для всех изменённых Python-файлов, а также `cargo fmt` и `cargo clippy` для Rust-сервисов (`account`, `migrator`). Также происходит проверка на утечку секретов в git-историю.
 
 ## Деплой
 
