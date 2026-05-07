@@ -4,12 +4,78 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
   (typeof window !== "undefined" ? "/api/proxy" : "http://localhost:8000");
 
+const ACCESS_TOKEN_KEY = "token";
+const REFRESH_TOKEN_KEY = "refresh_token";
+
 class ExpectedError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ExpectedError";
     Object.setPrototypeOf(this, ExpectedError.prototype);
   }
+}
+
+function getAccessToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+function getRefreshToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+let _refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return null;
+
+  if (!_refreshPromise) {
+    _refreshPromise = (async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        if (!response.ok) throw new Error("Refresh failed");
+        const data = await response.json();
+        window.localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
+        return data.access_token;
+      } catch {
+        window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+        window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+        return null;
+      } finally {
+        _refreshPromise = null;
+      }
+    })();
+  }
+
+  return _refreshPromise;
+}
+
+async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = getAccessToken();
+  if (token) {
+    const headers = new Headers(options.headers || {});
+    headers.set("Authorization", `Bearer ${token}`);
+    options = { ...options, headers };
+  }
+
+  let response = await fetch(url, options);
+
+  if (response.status === 401 && token) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      const headers = new Headers(options.headers || {});
+      headers.set("Authorization", `Bearer ${newToken}`);
+      response = await fetch(url, { ...options, headers });
+    }
+  }
+
+  return response;
 }
 
 export interface UploadVideoPayload {
@@ -68,6 +134,16 @@ async function checkResponse<T>(response: Response): Promise<T> {
       (error as any).statusCode = response.status;
       throw error;
     }
+    if (response.status === 401) {
+      const error = new ExpectedError("Требуется авторизация. Пожалуйста, войдите в аккаунт.");
+      (error as any).statusCode = response.status;
+      throw error;
+    }
+    if (response.status === 403) {
+      const error = new ExpectedError("Недостаточно прав для выполнения действия.");
+      (error as any).statusCode = response.status;
+      throw error;
+    }
 
     const error = new Error(errorMessage || "Ошибка сервера");
     (error as any).statusCode = response.status;
@@ -86,7 +162,7 @@ async function checkResponse<T>(response: Response): Promise<T> {
 }
 
 export async function authRegister(payload: AuthCredentials): Promise<RegisterResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -101,7 +177,7 @@ export async function authRegister(payload: AuthCredentials): Promise<RegisterRe
 }
 
 export async function authLogin(payload: AuthCredentials): Promise<LoginResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -116,7 +192,7 @@ export async function authLogin(payload: AuthCredentials): Promise<LoginResponse
 }
 
 export async function authRefresh(refreshToken: string): Promise<RefreshResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -144,7 +220,7 @@ export async function authLogout({
     headers.Authorization = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
     method: "POST",
     headers,
     body: refreshToken ? JSON.stringify({ refresh_token: refreshToken }) : undefined,
@@ -299,7 +375,7 @@ export async function uploadVideo(payload: UploadVideoPayload): Promise<{ task_i
   }
 
   try {
-    const response = await fetch("/api/upload", {
+    const response = await fetchWithAuth("/api/upload", {
       method: "POST",
       body: formData,
     });
@@ -322,6 +398,16 @@ export async function uploadVideo(payload: UploadVideoPayload): Promise<{ task_i
       }
       if (response.status === 413) {
         const error = new ExpectedError(errorMessage || "Файл слишком большой. Максимальный размер: 200MB.");
+        (error as any).statusCode = response.status;
+        throw error;
+      }
+      if (response.status === 401) {
+        const error = new ExpectedError("Требуется авторизация. Пожалуйста, войдите в аккаунт.");
+        (error as any).statusCode = response.status;
+        throw error;
+      }
+      if (response.status === 403) {
+        const error = new ExpectedError("Недостаточно прав для выполнения действия.");
         (error as any).statusCode = response.status;
         throw error;
       }
@@ -352,7 +438,7 @@ export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse>
 }
 
 export async function getAnalysis(taskId: string): Promise<AnalysisResult> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/analysis/${taskId}`);
+  const response = await fetchWithAuth(`${API_BASE_URL}/api/v1/analysis/${taskId}`);
   const data = await checkResponse<any>(response);
   return normalizeAnalysisResult(data);
 }

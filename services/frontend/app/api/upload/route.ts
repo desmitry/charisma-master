@@ -16,23 +16,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const headers: HeadersInit = {};
-    
+    const headersToForward: HeadersInit = {};
     request.headers.forEach((value, key) => {
       const lowerKey = key.toLowerCase();
-      if (lowerKey !== 'host') {
-        headers[key] = value;
+      if (lowerKey !== 'host' && lowerKey !== 'content-length' && lowerKey !== 'content-type') {
+        headersToForward[key] = value;
       }
     });
+
+    const formData = await request.formData();
 
     const backendUrl = `${BACKEND_URL}/api/v1/process`;
 
     const response = await fetch(backendUrl, {
       method: "POST",
-      headers: headers,
-      body: request.body as any,
-      // @ts-ignore - 'duplex' is required for streaming request body in Node.js
-      duplex: 'half',
+      headers: headersToForward,
+      body: formData,
     });
 
     const data = await response.text();
@@ -44,7 +43,8 @@ export async function POST(request: NextRequest) {
         "Content-Type": response.headers.get("content-type") || "application/json",
       },
     });
-  } catch {
+  } catch (e) {
+    console.error("Upload proxy error:", e);
     return NextResponse.json(
       { error: "Failed to upload file to backend" },
       { status: 502 }
