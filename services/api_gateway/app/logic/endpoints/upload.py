@@ -1,8 +1,10 @@
+import asyncio
 import logging
 import os
 import subprocess
 import tempfile
 import uuid
+from datetime import date
 from typing import Optional
 
 import psycopg2
@@ -21,12 +23,14 @@ from fastapi import (
     HTTPException,
     Request,
     UploadFile,
+    status,
 )
 from rutube import Rutube
 
 from app.auth.dependencies import (
     require_create_analysis,
 )
+from app.auth.jwt_utils import get_redis_client
 from app.celery_app import celery_app
 from app.config import settings
 
@@ -279,6 +283,22 @@ async def process(
 
     task_id = str(uuid.uuid4())
     logger.info(f"Processing task {task_id}")
+
+    user_id = user_info["sub"]
+    redis_client = get_redis_client()
+    today_str = date.today().isoformat()
+    counter_key = f"user_processing_count:{user_id}:{today_str}"
+    daily_count = int(
+        await asyncio.to_thread(lambda: redis_client.get(counter_key) or "0")
+    )
+    if daily_count >= settings.daily_process_limit:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                f"Превышен дневной лимит обработок "
+                f"({settings.daily_process_limit} в день)."
+            ),
+        )
 
     text_key = None
     if user_speech_text_file:

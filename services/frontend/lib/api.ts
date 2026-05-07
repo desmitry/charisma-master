@@ -144,6 +144,11 @@ async function checkResponse<T>(response: Response): Promise<T> {
       (error as any).statusCode = response.status;
       throw error;
     }
+    if (response.status === 429) {
+      const error = new ExpectedError("Слишком много запросов за сегодня. Попробуйте на следующий день.");
+      (error as any).statusCode = response.status;
+      throw error;
+    }
 
     const error = new Error(errorMessage || "Ошибка сервера");
     (error as any).statusCode = response.status;
@@ -408,6 +413,11 @@ export async function uploadVideo(payload: UploadVideoPayload): Promise<{ task_i
       }
       if (response.status === 403) {
         const error = new ExpectedError("Недостаточно прав для выполнения действия.");
+        (error as any).statusCode = response.status;
+        throw error;
+      }
+      if (response.status === 429) {
+        const error = new ExpectedError("Слишком много запросов за сегодня. Попробуйте на следующий день.");
         (error as any).statusCode = response.status;
         throw error;
       }

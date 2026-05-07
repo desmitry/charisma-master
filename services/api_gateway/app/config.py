@@ -110,6 +110,13 @@ class Settings(BaseSettings):
         frozen=True,
     )
 
+    daily_process_limit: int = Field(
+        key="DAILY_PROCESS_LIMIT",
+        default=3,
+        validate_default=True,
+        frozen=True,
+    )
+
     model_config = SettingsConfigDict(env_file=".env")
 
 
