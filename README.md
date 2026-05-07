@@ -33,7 +33,7 @@
 [![Deploy Status](https://github.com/desmitry/charisma-master/actions/workflows/deploy.yaml/badge.svg)](https://github.com/desmitry/charisma-master/actions/workflows/deploy.yaml)
 
 
-Микросервисная архитектура, для управления проектом используется uv workspaces. Проект предоставляет собой монорепозиторий. Состоит из 3-х Python-сервисов, общих Python-пакетов, а также фронтенда на NodeJS.
+Микросервисная архитектура, для управления проектом используется uv workspaces. Проект представляет собой монорепозиторий. Состоит из Python и Rust микросервисов, общих пакетов (Python и Rust), а также фронтенда на NodeJS. Взаимодействие между сервисами происходит через NATS.
 
 ### Сервисы
 
@@ -42,6 +42,7 @@
 | `services/api_gateway` | FastAPI-бэкенд. Приём файлов, запуск задач, опрос статуса, выдача результатов и стриминг видео | FastAPI, Celery, uvicorn |
 | `services/ml_worker` | Celery-воркер. Транскрибация, анализ видео/аудио, оценка выступления через LLM | Celery, Whisper, MediaPipe, GigaChat, OpenAI, LangGraph |
 | `services/migrator` | Сервис миграции БД. Выполняет SQL-миграции через sqlx и загружает промпты/пресеты из `docs/` в Postgres | Rust, sqlx |
+| `services/account` | Сервис управления аккаунтами. Обрабатывает NATS-сообщения: создание юзера, верификация, управление ролями | Rust, sqlx, NATS |
 | `services/frontend` | Веб-приложение. Интерфейс загрузки, индикатор прогресса, дашборд результатов | Next.js, React, Tailwind CSS |
 
 ### Общие пакеты
@@ -51,13 +52,24 @@
 | `packages/charisma_schemas` | Pydantic-модели, общие для api_gateway и ml_worker |
 | `packages/charisma_storage` | Клиент SeaweedFS (S3-совместимый), используется обоими Python-сервисами |
 
+### Протобаф схемы
+
+| Путь | Описание |
+|------|----------|
+| `packages/proto/common.proto` | Общие сообщения (ошибки, статусы) |
+| `packages/proto/logger.proto` | Схема для логирования через NATS |
+| `packages/proto/account/users.proto` | Операции с пользователями (создание, обновление, роли) |
+| `packages/proto/account/credentials.proto` | Операции с учетными данными (верификация, смена пароля) |
+| `packages/proto/account/permissions.proto` | Получение ролей и прав доступа |
+
 ### Инфраструктура
 
 | Компонент | Назначение |
 |-----------|------------|
-| Postgres | Хранит промпты (таблица `prompts`), пресеты критериев оценивания (таблица `presets`), веса для Data Driven алгоритмов (таблица `algorithm_weights`) |
+| Postgres | Хранит промпты (таблица `prompts`), пресеты критериев оценивания (таблица `presets`), веса для Data Driven алгоритмов (таблица `algorithm_weights`), а также данные аккаунтов (схема `account`) |
 | SeaweedFS | Объектное хранилище для загруженных видео, презентаций, файлов критериев и результатов анализа |
 | Redis | Брокер сообщений Celery и бэкенд результатов |
+| NATS | Шина сообщений для микросервисов (используется микросервисами `account` и `api_gateway` для взаимодействия и обработки запросов) |
 
 ### Поток данных
 
@@ -88,19 +100,22 @@ charisma-master/
 ├── .dockerignore                # Исключения для сборки
 ├── pyproject.toml               # Корневой uv‑workspace
 ├── uv.lock                      # Lock для uv-пакетов
-├── packages/                    # Общие Python‑пакеты
+├── packages/                    # Общие пакеты
 │   ├── charisma_schemas/        # Pydantic‑модели
-│   └── charisma_storage/        # Клиент SeaweedFS (S3‑совместимый)
+│   ├── charisma_storage/        # Клиент SeaweedFS (S3‑совместимый)
+│   ├── proto/                   # Protobuf схемы (NATS сообщения)
+│   └── rust_common/             # Общие Rust‑утилиты
 ├── services/                    # Микросервисы проекта
 │   ├── api_gateway/             # FastAPI‑бэкенд, маршрутизация задач, взаимодействие с SeaweedFS
 │   ├── ml_worker/               # Celery‑воркер, обработка медиа, LLM‑анализ, интеграция LangChain
 │   ├── migrator/                # Сервис миграции БД (sqlx + seed)
-│   └── frontend/                # Next.js фронтенд (React, Tailwind CSS)
+│   ├── account/                 # Сервис управления аккаунтами (NATS + sqlx)
+│   └── frontend/                # Next.js фронтенд (React и Tailwind CSS)
 ├── docs/                        # Документация, промпты и пресеты
 │   ├── prompts/                 # Промпты для LLM
 │   │   └── personas/            # Специфические промпты для ролей
 │   └── presets/                 # Готовые пресеты оценивания
-└── example.env                  # Пример Docker Compose env-файла
+└── example.docker.env                  # Пример Docker Compose env-файла
 ```
 
 ## Требования
@@ -203,6 +218,7 @@ cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
 | `POSTGRES_PASSWORD` | `charisma` | Пароль PostgreSQL |
 | `POSTGRES_DB` | `charisma` | Название базы данных |
 | `MIGRATOR_IMAGE` | `ghcr.io/desmitry/charisma-master-migrator:latest` | Образ сервиса миграции БД |
+| `ACCOUNT_IMAGE` | `ghcr.io/desmitry/charisma-master-account-service:latest` | Образ сервиса аккаунтов |
 | `ML_WORKER_IMAGE` | `ghcr.io/desmitry/charisma-master-ml-worker:latest` | Образ ML Worker |
 | `API_GATEWAY_IMAGE` | `ghcr.io/desmitry/charisma-master-api-gateway:latest` | Образ API Gateway |
 | `FRONTEND_IMAGE` | `ghcr.io/desmitry/charisma-master-frontend:latest` | Образ Frontend |

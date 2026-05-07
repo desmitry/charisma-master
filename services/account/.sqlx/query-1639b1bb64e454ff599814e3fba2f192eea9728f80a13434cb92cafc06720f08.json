@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT u.id, c.password_hash\n            FROM account.users u\n            JOIN account.credentials c ON u.id = c.user_id\n            WHERE LOWER(u.email) = LOWER($1)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "password_hash",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "1639b1bb64e454ff599814e3fba2f192eea9728f80a13434cb92cafc06720f08"
+}

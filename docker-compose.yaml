@@ -15,6 +15,19 @@ services:
             retries: 5
             start_period: 10s
 
+    nats:
+        image: nats:2.14.0-alpine3.22
+        container_name: nats
+        expose:
+            - "4222"
+        command: ["-m", "8222"]
+        healthcheck:
+            test: ["CMD-SHELL", "nc -z localhost 4222 || exit 1"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        restart: unless-stopped
+
     seaweedfs-master:
         image: chrislusf/seaweedfs:3.78
         container_name: seaweedfs-master
@@ -95,6 +108,22 @@ services:
             interval: 10s
             timeout: 5s
             retries: 3
+
+    account:
+        image: ${ACCOUNT_IMAGE:-ghcr.io/desmitry/charisma-master-account-service:latest}
+        build:
+            context: .
+            dockerfile: services/account/Dockerfile
+        container_name: account
+        environment:
+            DATABASE_URL: postgresql://${POSTGRES_USER:-charisma}:${POSTGRES_PASSWORD:-charisma}@postgres:5432/${POSTGRES_DB:-charisma}
+            NATS_URL: nats://nats:4222
+        depends_on:
+            postgres:
+                condition: service_healthy
+            nats:
+                condition: service_healthy
+        restart: unless-stopped
 
     ml_worker:
         image: ${ML_WORKER_IMAGE:-ghcr.io/desmitry/charisma-master-ml-worker:latest}
