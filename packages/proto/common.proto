@@ -1,0 +1,24 @@
+syntax = "proto3";
+package common;
+
+// Common error types used across all services.
+
+message InternalError {
+  string message = 1;
+}
+
+message UserNotFoundError {
+  string message = 1;
+}
+
+message InvalidCredentialsError {
+  string message = 1;
+}
+
+message EmailAlreadyRegisteredError {
+  string message = 1;
+}
+
+message InvalidPasswordError {
+  string message = 1;
+}
