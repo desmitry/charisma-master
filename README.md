@@ -51,6 +51,8 @@
 |-------|----------|
 | `packages/charisma_schemas` | Pydantic-модели, общие для api_gateway и ml_worker |
 | `packages/charisma_storage` | Клиент SeaweedFS (S3-совместимый), используется обоими Python-сервисами |
+| `packages/rust_common` | Общие Rust-утилиты (протобаф, логгер, NATS-хендлеры), используются account и migrator |
+| `packages/proto` | Protobuf-схемы для NATS-сообщений (account, общие, логгер) |
 
 ### Протобаф схемы
 
@@ -68,17 +70,19 @@
 |-----------|------------|
 | Postgres | Хранит промпты (таблица `prompts`), пресеты критериев оценивания (таблица `presets`), веса для Data Driven алгоритмов (таблица `algorithm_weights`), а также данные аккаунтов (схема `account`) |
 | SeaweedFS | Объектное хранилище для загруженных видео, презентаций, файлов критериев и результатов анализа |
-| Redis | Брокер сообщений Celery и бэкенд результатов |
+| Redis | Брокер сообщений Celery, бэкенд результатов, blacklist JWT-токенов, счётчик дневного лимита обработок |
 | NATS | Шина сообщений для микросервисов (используется микросервисами `account` и `api_gateway` для взаимодействия и обработки запросов) |
 
 ### Поток данных
 
-1. Пользователь загружает видео (или указывает ссылку на RuTube) через фронтенд.
-2. API Gateway конвертирует видео в faststart MP4 и загружает в SeaweedFS (bucket `uploads`).
-3. API Gateway отправляет Celery-задачу, содержащую ключи SeaweedFS objects.
-4. ML Worker скачивает файлы из SeaweedFS, обрабатывает их и записывает результат обратно в SeaweedFS (bucket `results`)
-5. Фронтенд опрашивает эндпоинт статуса задачи, затем получает итоговый анализ через API Gateway.
-6. Воспроизведение видео идёт через API Gateway как StreamingResponse с поддержкой HTTP Range.
+1. Пользователь регистрируется и логинится - API Gateway отправляет NATS-запрос в `account`, получает JWT-токены.
+2. Фронтенд авторизует запросы через Bearer-токен. Если токен истёк - автоматически обновляется через `/api/v1/auth/refresh`.
+3. Пользователь загружает видео (или указывает ссылку на RuTube) через фронтенд. API Gateway проверяет дневной лимит обработок (Redis), затем - JWT пользователя.
+4. API Gateway конвертирует видео в faststart MP4 и загружает в SeaweedFS (bucket `uploads`).
+5. API Gateway отправляет Celery-задачу, содержащую ключи SeaweedFS objects.
+6. ML Worker скачивает файлы из SeaweedFS, обрабатывает их и записывает результат обратно в SeaweedFS (bucket `results`). После успешного сохранения - инкрементит счётчик обработок в Redis.
+7. Фронтенд опрашивает эндпоинт статуса задачи, затем получает итоговый анализ через API Gateway.
+8. Воспроизведение видео идёт через API Gateway как StreamingResponse с поддержкой HTTP Range.
 
 ## LangChain в проекте
 
@@ -144,9 +148,11 @@ uv run pre-commit install
 docker compose up -d
 ```
 
-Запускает все сервисы: Postgres, SeaweedFS (master, volume, filer, s3), migrator, Redis, ml_worker, api_gateway и frontend.
+Запускает все сервисы: Postgres, NATS, SeaweedFS (master, volume, filer, s3), migrator, Redis, account, ml_worker, api_gateway и frontend.
 
-Сервис migrator выполняет SQL-миграции (создание схемы, таблиц, ролей и прав) и загружает промпты и пресеты из `docs/` в БД. Завершается со статусом `service_completed_successfully`.
+Сервис migrator выполняет SQL-миграции (создание схемы `account`, таблиц, ролей и прав) и загружает промпты и пресеты из `docs/` в БД. Завершается со статусом `service_completed_successfully`.
+
+Сервис account обрабатывает NATS-сообщения от api_gateway: регистрация, верификация, управление ролями и правами доступа. api_gateway стартует только после account-health.
 
 Для включения GPU-поддержки ML Worker:
 
@@ -162,10 +168,13 @@ docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml up -d
 uv sync
 
 # Запуск инфраструктуры
-docker compose up -d postgres seaweedfs-master seaweedfs-volume seaweedfs-filer seaweedfs-s3 redis
+docker compose up -d postgres nats seaweedfs-master seaweedfs-volume seaweedfs-filer seaweedfs-s3 redis
 
 # Запуск мигратора
 docker compose up migrator
+
+# Запуск сервиса аккаунтов
+docker compose up -d account account-health
 
 # Запуск Celery-воркера
 celery -A services/ml_worker/app.celery_app worker --loglevel=info --pool=solo
@@ -241,6 +250,19 @@ cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
 | `SEAWEEDFS_ENDPOINT` | `localhost:8333` | Адрес S3-шлюза SeaweedFS |
 | `SEAWEEDFS_ACCESS_KEY` | "" | Ключ доступа S3 |
 | `SEAWEEDFS_SECRET_KEY` | "" | Секретный ключ S3 |
+| `NATS_URL` | `nats://nats:4222` | URL подключения к NATS |
+| `JWT_SECRET` | `dev-secret-key` | Секретный ключ для подписи JWT |
+| `JWT_ALGORITHM` | `HS256` | Алгоритм подписи JWT |
+| `ACCESS_TOKEN_EXPIRE_MINS` | `15` | Время жизни access-токена (минут) |
+| `REFRESH_TOKEN_EXPIRE_MINS` | `10080` | Время жизни refresh-токена (минут, 7 дней) |
+| `DAILY_PROCESS_LIMIT` | `3` | Максимум обработок видео в день на пользователя |
+
+### Account
+
+| Переменная | По умолчанию | Описание |
+|------------|--------------|----------|
+| `DATABASE_URL` | `postgresql://charisma:charisma@postgres:5432/charisma` | Подключение к Postgres |
+| `NATS_URL` | `nats://nats:4222` | URL подключения к NATS |
 
 ### ML Worker
 
@@ -280,13 +302,18 @@ cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
 
 ## API эндпоинты
 
-| Метод | Путь | Описание |
-|-------|------|----------|
-| POST | `/api/v1/process` | Отправить видео на анализ. Возвращает `task_id` |
-| GET | `/api/v1/tasks/{task_id}/status` | Опросить прогресс задачи |
-| GET | `/api/v1/analysis/{task_id}` | Получить итоговый результат анализа |
-| GET | `/media/{task_id}.mp4` | Стриминг видео с поддержкой Range-запросов |
-| GET | `/health` | Проверка работоспособности |
+| Метод | Путь | Auth | Описание |
+|-------|------|------|----------|
+| POST | `/api/v1/auth/register` | Нет | Регистрация пользователя, принимает `email` и `password` |
+| POST | `/api/v1/auth/login` | Нет | Вход, возвращает `access_token` и `refresh_token` |
+| POST | `/api/v1/auth/refresh` | Нет | Обновление access-токена, принимает `refresh_token` |
+| POST | `/api/v1/auth/logout` | Bearer | Выход, черный список текущего токена |
+| GET | `/api/v1/auth/me` | Bearer | Информация о текущем пользователе (роли, права) |
+| POST | `/api/v1/process` | Bearer | Отправить видео на анализ. Возвращает `task_id`. **429** при превышении дневного лимита |
+| GET | `/api/v1/tasks/{task_id}/status` | Bearer | Опросить прогресс задачи |
+| GET | `/api/v1/analysis/{task_id}` | Bearer | Получить итоговый анализ (только свой, если не модератор) |
+| GET | `/media/{task_id}.mp4` | Bearer | Стриминг видео с поддержкой Range-запросов |
+| GET | `/health` | Нет | Проверка работоспособности |
 
 ## Схема базы данных
 
@@ -375,25 +402,25 @@ cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
 ### Пермишены
 
 #### Пользовательские (доступны `user`)
-- `user.profile.view.own` — просмотр своего профиля
-- `user.profile.update.own` — редактирование своего профиля
-- `user.analysis.create` — создание задачи анализа
-- `user.analysis.view.own` — просмотр своих результатов
-- `user.analysis.delete.own` — удаление своих результатов
+- `user.profile.view.own` - просмотр своего профиля
+- `user.profile.update.own` - редактирование своего профиля
+- `user.analysis.create` - создание задачи анализа
+- `user.analysis.view.own` - просмотр своих результатов
+- `user.analysis.delete.own` - удаление своих результатов
 
 #### Модераторские (доступны `moderator`)
-- `user.profile.view.any` — просмотр профилей любых пользователей
-- `user.analysis.view.any` — просмотр анализов любых пользователей
-- `content.prompts.manage` — управление промптами (CRUD)
-- `content.presets.manage` — управление пресетами (CRUD)
-- `content.algorithm_weights.view` — просмотр весов алгоритмов
+- `user.profile.view.any` - просмотр профилей любых пользователей
+- `user.analysis.view.any` - просмотр анализов любых пользователей
+- `content.prompts.manage` - управление промптами (CRUD)
+- `content.presets.manage` - управление пресетами (CRUD)
+- `content.algorithm_weights.view` - просмотр весов алгоритмов
 
 #### Административные (доступны `admin`)
-- `user.account.delete.any` — удаление/бан пользователей
-- `user.analysis.delete.any` — удаление анализов любых пользователей
-- `content.algorithm_weights.manage` — редактирование весов алгоритмов
-- `system.settings.view` — просмотр системных настроек
-- `system.settings.edit` — редактирование системных настроек
+- `user.account.delete.any` - удаление/бан пользователей
+- `user.analysis.delete.any` - удаление анализов любых пользователей
+- `content.algorithm_weights.manage` - редактирование весов алгоритмов
+- `system.settings.view` - просмотр системных настроек
+- `system.settings.edit` - редактирование системных настроек
 
 ## SeaweedFS buckets
 
