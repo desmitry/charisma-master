@@ -125,6 +125,21 @@ services:
                 condition: service_healthy
         restart: unless-stopped
 
+    account-health:
+        image: alpine:3.19
+        container_name: account-health
+        command: ["tail", "-f", "/dev/null"]
+        depends_on:
+            account:
+                condition: service_started
+        healthcheck:
+            test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://account:8080/health"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+        restart: unless-stopped
+
     ml_worker:
         image: ${ML_WORKER_IMAGE:-ghcr.io/desmitry/charisma-master-ml-worker:latest}
         build:
@@ -187,6 +202,8 @@ services:
                 condition: service_healthy
             migrator:
                 condition: service_completed_successfully
+            account-health:
+                condition: service_healthy
             redis:
                 condition: service_healthy
         healthcheck:
