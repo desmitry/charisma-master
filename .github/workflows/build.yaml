@@ -51,6 +51,9 @@ jobs:
         with:
           shared-key: "rust-lint"
       
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      
       - name: Rust fmt & clippy
         run: |
           cargo fmt --manifest-path services/account/Cargo.toml -- --check
