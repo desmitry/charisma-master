@@ -240,6 +240,18 @@ def _download_user_speech_from_rutube(task_id: str, video_url: str) -> str:
                 }
             },
         },
+        429: {
+            "description": "Слишком много запросов на обработку",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": (
+                            "Превышен дневной лимит обработок (5 в день)"
+                        )
+                    }
+                }
+            },
+        },
         500: {
             "description": "Внутренняя ошибка сервера",
             "content": {

@@ -84,8 +84,6 @@ class Settings(BaseSettings):
 
     jwt_secret: str = Field(
         key="JWT_SECRET",
-        default="dev-secret-key",
-        validate_default=True,
         frozen=True,
     )
 

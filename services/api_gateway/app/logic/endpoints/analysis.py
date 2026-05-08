@@ -13,6 +13,29 @@ router = APIRouter()
     response_model=AnalysisResult,
     summary="Получить результаты анализа",
     description="Возвращает полный результат анализа выступления.",
+    response_description="Результат анализа выступления",
+    responses={
+        404: {
+            "description": "Результат не найден или задача ещё обрабатывается",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Analysis not found or still processing"
+                    }
+                }
+            },
+        },
+        403: {
+            "description": "Недостаточно прав для доступа к задаче",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Not enough permissions",
+                    }
+                }
+            },
+        },
+    },
 )
 async def get_analysis(
     task_id: str,
@@ -34,12 +57,14 @@ async def get_analysis(
         # Verify user can only view their own analysis
         if data.get("user_id") != user_info["sub"]:
             raise HTTPException(
-                status_code=403, detail="Not enough permissions"
+                status_code=403,
+                detail="Not enough permissions",
             )
         return data
     except HTTPException:
         raise
     except Exception:
         raise HTTPException(
-            status_code=404, detail="Analysis not found or still processing"
+            status_code=404,
+            detail="Analysis not found or still processing",
         )
