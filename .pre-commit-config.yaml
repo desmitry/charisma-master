@@ -14,6 +14,30 @@ repos:
         language: system
         pass_filenames: false
         types: [python]
+      - id: cargo-fmt-account
+        name: cargo fmt (account)
+        entry: cargo fmt --manifest-path services/account/Cargo.toml -- --check
+        language: system
+        pass_filenames: false
+        types: [rust]
+      - id: cargo-clippy-account
+        name: cargo clippy (account)
+        entry: cargo clippy --manifest-path services/account/Cargo.toml -- -D warnings
+        language: system
+        pass_filenames: false
+        types: [rust]
+      - id: cargo-fmt-migrator
+        name: cargo fmt (migrator)
+        entry: cargo fmt --manifest-path services/migrator/Cargo.toml -- --check
+        language: system
+        pass_filenames: false
+        types: [rust]
+      - id: cargo-clippy-migrator
+        name: cargo clippy (migrator)
+        entry: cargo clippy --manifest-path services/migrator/Cargo.toml -- -D warnings
+        language: system
+        pass_filenames: false
+        types: [rust]
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.0
     hooks:

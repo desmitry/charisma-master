@@ -157,7 +157,7 @@ export function AuthPanel() {
           return;
         }
         const response = await authRegister({ email, password });
-        setStatusMessage(`Регистрация выполнена. ID: ${response.user_id}`);
+        setStatusMessage("Регистрация выполнена, теперь войдите в аккаунт");
       }
       setPassword("");
       setConfirmPassword("");

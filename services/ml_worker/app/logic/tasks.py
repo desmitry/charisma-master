@@ -3,10 +3,12 @@ import logging
 import os
 import subprocess
 import tempfile
+from datetime import date
 from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+import redis
 from celery import shared_task
 from celery.signals import worker_process_init
 from charisma_schemas import (
@@ -145,6 +147,7 @@ def process_video_pipeline(  # noqa: C901
     persona: str | Enum,
     analyze_provider: str | Enum,
     transcribe_provider: str | Enum,
+    user_id: str,
 ):
     persona = PersonaRoles(persona)
     analyze_provider = AnalyzeProvider(analyze_provider)
@@ -423,6 +426,7 @@ def process_video_pipeline(  # noqa: C901
         analyze_provider=analyze_provider.value,
         analyze_model=analyze_provider.model_name,
         transcribe_model=transcribe_provider.value,
+        user_id=user_id,
     )
 
     put_object_json(
@@ -433,5 +437,15 @@ def process_video_pipeline(  # noqa: C901
         settings.seaweedfs_access_key,
         settings.seaweedfs_secret_key,
     )
+
+    try:
+        daily_key = (
+            f"user_processing_count:{user_id}:{date.today().isoformat()}"
+        )
+        r = redis.from_url(settings.redis_url)
+        r.incr(daily_key)
+        r.expire(daily_key, 86400)
+    except Exception as e:
+        logger.warning("Failed to increment daily processing counter: %s", e)
 
     return {"status": "completed", "task_id": task_id}

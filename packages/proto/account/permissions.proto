@@ -1,0 +1,25 @@
+syntax = "proto3";
+package account.permissions;
+
+import "common.proto";
+
+// Permissions operations: get roles and permissions by user ID.
+
+// GET PERMISSIONS BY ID
+
+message PermissionsByIdRequest {
+  string id = 1;
+}
+
+message PermissionsByIdSuccess {
+  repeated string roles = 1;
+  repeated string permissions = 2;
+}
+
+message PermissionsByIdResponse {
+  oneof result {
+    PermissionsByIdSuccess success = 1;
+    common.UserNotFoundError user_not_found = 2;
+    common.InternalError internal = 3;
+  }
+}

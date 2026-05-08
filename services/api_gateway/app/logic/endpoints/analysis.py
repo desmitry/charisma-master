@@ -1,7 +1,8 @@
 from charisma_schemas import AnalysisResult
 from charisma_storage import BUCKET_RESULTS, get_object_json
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.auth.dependencies import require_view_own_analysis
 from app.config import settings
 
 router = APIRouter()
@@ -11,11 +12,7 @@ router = APIRouter()
     "/analysis/{task_id}",
     response_model=AnalysisResult,
     summary="Получить результаты анализа",
-    description=(
-        "Возвращает полный результат анализа выступления: "
-        "транскрипцию, темп речи, паузы, оценки по критериям, "
-        "confidence index и LLM-отчёт."
-    ),
+    description="Возвращает полный результат анализа выступления.",
     response_description="Результат анализа выступления",
     responses={
         404: {
@@ -28,10 +25,27 @@ router = APIRouter()
                 }
             },
         },
+        403: {
+            "description": "Недостаточно прав для доступа к задаче",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Not enough permissions",
+                    }
+                }
+            },
+        },
     },
 )
-async def get_analysis(task_id: str):
-    """Get analysis results from SeaweedFS."""
+async def get_analysis(
+    task_id: str,
+    user_info: dict = Depends(require_view_own_analysis),
+):
+    """Get analysis results from SeaweedFS.
+
+    Checks that the analysis result contains user_id
+    matching the authenticated user.
+    """
     try:
         data = get_object_json(
             settings.seaweedfs_endpoint,
@@ -40,7 +54,15 @@ async def get_analysis(task_id: str):
             settings.seaweedfs_access_key,
             settings.seaweedfs_secret_key,
         )
+        # Verify user can only view their own analysis
+        if data.get("user_id") != user_info["sub"]:
+            raise HTTPException(
+                status_code=403,
+                detail="Not enough permissions",
+            )
         return data
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(
             status_code=404,

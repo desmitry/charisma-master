@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO account.user_roles (user_id, role_id) SELECT $1, id FROM account.roles WHERE name = $2 ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7d4136eed8dc558264698331c2810ef42e41aff4fb1641fbae40670d52db6c0d"
+}

@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT r.name\n            FROM account.user_roles ur\n            JOIN account.roles r ON ur.role_id = r.id\n            WHERE ur.user_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "57e535bb668b94ba750b9fa0692febe3b266481246db4a181b4b7d7d03c3befa"
+}

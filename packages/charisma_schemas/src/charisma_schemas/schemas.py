@@ -225,6 +225,7 @@ class AnalysisResult(BaseModel):
     analyze_provider: str
     analyze_model: str
     transcribe_model: str
+    user_id: str
 
 
 class TaskStatusResponse(BaseModel):
