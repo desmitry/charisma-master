@@ -1,0 +1,82 @@
+{
+  "gaze_algorithm": "advanced_pnp_iris",
+  "version": "2.0.0",
+  "parameters": {
+    "yaw_center_offset": 180.0,
+    "pitch_center_offset": 10.0,
+    "head_pose_thresholds": {
+      "yaw_limit": 40.0,
+      "pitch_limit": [
+        -20.0,
+        65.0
+      ]
+    },
+    "iris_tracking": {
+      "base_gaze": 0.5,
+      "yaw_gaze_coefficient": 0.013,
+      "gaze_tolerance": 0.08
+    },
+    "landmarks": {
+      "pnp_indices": [
+        1,
+        152,
+        33,
+        263,
+        61,
+        291
+      ],
+      "left_eye_indices": [
+        362,
+        382,
+        381,
+        380,
+        374,
+        373,
+        390,
+        249,
+        263,
+        466,
+        388,
+        387,
+        386,
+        385,
+        384,
+        398
+      ],
+      "right_eye_indices": [
+        33,
+        7,
+        163,
+        144,
+        145,
+        153,
+        154,
+        155,
+        133,
+        173,
+        157,
+        158,
+        159,
+        160,
+        161,
+        246
+      ],
+      "left_iris_indices": [
+        474,
+        475,
+        476,
+        477
+      ],
+      "right_iris_indices": [
+        469,
+        470,
+        471,
+        472
+      ]
+    }
+  },
+  "processing": {
+    "sampling_rate": 10,
+    "target_width": 480
+  }
+}
