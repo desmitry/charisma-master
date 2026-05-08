@@ -44,6 +44,7 @@ os.environ.setdefault("WHISPER_MODEL_NAME", "whisper-1")
 os.environ.setdefault("WHISPER_MODEL_TYPE", "base")
 os.environ.setdefault("WHISPER_DEVICE", "cpu")
 os.environ.setdefault("WHISPER_COMPUTE_TYPE", "int8")
+os.environ.setdefault("JWT_SECRET", "test-secret-key")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 API_GATEWAY_PATH = str(REPO_ROOT / "services" / "api_gateway")

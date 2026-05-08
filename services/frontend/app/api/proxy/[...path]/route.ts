@@ -60,7 +60,7 @@ async function proxyRequest(
     const headersToForward: HeadersInit = {};
     request.headers.forEach((value, key) => {
       const lowerKey = key.toLowerCase();
-      if (lowerKey !== 'host' && lowerKey !== 'content-length') {
+      if (lowerKey !== 'host' && lowerKey !== 'content-length' && lowerKey !== 'content-type') {
         headersToForward[key] = value;
       }
     });
@@ -68,27 +68,16 @@ async function proxyRequest(
     if (method !== "GET" && method !== "DELETE") {
       if (isFormData) {
         options.headers = headersToForward;
-        
-        if (request.body) {
-          options.body = request.body as any;
-        } else {
-          const formData = await request.formData();
-          options.body = formData;
-          delete (options.headers as any)['content-type'];
-        }
+        const formData = await request.formData();
+        options.body = formData;
       } else {
         options.headers = {
           ...headersToForward,
-          "Content-Type": contentType || "application/json",
+          "content-type": contentType || "application/json",
         };
-        
-        if (request.body) {
-          options.body = request.body as any;
-        } else {
-          const body = await request.text();
-          if (body) {
-            options.body = body;
-          }
+        const body = await request.text();
+        if (body) {
+          options.body = body;
         }
       }
     } else {

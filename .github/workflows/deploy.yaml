@@ -46,10 +46,11 @@ jobs:
 
             export API_GATEWAY_IMAGE=${{ env.IMAGE_PREFIX }}-api-gateway:${{ github.event.workflow_run.head_sha }}
             export ML_WORKER_IMAGE=${{ env.IMAGE_PREFIX }}-ml-worker:${{ github.event.workflow_run.head_sha }}
+            export ACCOUNT_IMAGE=${{ env.IMAGE_PREFIX }}-account:${{ github.event.workflow_run.head_sha }}
             export FRONTEND_IMAGE=${{ env.IMAGE_PREFIX }}-frontend:${{ github.event.workflow_run.head_sha }}
             export MIGRATOR_IMAGE=${{ env.IMAGE_PREFIX }}-migrator:${{ github.event.workflow_run.head_sha }}
 
-            docker compose pull api-gateway ml-worker frontend migrator
+            docker compose pull api-gateway ml-worker account frontend migrator
             docker compose up -d --no-build
 
             docker compose ps

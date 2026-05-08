@@ -1,34 +1,23 @@
-FROM python:3.12-slim
+FROM rust:1.94-alpine AS builder
 
-ARG UV_VERSION=0.11.3
-ARG VERSION=0.0.0
+RUN cargo install sqlx-cli --version=0.8.6 --locked --no-default-features --features rustls,postgres
 
-WORKDIR /migrator
+WORKDIR /app
+COPY services/migrator/Cargo.toml /app
+COPY services/migrator/Cargo.lock /app
+COPY services/migrator/src /app/src
+RUN cargo build --release
 
-ENV SETUPTOOLS_SCM_PRETEND_VERSION=${VERSION}
+FROM debian:12-slim
 
-RUN apt-get update -y && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    curl ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 
-ENV VIRTUAL_ENV=/migrator/.venv \
-    PATH="/migrator/.venv/bin:$PATH" \
-    UV_LINK_MODE=copy
+COPY --from=builder /usr/local/cargo/bin/sqlx /usr/local/bin/sqlx
 
-RUN curl -LsSf "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz" \
-    | tar -xz -C /usr/local/bin --strip-components=1 \
-    && chmod +x /usr/local/bin/uv
+COPY --from=builder /app/target/release/migrator-seed /usr/local/bin/migrator-seed
 
-COPY pyproject.toml ./pyproject.toml
-COPY uv.lock ./uv.lock
-COPY services/migrator/pyproject.toml ./services/migrator/pyproject.toml
+WORKDIR /app
+COPY services/migrator/migrations /app/migrations
+COPY docs /app/docs
 
-RUN uv sync --frozen --no-dev --package charisma-migrator 
-
-COPY services/migrator/migrate.py ./services/migrator/migrate.py
-
-COPY docs/prompts ./services/migrator/docs/prompts
-COPY docs/presets ./services/migrator/docs/presets
-
-CMD ["python", "./services/migrator/migrate.py"]
+ENTRYPOINT ["/bin/bash", "-c", "sqlx migrate run --source /app/migrations && migrator-seed"]

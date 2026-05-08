@@ -20,6 +20,9 @@ dependencies = [
     "rutube-downloader>=0.0.8",
     "uvicorn[standard]>=0.38.0",
     "slowapi>=0.1.9",
+    "nats-py>=2.14.0",
+    "pyjwt>=2.12.1",
+    "protobuf>=4.25.3,<5",
 ]
 
 [tool.setuptools]

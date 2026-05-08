@@ -1,0 +1,95 @@
+syntax = "proto3";
+package account.users;
+
+import "common.proto";
+
+// User management operations: create, get email, update email.
+
+// CREATE USER
+
+message CreateRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message CreateSuccess {
+  string id = 1;
+}
+
+message CreateResponse {
+  oneof result {
+    CreateSuccess success = 1;
+    common.EmailAlreadyRegisteredError email_exists = 2;
+    common.InternalError internal = 3;
+  }
+}
+
+// GET EMAIL BY ID
+
+message EmailByIdRequest {
+  string id = 1;
+}
+
+message EmailByIdSuccess {
+  string email = 1;
+}
+
+message EmailByIdResponse {
+  oneof result {
+    EmailByIdSuccess success = 1;
+    common.UserNotFoundError user_not_found = 2;
+    common.InternalError internal = 3;
+  }
+}
+
+// UPDATE EMAIL
+
+message UpdateEmailRequest {
+  string id = 1;
+  string new_email = 2;
+}
+
+message UpdateEmailSuccess {}
+
+message UpdateEmailResponse {
+  oneof result {
+    UpdateEmailSuccess success = 1;
+    common.EmailAlreadyRegisteredError email_exists = 2;
+    common.UserNotFoundError user_not_found = 3;
+    common.InternalError internal = 4;
+  }
+}
+
+// ASSIGN ROLE
+
+message AssignRoleRequest {
+  string user_id = 1;
+  string role_name = 2;
+}
+
+message AssignRoleSuccess {}
+
+message AssignRoleResponse {
+  oneof result {
+    AssignRoleSuccess success = 1;
+    common.UserNotFoundError user_not_found = 2;
+    common.InternalError internal = 3;
+  }
+}
+
+// REMOVE ROLE
+
+message RemoveRoleRequest {
+  string user_id = 1;
+  string role_name = 2;
+}
+
+message RemoveRoleSuccess {}
+
+message RemoveRoleResponse {
+  oneof result {
+    RemoveRoleSuccess success = 1;
+    common.UserNotFoundError user_not_found = 2;
+    common.InternalError internal = 3;
+  }
+}

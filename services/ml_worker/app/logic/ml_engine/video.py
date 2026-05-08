@@ -94,76 +94,6 @@ def get_gaze_ratio(face_landmarks, eye_indices, iris_indices):
     return (x_iris - min(x_left, x_right)) / width
 
 
-def analyze_gaze_advanced(face_lms, pitch, raw_yaw, params):
-    """Determines if looking at the camera based on head pose and iris."""
-    lms_cfg = params["landmarks"]
-
-    yaw_offset = params.get("yaw_center_offset", 180.0)
-    yaw = raw_yaw - yaw_offset if raw_yaw > 0 else raw_yaw + yaw_offset
-
-    ratio_l = get_gaze_ratio(
-        face_lms, lms_cfg["left_eye_indices"], lms_cfg["left_iris_indices"]
-    )
-    ratio_r = get_gaze_ratio(
-        face_lms, lms_cfg["right_eye_indices"], lms_cfg["right_iris_indices"]
-    )
-    avg_gaze = (ratio_l + ratio_r) / 2
-
-    yaw_lim = params["head_pose_thresholds"]["yaw_limit"]
-    p_min, p_max = params["head_pose_thresholds"]["pitch_limit"]
-
-    is_head_centered = (abs(yaw) < yaw_lim) and (p_min < pitch < p_max)
-
-    iris_track = params.get("iris_tracking", {})
-    pitch_offset = params.get("pitch_center_offset", 10.0)
-    norm_true_yaw = pitch - pitch_offset
-
-    if "base_gaze" in iris_track:
-        base = iris_track["base_gaze"]
-        coef = iris_track["yaw_gaze_coefficient"]
-        tol = iris_track["gaze_tolerance"]
-
-        # 'pitch' variable contains True Yaw (horizontal turn).
-        # Compensate horizontal iris based on True Yaw, not Pitch.
-        # True Yaw > 0 (turn right) shifts iris left (ratio decreases).
-        # So we must SUBTRACT the offset.
-        expected_gaze = base - (yaw * coef)
-        is_gaze_centered = (
-            (expected_gaze - tol) <= avg_gaze <= (expected_gaze + tol)
-        )
-
-        # Для отладки логируем каждый ~25-й кадр
-        import random
-
-        if random.random() < 0.04:  # noqa: S311
-            import logging
-
-            logging.getLogger(__name__).info(
-                f"Gaze Debug: Pitch={pitch:.1f}, NormYaw={yaw:.1f}, "
-                f"AvgGaze={avg_gaze:.3f}, Expected={expected_gaze:.3f}, "
-                f"Centered={is_gaze_centered}"
-            )
-
-        return is_head_centered and is_gaze_centered
-    else:
-        g_min, g_max = iris_track.get("center_range", [0.4, 0.6])
-        is_gaze_centered = g_min < avg_gaze < g_max
-
-        compensation = False
-        trigger = iris_track.get("compensation_trigger_yaw", 15)
-        # 'pitch' variable contains True Yaw
-        if norm_true_yaw < -trigger and avg_gaze < iris_track.get(
-            "compensation_ratio_right", 0.45
-        ):
-            compensation = True
-        elif norm_true_yaw > trigger and avg_gaze > iris_track.get(
-            "compensation_ratio_left", 0.55
-        ):
-            compensation = True
-
-        return (is_head_centered and is_gaze_centered) or compensation
-
-
 # TODO: Refactor this function.
 def analyze_video(  # noqa: C901
     video_path: str,
@@ -209,6 +139,7 @@ def analyze_video(  # noqa: C901
 
     movement_accum = 0.0
     prev_wrist = {"left": None, "right": None}
+    raw_gaze_data = []
 
     try:
         with mp_holistic.Holistic(
@@ -246,16 +177,46 @@ def analyze_video(  # noqa: C901
 
                         if gaze_config and "parameters" in gaze_config:
                             params = gaze_config["parameters"]
+
+                            gray_frame = cv2.cvtColor(
+                                small_frame, cv2.COLOR_BGR2GRAY
+                            )
+                            brightness = float(np.mean(gray_frame))
+
                             pitch, raw_yaw = get_head_pose_v2(
                                 results.face_landmarks,
                                 small_frame.shape[1],
                                 small_frame.shape[0],
                                 params["landmarks"],
                             )
-                            if analyze_gaze_advanced(
-                                results.face_landmarks, pitch, raw_yaw, params
-                            ):
-                                looking_at_camera_frames += 1
+                            lms_cfg = params["landmarks"]
+                            ratio_l = get_gaze_ratio(
+                                results.face_landmarks,
+                                lms_cfg["left_eye_indices"],
+                                lms_cfg["left_iris_indices"],
+                            )
+                            ratio_r = get_gaze_ratio(
+                                results.face_landmarks,
+                                lms_cfg["right_eye_indices"],
+                                lms_cfg["right_iris_indices"],
+                            )
+                            avg_gaze = (ratio_l + ratio_r) / 2
+
+                            yaw_offset = params.get("yaw_center_offset", 180.0)
+                            yaw = (
+                                raw_yaw - yaw_offset
+                                if raw_yaw > 0
+                                else raw_yaw + yaw_offset
+                            )
+
+                            raw_gaze_data.append(
+                                {
+                                    "pitch": pitch,
+                                    "yaw": yaw,
+                                    "gaze": avg_gaze,
+                                    "brightness": brightness,
+                                }
+                            )
                         else:
                             face = results.face_landmarks.landmark
                             nose_x = face[1].x
@@ -311,6 +272,33 @@ def analyze_video(  # noqa: C901
         logger.critical(f"Global CV Loop crash: {e_global}")
     finally:
         cap.release()
+
+    # Dynamic median baseline two-pass calculation
+    if gaze_config and "parameters" in gaze_config and raw_gaze_data:
+        params = gaze_config["parameters"]
+        median_gaze = float(np.median([d["gaze"] for d in raw_gaze_data]))
+
+        yaw_lim = params["head_pose_thresholds"]["yaw_limit"]
+        p_min, p_max = params["head_pose_thresholds"]["pitch_limit"]
+
+        iris_track = params.get("iris_tracking", {})
+        dark_threshold = iris_track.get("dark_threshold", 85.0)
+        coef = iris_track.get("yaw_gaze_coefficient", 0.0)
+        tol = iris_track.get("gaze_tolerance", 0.05)
+
+        hits = 0
+        for d in raw_gaze_data:
+            if not (p_min < d["pitch"] < p_max) or abs(d["yaw"]) > yaw_lim:
+                continue
+
+            if d["brightness"] < dark_threshold:
+                hits += 1
+            else:
+                expected_gaze = median_gaze - (d["yaw"] * coef)
+                if abs(d["gaze"] - expected_gaze) < tol:
+                    hits += 1
+
+        looking_at_camera_frames += hits
 
     logger.info("Analyze video debug stats")
     logger.info(f"Total processed frames: {total_frames_processed}")
