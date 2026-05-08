@@ -43,6 +43,7 @@
 | `services/ml_worker` | Celery-воркер. Транскрибация, анализ видео/аудио, оценка выступления через LLM | Celery, Whisper, MediaPipe, GigaChat, OpenAI, LangGraph |
 | `services/migrator` | Сервис миграции БД. Выполняет SQL-миграции через sqlx и загружает промпты/пресеты из `docs/` в Postgres | Rust, sqlx |
 | `services/account` | Сервис управления аккаунтами. Обрабатывает NATS-сообщения: создание юзера, верификация, управление ролями | Rust, sqlx, NATS |
+| `services/nginx` | Reverse-proxy. TLS-терминация (Let's Encrypt), rate limiting (10 r/s), прокси на фронтенд | NGINX, certbot |
 | `services/frontend` | Веб-приложение. Интерфейс загрузки, индикатор прогресса, дашборд результатов | Next.js, React, Tailwind CSS |
 
 ### Общие пакеты
@@ -163,9 +164,9 @@ docker compose --profile init up certbot-init
 docker compose up -d
 ```
 
-Запускает все сервисы: Postgres, SeaweedFS (master, volume, filer, s3), migrator, Redis, ml_worker, api_gateway, frontend, nginx и certbot. 
+Запускает все сервисы: Postgres, NATS, SeaweedFS (master, volume, filer, s3), migrator, Redis, account, ml_worker, api_gateway, nginx, certbot и frontend.
 
-Nginx терминирует TLS, проксирует трафик на frontend, ограничивает rate (10 r/s на IP, burst 20) и размер тела запроса (700 МБ).
+Nginx терминирует TLS, проксирует трафик на frontend (`frontend:3000`), ограничивает rate (10 r/s на IP, burst 20, 429 при превышении) и размер тела запроса (700 МБ).
 
 Сервис migrator выполняет SQL-миграции (создание схемы `account`, таблиц, ролей и прав) и загружает промпты и пресеты из `docs/` в БД. Завершается со статусом `service_completed_successfully`.
 
