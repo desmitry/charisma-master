@@ -114,6 +114,7 @@ charisma-master/
 │   ├── ml_worker/               # Celery‑воркер, обработка медиа, LLM‑анализ, интеграция LangChain
 │   ├── migrator/                # Сервис миграции БД (sqlx + seed)
 │   ├── account/                 # Сервис управления аккаунтами (NATS + sqlx)
+│   ├── nginx/                   # Конфигурация Nginx + кастомный Certbot Image
 │   └── frontend/                # Next.js фронтенд (React и Tailwind CSS)
 ├── docs/                        # Документация, промпты и пресеты
 │   ├── prompts/                 # Промпты для LLM
@@ -245,7 +246,8 @@ cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
 | `POSTGRES_PASSWORD` | `charisma` | Пароль PostgreSQL |
 | `POSTGRES_DB` | `charisma` | Название базы данных |
 | `MIGRATOR_IMAGE` | `ghcr.io/desmitry/charisma-master-migrator:latest` | Образ сервиса миграции БД |
-| `ACCOUNT_IMAGE` | `ghcr.io/desmitry/charisma-master-account-service:latest` | Образ сервиса аккаунтов |
+| `ACCOUNT_IMAGE` | `ghcr.io/desmitry/charisma-master-account:latest` | Образ сервиса аккаунтов |
+| `CERTBOT_IMAGE` | `ghcr.io/desmitry/charisma-master-certbot:latest` | Образ сервиса Certbot для Nginx |
 | `ML_WORKER_IMAGE` | `ghcr.io/desmitry/charisma-master-ml-worker:latest` | Образ ML Worker |
 | `API_GATEWAY_IMAGE` | `ghcr.io/desmitry/charisma-master-api-gateway:latest` | Образ API Gateway |
 | `FRONTEND_IMAGE` | `ghcr.io/desmitry/charisma-master-frontend:latest` | Образ Frontend |
