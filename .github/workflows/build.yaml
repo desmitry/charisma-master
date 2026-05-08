@@ -122,6 +122,19 @@ jobs:
             ${{ env.IMAGE_PREFIX }}-api-gateway:latest
             ${{ env.IMAGE_PREFIX }}-api-gateway:${{ needs.release.outputs.version }}
 
+      - name: Build and push custom certbot image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./services/nginx/certbot.Dockerfile
+          push: true
+          build-args: |
+            VERSION=${{ needs.release.outputs.version }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-certbot:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-certbot:latest
+            ${{ env.IMAGE_PREFIX }}-certbot:${{ needs.release.outputs.version }}
+
       - name: Build and push ml-worker
         uses: docker/build-push-action@v5
         with:
