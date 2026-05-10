@@ -20,6 +20,7 @@ type Props = {
 };
 
 type DashboardTab = "overview" | "ai-report" | "criteria-report";
+type DashboardTabConfig = { id: DashboardTab; label: string };
 
 // ─── animations ──────────────────────────────────────────────────────────────
 const fadeUp: any = {
@@ -127,11 +128,17 @@ function ChevronIcon({ open }: { open: boolean }) {
 }
 
 // ─── Tab nav ─────────────────────────────────────────────────────────────────
-const tabConfig: { id: DashboardTab; label: string }[] = [
-  { id: "overview", label: "Обзор" },
-  { id: "ai-report", label: "ИИ-отчёт" },
-  { id: "criteria-report", label: "Критерии" },
-];
+function getAvailableTabs(
+  needVideoAnalysis: boolean,
+): DashboardTabConfig[] {
+  return [
+    ...(needVideoAnalysis
+      ? [{ id: "overview" as const, label: "Обзор" }]
+      : []),
+    { id: "ai-report" as const, label: "ИИ-отчёт" },
+    { id: "criteria-report" as const, label: "Критерии" },
+  ];
+}
 
 // ─── Stat pill ────────────────────────────────────────────────────────────────
 function StatPill({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
@@ -165,11 +172,17 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   const [currentTime, setCurrentTime] = useState(0);
   const [videoSrc, setVideoSrc] = useState(() => result.video_path ? resolveVideoUrl(result.video_path) : "");
   const [videoError, setVideoError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
+  const [activeTab, setActiveTab] = useState<DashboardTab>(() =>
+    result.user_need_video_analysis ? "overview" : "ai-report",
+  );
 
   const hasVideo = !!result.video_path;
   const needVideoAnalysis = result.user_need_video_analysis;
   const needTranscript = result.user_need_text_from_video;
+  const availableTabs = useMemo(
+    () => getAvailableTabs(needVideoAnalysis),
+    [needVideoAnalysis],
+  );
 
   const speechReport = result.speech_report;
   const evaluationReport = result.evaluation_criteria_report;
@@ -324,7 +337,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
         {/* tab bar */}
         <div className="border-t border-white/[0.04] mx-auto max-w-[1280px] px-5">
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
-            {tabConfig.map((tab) => (
+            {availableTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}

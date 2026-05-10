@@ -93,8 +93,8 @@ const ANALYZE_PROVIDERS = [
 ];
 
 const TRANSCRIBE_PROVIDERS = [
-  { id: "sber_gigachat", label: "Sber GigaChat" },
   { id: "whisper_local", label: "Whisper локально" },
+  { id: "sber_gigachat", label: "Sber GigaChat" },
   { id: "whisper_openai", label: "Whisper Fast", disabled: true },
 ];
 
@@ -504,7 +504,10 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
   };
 
   /* ─── Review payload ─── */
-  const reviewPayload = [
+	const isDevelopment = process.env.NODE_ENV === "development";
+
+	const reviewPayload = isDevelopment
+		? [
     state.inputMode === "speech_text" && state.speechTextFile
       ? { key: "user_speech_text_file", value: state.speechTextFile.name }
       : null,
@@ -520,7 +523,8 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
     { key: "persona", value: state.selectedPersona },
     { key: "analyze_provider", value: state.selectedAnalyzeProvider },
     { key: "transcribe_provider", value: state.selectedTranscribeProvider },
-  ].filter((item): item is { key: string; value: string } => Boolean(item));
+  ].filter((item): item is { key: string; value: string } => Boolean(item))
+		: [];
 
   /* ═══ STEP RENDERERS ═══ */
 
