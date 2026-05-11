@@ -18,9 +18,9 @@ export function InsightCard({
     <div
       className={cn(
         "group relative overflow-hidden rounded-3xl border transition-all duration-500 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] hover:shadow-[0_12px_40px_rgba(255,255,255,0.05)]",
-        accent === "red" ? "border-rose-500/20 bg-black/40 backdrop-blur-2xl hover:border-rose-500/40" : 
-        accent === "amber" ? "border-amber-500/20 bg-black/40 backdrop-blur-2xl hover:border-amber-500/40" : 
-        "border-white/10 bg-black/40 backdrop-blur-2xl hover:border-white/30",
+        accent === "red" ? "border-rose-500/20 bg-background/40 backdrop-blur-2xl hover:border-rose-500/40" : 
+        accent === "amber" ? "border-amber-500/20 bg-background/40 backdrop-blur-2xl hover:border-amber-500/40" : 
+        "border-foreground/10 bg-background/40 backdrop-blur-2xl hover:border-foreground/30",
         mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
         className
       )}
@@ -43,12 +43,12 @@ export function InsightCard({
             "text-base font-semibold mb-3 tracking-tight drop-shadow-sm",
             accent === "amber" && "text-amber-200/90",
             accent === "red" && "text-rose-300/90",
-            !accent && "text-white"
+            !accent && "text-foreground"
           )}
         >
           {title}
         </h3>
-        <p className="text-[14px] leading-relaxed text-white/70 whitespace-pre-wrap">{content}</p>
+        <p className="text-[14px] leading-relaxed text-foreground/70 whitespace-pre-wrap">{content}</p>
       </div>
     </div>
   );

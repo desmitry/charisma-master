@@ -1,11 +1,70 @@
 @import "tailwindcss";
 
-:root {
+:root,
+[data-theme="dark"] {
   --background: #000000;
   --foreground: #ffffff;
   --primary: #FFC700;
   --primary-foreground: #ffffff;
   --border: #424242;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-hover: rgba(255, 255, 255, 0.08);
+  --muted: rgba(255, 255, 255, 0.5);
+  --muted-strong: rgba(255, 255, 255, 0.7);
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --page-aurora-bg: #000000;
+  --page-aurora-opacity: 1;
+  --page-bends-bg: #020202;
+  --chart-axis: rgba(255, 255, 255, 0.34);
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --chart-cursor: rgba(255, 255, 255, 0.06);
+  --chart-reference: rgba(255, 255, 255, 0.45);
+  --chart-green: #34d399;
+  --chart-yellow: #f59e0b;
+  --chart-red: #f43f5e;
+  --ring-strong: rgba(255, 255, 255, 0.92);
+  --ring-medium: rgba(255, 255, 255, 0.65);
+  --ring-soft: rgba(255, 255, 255, 0.42);
+  --ring-track: rgba(255, 255, 255, 0.07);
+  --ring-track-soft: rgba(255, 255, 255, 0.05);
+  --ring-icon: #000000;
+}
+
+[data-theme="light"] {
+  --background: #f2eee5;
+  --foreground: #17130f;
+  --primary: #b78300;
+  --primary-foreground: #0f0f0f;
+  --border: #d6cec0;
+  --surface: rgba(54, 43, 29, 0.055);
+  --surface-hover: rgba(54, 43, 29, 0.09);
+  --muted: rgba(23, 19, 15, 0.5);
+  --muted-strong: rgba(23, 19, 15, 0.72);
+  --glass-bg: rgba(255, 252, 244, 0.78);
+  --glass-border: rgba(64, 49, 31, 0.12);
+  --card-bg: rgba(255, 252, 244, 0.84);
+  --card-border: rgba(64, 49, 31, 0.1);
+  --shadow-color: rgba(91, 65, 32, 0.14);
+  --page-aurora-bg: #eee8dc;
+  --page-aurora-opacity: 0.78;
+  --page-bends-bg: #f1eadf;
+  --chart-axis: rgba(57, 44, 28, 0.58);
+  --chart-grid: rgba(57, 44, 28, 0.16);
+  --chart-cursor: rgba(57, 44, 28, 0.12);
+  --chart-reference: rgba(57, 44, 28, 0.62);
+  --chart-green: #087f5b;
+  --chart-yellow: #b56900;
+  --chart-red: #c92a45;
+  --ring-strong: #17130f;
+  --ring-medium: #9a7433;
+  --ring-soft: #2f8f79;
+  --ring-track: rgba(61, 48, 33, 0.18);
+  --ring-track-soft: rgba(61, 48, 33, 0.12);
+  --ring-icon: #fffaf0;
 }
 
 @utility container {
@@ -27,6 +86,12 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-border: var(--border);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
 
   --font-mono: var(--font-geist-mono);
 
@@ -39,6 +104,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   overflow: hidden;
   touch-action: auto;
+  transition: background 0.4s ease, color 0.4s ease;
 }
 
 html {
@@ -187,23 +253,34 @@ html, body {
   background: linear-gradient(135deg, #000 0%, #0a0a0a 50%, #050505 100%);
   position: relative;
   overflow: hidden;
+  transition: background 0.4s ease;
+}
+
+[data-theme="light"] .eco-bg {
+  background: linear-gradient(135deg, #eeece6 0%, #f0ede5 50%, #e8e5dd 100%);
 }
 
 .eco-bg::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: 
+  background:
     radial-gradient(ellipse 80% 50% at 20% 40%, rgba(255,255,255,0.03) 0%, transparent 50%),
     radial-gradient(ellipse 60% 40% at 80% 60%, rgba(255,255,255,0.02) 0%, transparent 50%);
   animation: eco-glow 8s ease-in-out infinite alternate;
+}
+
+[data-theme="light"] .eco-bg::before {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(0,0,0,0.02) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(0,0,0,0.015) 0%, transparent 50%);
 }
 
 .eco-bg::after {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: 
+  background-image:
     radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.15) 0%, transparent 100%),
     radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,0.12) 0%, transparent 100%),
     radial-gradient(1px 1px at 50% 30%, rgba(255,255,255,0.1) 0%, transparent 100%),
@@ -220,6 +297,25 @@ html, body {
     radial-gradient(1px 1px at 95% 75%, rgba(255,255,255,0.1) 0%, transparent 100%),
     radial-gradient(1px 1px at 55% 45%, rgba(255,255,255,0.06) 0%, transparent 100%);
   animation: eco-stars 12s linear infinite;
+}
+
+[data-theme="light"] .eco-bg::after {
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(0,0,0,0.08) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 70%, rgba(0,0,0,0.06) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50% 30%, rgba(0,0,0,0.05) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 80%, rgba(0,0,0,0.04) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 40%, rgba(0,0,0,0.06) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 15% 85%, rgba(0,0,0,0.05) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 45% 15%, rgba(0,0,0,0.04) 0%, transparent 100%),
+    radial-gradient(1px 1px at 75% 55%, rgba(0,0,0,0.06) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 45%, rgba(0,0,0,0.05) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 25%, rgba(0,0,0,0.04) 0%, transparent 100%),
+    radial-gradient(1px 1px at 5% 65%, rgba(0,0,0,0.05) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 65% 5%, rgba(0,0,0,0.06) 0%, transparent 100%),
+    radial-gradient(1px 1px at 35% 95%, rgba(0,0,0,0.04) 0%, transparent 100%),
+    radial-gradient(1px 1px at 95% 75%, rgba(0,0,0,0.05) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 45%, rgba(0,0,0,0.03) 0%, transparent 100%);
 }
 
 @keyframes eco-glow {
@@ -358,4 +454,3 @@ html, body {
 :root:has(body [data-modal-open]) .eco-bg::after {
   animation-play-state: paused !important;
 }
-

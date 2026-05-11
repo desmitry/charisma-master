@@ -185,13 +185,13 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
 
   return (
     <Popover className="relative z-50">
-      <PopoverButton className="rounded-md border border-white/[0.08] bg-[#111] hover:bg-white/5 px-4 py-1.5 text-xs font-medium text-white/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20">
+      <PopoverButton className="rounded-lg border border-foreground/15 bg-foreground text-background hover:bg-foreground/88 px-4 py-1.5 text-xs font-semibold shadow-[0_10px_24px_var(--shadow-color)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20">
         Экспорт PDF
       </PopoverButton>
 
       <PopoverPanel
         transition
-        className="absolute right-0 top-full mt-2 w-[260px] rounded-xl border border-white/15 bg-[#0c0c0c]/95 backdrop-blur-xl shadow-2xl overflow-hidden transition duration-200 ease-out data-[closed]:scale-95 data-[closed]:opacity-0"
+        className="absolute right-0 top-full mt-2 w-[260px] rounded-xl border border-card-border bg-card-bg backdrop-blur-xl shadow-2xl overflow-hidden transition duration-200 ease-out data-[closed]:scale-95 data-[closed]:opacity-0"
       >
         {({ close }) => (
           <>
@@ -202,8 +202,8 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
                   onClick={() => !opt.disabled && toggleOption(opt.key)}
                   className={cn(
                     "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all select-none",
-                    opt.disabled ? "opacity-30 cursor-not-allowed" : "cursor-pointer hover:bg-white/5",
-                    options[opt.key] && !opt.disabled ? "bg-white/10 text-white" : "text-white/60 hover:text-white/80"
+                    opt.disabled ? "opacity-35 cursor-not-allowed" : "cursor-pointer hover:bg-surface-hover",
+                    options[opt.key] && !opt.disabled ? "bg-surface text-foreground" : "text-foreground/60 hover:text-foreground/80"
                   )}
                 >
                   <span>{opt.label}</span>
@@ -211,9 +211,9 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
                     checked={options[opt.key]}
                     disabled={opt.disabled}
                     onChange={() => {}}
-                    className="group block h-4 w-4 rounded border border-white/30 bg-transparent transition-all data-[checked]:bg-white data-[checked]:border-white"
+                    className="group block h-4 w-4 rounded border border-foreground/30 bg-transparent transition-all data-[checked]:bg-foreground data-[checked]:border-foreground"
                   >
-                    <svg className="h-3 w-3 stroke-black opacity-0 group-data-[checked]:opacity-100 mx-auto mt-0.5" fill="none" viewBox="0 0 14 14">
+                    <svg className="h-3 w-3 stroke-background opacity-0 group-data-[checked]:opacity-100 mx-auto mt-0.5" fill="none" viewBox="0 0 14 14">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 8L6 11L11 3.5" />
                     </svg>
                   </Checkbox>
@@ -221,8 +221,8 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
               ))}
             </div>
 
-            <div className="flex items-center justify-between px-4 py-3 border-t border-white/10 bg-white/[0.02]">
-              <span className="text-xs text-white/40">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-card-border bg-surface">
+              <span className="text-xs text-foreground/45">
                 {Object.values(options).filter(Boolean).length} из {optionsList.length} выбрано
               </span>
               <button
@@ -231,8 +231,8 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all",
                   isGenerating || Object.values(options).every((value) => !value)
-                    ? "bg-white/10 text-white/30 cursor-not-allowed"
-                    : "bg-white text-black hover:bg-white/90 shadow-lg"
+                    ? "bg-foreground/10 text-foreground/30 cursor-not-allowed"
+                    : "bg-foreground text-background hover:bg-foreground/88 shadow-lg"
                 )}
               >
                 {isGenerating ? "Генерация..." : "Скачать PDF"}

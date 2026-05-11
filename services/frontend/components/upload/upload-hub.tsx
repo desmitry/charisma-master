@@ -150,14 +150,14 @@ function FileField({
   };
 
   return (
-    <div className="group/field rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.015] p-5 transition-colors hover:border-white/[0.14]">
+    <div className="group/field rounded-2xl border border-card-border bg-card-bg p-5 shadow-[0_10px_28px_var(--shadow-color)] transition-colors hover:border-foreground/20">
       <div className={cn("flex items-start gap-3", file ? "mb-3" : "mb-4")}>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.05] text-white/50 transition-colors group-hover/field:text-white/70">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-card-border bg-surface text-foreground/50 transition-colors group-hover/field:text-foreground/75">
           {icon}
         </div>
         <div className="min-w-0">
-          <h4 className="text-sm font-semibold text-white/90">{title}</h4>
-          <p className="mt-0.5 text-[13px] leading-5 text-white/35">{description}</p>
+          <h4 className="text-sm font-semibold text-foreground/90">{title}</h4>
+          <p className="mt-0.5 text-[13px] leading-5 text-foreground/48">{description}</p>
         </div>
       </div>
 
@@ -169,13 +169,13 @@ function FileField({
         >
           <FileCheck className="h-4 w-4 shrink-0 text-emerald-300/70" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-white/90">{file.name}</p>
-            <p className="text-xs text-white/30">{Math.max(1, Math.round(file.size / 1024))} КБ</p>
+            <p className="truncate text-sm font-medium text-foreground/90">{file.name}</p>
+            <p className="text-xs text-foreground/45">{Math.max(1, Math.round(file.size / 1024))} КБ</p>
           </div>
           <button
             type="button"
             onClick={onRemove}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.04] text-white/35 transition hover:border-rose-400/25 hover:bg-rose-400/10 hover:text-rose-300"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-card-border bg-surface text-foreground/45 transition hover:border-rose-400/30 hover:bg-rose-400/10 hover:text-rose-500"
           >
             <X className="h-3 w-3" />
           </button>
@@ -189,18 +189,18 @@ function FileField({
           className={cn(
             "group/drop flex cursor-pointer flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed px-5 py-5 text-center transition-all",
             isDragging
-              ? "border-white/30 bg-white/[0.06]"
-              : "border-white/[0.1] bg-black/20 hover:border-white/20 hover:bg-white/[0.03]"
+              ? "border-foreground/30 bg-surface-hover"
+              : "border-foreground/15 bg-surface hover:border-foreground/25 hover:bg-surface-hover"
           )}
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.05] text-white/25 transition group-hover/drop:text-white/50">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-card-border bg-card-bg text-foreground/35 transition group-hover/drop:text-foreground/65">
             <Upload className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-sm font-medium text-white/60 transition group-hover/drop:text-white/80">
+            <p className="text-sm font-medium text-foreground/60 transition group-hover/drop:text-foreground/80">
               Перетащите файл или нажмите
             </p>
-            <p className="mt-0.5 text-xs text-white/25">{accept.replaceAll(",", ", ")}</p>
+            <p className="mt-0.5 text-xs text-foreground/40">{accept.replaceAll(",", ", ")}</p>
           </div>
           <input
             id={id}
@@ -236,23 +236,23 @@ function ToggleCard({
       className={cn(
         "group/toggle relative flex w-full items-start gap-3 rounded-xl border px-4 py-4 text-left transition-all",
         active
-          ? "border-white/20 bg-gradient-to-br from-white/[0.1] to-white/[0.03] text-white shadow-[0_0_24px_rgba(255,255,255,0.04)]"
-          : "border-white/[0.06] bg-white/[0.02] text-white/60 hover:border-white/[0.12] hover:bg-white/[0.04]"
+          ? "border-foreground/25 bg-surface-hover text-foreground shadow-[0_12px_30px_var(--shadow-color)]"
+          : "border-card-border bg-card-bg text-foreground/60 hover:border-foreground/15 hover:bg-surface"
       )}
     >
       <div
         className={cn(
           "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-all",
           active
-            ? "border-white/15 bg-white/[0.1] text-white"
-            : "border-white/[0.06] bg-black/20 text-white/40 group-hover/toggle:text-white/60"
+            ? "border-foreground/20 bg-surface-hover text-foreground"
+            : "border-card-border bg-surface text-foreground/40 group-hover/toggle:text-foreground/65"
         )}
       >
         {icon}
       </div>
       <div className="min-w-0">
-        <p className={cn("text-sm font-semibold transition-colors", active ? "text-white" : "text-white/75")}>{title}</p>
-        <p className="mt-0.5 text-[13px] leading-5 text-white/35">{description}</p>
+        <p className={cn("text-sm font-semibold transition-colors", active ? "text-foreground" : "text-foreground/75")}>{title}</p>
+        <p className="mt-0.5 text-[13px] leading-5 text-foreground/48">{description}</p>
       </div>
       <AnimatePresence>
         {active && (
@@ -260,9 +260,9 @@ function ToggleCard({
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-white/[0.12]"
+            className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-foreground/12"
           >
-            <Check className="h-3 w-3 text-white/80" />
+            <Check className="h-3 w-3 text-foreground/80" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -272,9 +272,9 @@ function ToggleCard({
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-      <span className="text-[11px] font-mono uppercase tracking-[0.15em] text-white/25">{label}</span>
-      <span className="text-sm text-white/80">{value}</span>
+    <div className="flex flex-col gap-1 rounded-xl border border-card-border bg-surface px-4 py-3">
+      <span className="text-[11px] font-mono uppercase tracking-[0.15em] text-foreground/40">{label}</span>
+      <span className="text-sm text-foreground/80">{value}</span>
     </div>
   );
 }
@@ -297,7 +297,7 @@ function BackButton({ onClick, label = "Назад" }: { onClick: () => void; la
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-5 text-sm font-semibold text-white/60 transition hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-white/80"
+      className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-card-border bg-card-bg px-5 text-sm font-semibold text-foreground/60 transition hover:border-foreground/20 hover:bg-surface-hover hover:text-foreground"
     >
       <ChevronLeft className="h-4 w-4" />
       {label}
@@ -315,8 +315,8 @@ function NextButton({ onClick, label, disabled = false }: { onClick: () => void;
       className={cn(
         "inline-flex h-12 items-center justify-center gap-2 rounded-xl border px-5 text-sm font-semibold transition",
         disabled
-          ? "cursor-not-allowed border-white/[0.05] bg-white/[0.02] text-white/25"
-          : "border-white/[0.08] bg-white/[0.04] text-white hover:border-white/[0.18] hover:bg-white/[0.07]"
+          ? "cursor-not-allowed border-card-border bg-surface text-foreground/30"
+          : "border-card-border bg-card-bg text-foreground/80 hover:border-foreground/20 hover:bg-surface-hover hover:text-foreground"
       )}
     >
       {label}
@@ -343,8 +343,8 @@ function PrimaryButton({
       className={cn(
         "inline-flex h-12 items-center justify-center gap-2 rounded-xl border px-6 text-sm font-semibold transition",
         disabled
-          ? "cursor-not-allowed border-white/[0.08] bg-white/5 text-white/25"
-          : "border-white/15 bg-white text-black"
+          ? "cursor-not-allowed border-card-border bg-surface text-foreground/30"
+          : "border-foreground/15 bg-foreground text-background hover:bg-foreground/88"
       )}
     >
       {icon ?? <Play className="h-4 w-4" />}
@@ -388,7 +388,7 @@ function ProviderSelect({
   const tooltip = mounted && typeof document !== "undefined" ? createPortal(
     <div
       ref={tooltipRef}
-      className="fixed z-[9999] pointer-events-none whitespace-nowrap rounded-lg bg-[#1e1e22] border border-white/10 text-[11px] text-white/70 px-3 py-1.5 shadow-xl"
+      className="fixed z-[9999] pointer-events-none whitespace-nowrap rounded-lg bg-card-bg border border-card-border text-[11px] text-foreground/70 px-3 py-1.5 shadow-xl backdrop-blur-xl"
       style={{
         left: mouse?.x ?? 0,
         top: mouse?.y ?? 0,
@@ -408,13 +408,13 @@ function ProviderSelect({
         p.disabled ? (
           <div
             key={p.id}
-            className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-black/10 px-4 py-3 opacity-40 cursor-not-allowed select-none"
+            className="flex items-center justify-between rounded-xl border border-card-border bg-surface px-4 py-3 opacity-45 cursor-not-allowed select-none"
             onMouseEnter={(e) => { handleMouseMove(e); setVisible(true); }}
             onMouseLeave={() => setVisible(false)}
             onMouseMove={handleMouseMove}
           >
-            <span className="text-sm text-white/60">{p.label}</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/40">
+            <span className="text-sm text-foreground/60">{p.label}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground/45">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
@@ -426,13 +426,13 @@ function ProviderSelect({
             onClick={() => onChange(p.id)}
             className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition text-left ${
               value === p.id
-                ? "border-white/20 bg-white/[0.08] text-white"
-                : "border-white/[0.06] bg-black/10 text-white/60 hover:border-white/10 hover:text-white/80"
+                ? "border-foreground/25 bg-surface-hover text-foreground"
+                : "border-card-border bg-surface text-foreground/60 hover:border-foreground/15 hover:text-foreground/80"
             }`}
           >
             <span>{p.label}</span>
             {value === p.id && (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/70">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-foreground/75">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             )}
@@ -576,14 +576,14 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
               onRemove={() => actions.handleSpeechVideoFileChange(null)}
             />
 
-            <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.015] p-5">
+            <div className="rounded-2xl border border-card-border bg-gradient-to-b from-card-bg to-surface p-5">
               <div className="mb-3 flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.05] text-white/50">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-card-border bg-surface text-foreground/52">
                   <LinkIcon className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-white/90">Или ссылка на RuTube</h4>
-                  <p className="mt-0.5 text-[13px] leading-5 text-white/35">rutube.ru/video/...</p>
+                  <h4 className="text-sm font-semibold text-foreground/90">Или ссылка на RuTube</h4>
+                  <p className="mt-0.5 text-[13px] leading-5 text-foreground/48">rutube.ru/video/...</p>
                 </div>
               </div>
               <input
@@ -591,7 +591,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                 value={state.speechVideoUrl}
                 onChange={(e) => actions.handleSpeechVideoUrlChange(e.target.value)}
                 placeholder="https://rutube.ru/video/..."
-                className="w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-white/20 focus:bg-black/30"
+                className="w-full rounded-xl border border-card-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-foreground/35 focus:border-foreground/20 focus:bg-surface-hover"
               />
               {state.speechVideoUrl && !state.isValidRuTubeUrl && (
                 <p className="mt-2 text-xs text-amber-300/70">Ссылка не похожа на корректную ссылку RuTube.</p>
@@ -605,7 +605,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                 className="flex items-center gap-3 rounded-xl border border-sky-400/15 bg-sky-400/[0.05] px-4 py-3"
               >
                 <Mic className="h-4 w-4 shrink-0 text-sky-300/60" />
-                <p className="text-[13px] leading-5 text-sky-100/70">
+                  <p className="text-[13px] leading-5 text-sky-500/85">
                   Транскрибация включена — текст будет извлечён из видео.
                 </p>
               </motion.div>
@@ -674,7 +674,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
               ) : (
                 <div className="flex items-center gap-3 rounded-xl border border-amber-400/15 bg-amber-400/[0.05] px-4 py-3">
                   <Video className="h-4 w-4 shrink-0 text-amber-300/60" />
-                  <p className="text-[13px] leading-5 text-amber-100/70">Видео не добавлено. Загрузите файл или ссылку.</p>
+                  <p className="text-[13px] leading-5 text-amber-500/85">Видео не добавлено. Загрузите файл или ссылку.</p>
                 </div>
               )}
 
@@ -689,14 +689,14 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                 onRemove={() => actions.handleSpeechVideoFileChange(null)}
               />
 
-              <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.015] p-5">
+              <div className="rounded-2xl border border-card-border bg-gradient-to-b from-card-bg to-surface p-5">
                 <div className="mb-3 flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.05] text-white/50">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-card-border bg-surface text-foreground/52">
                     <LinkIcon className="h-4.5 w-4.5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-white/90">Ссылка на RuTube</h4>
-                    <p className="mt-0.5 text-[13px] leading-5 text-white/35">rutube.ru/video/...</p>
+                    <h4 className="text-sm font-semibold text-foreground/90">Ссылка на RuTube</h4>
+                    <p className="mt-0.5 text-[13px] leading-5 text-foreground/48">rutube.ru/video/...</p>
                   </div>
                 </div>
                 <input
@@ -704,7 +704,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                   value={state.speechVideoUrl}
                   onChange={(e) => actions.handleSpeechVideoUrlChange(e.target.value)}
                   placeholder="https://rutube.ru/video/..."
-                  className="w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-white/20 focus:bg-black/30"
+                  className="w-full rounded-xl border border-card-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-foreground/35 focus:border-foreground/20 focus:bg-surface-hover"
                 />
               </div>
 
@@ -712,7 +712,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 rounded-xl border border-violet-400/15 bg-violet-400/[0.05] px-4 py-3">
                     <Wand2 className="h-4 w-4 shrink-0 text-violet-300/60" />
-                    <p className="text-[13px] leading-5 text-violet-100/70">
+                    <p className="text-[13px] leading-5 text-violet-500/85">
                       Хотите также извлечь текст из видео?
                     </p>
                   </div>
@@ -776,12 +776,12 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
       <AnimatePresence mode="wait">
         {state.criteriaMode === "preset" && (
           <motion.div key="preset" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-            <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.015] p-5">
-              <label className="mb-2 block text-sm font-semibold text-white/90">Пресет критериев</label>
+            <div className="rounded-2xl border border-card-border bg-gradient-to-b from-card-bg to-surface p-5">
+              <label className="mb-2 block text-sm font-semibold text-foreground/90">Пресет критериев</label>
               <select
                 value={state.selectedEvaluationPreset}
                 onChange={(e) => actions.setSelectedEvaluationPreset(e.target.value as EvaluationPresetId)}
-                className="w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-3 text-sm text-white outline-none transition focus:border-white/20"
+                className="w-full rounded-xl border border-card-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition focus:border-foreground/20"
               >
                 {PRESETS.map((p) => (
                   <option key={p.id} value={p.id}>{p.label}</option>
@@ -817,28 +817,28 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
   const renderSettingsStep = () => (
     <div className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.015] p-5 transition-colors hover:border-white/[0.12]">
-          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/90">
-            <UserRound className="h-4 w-4 text-white/40" />
+        <div className="rounded-2xl border border-card-border bg-gradient-to-b from-card-bg to-surface p-5 transition-colors hover:border-foreground/20">
+          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground/90">
+            <UserRound className="h-4 w-4 text-foreground/45" />
             Персона
           </label>
           <select
             value={state.selectedPersona}
             onChange={(e) => actions.setSelectedPersona(e.target.value)}
-            className="w-full rounded-xl border border-white/[0.08] bg-black/25 px-4 py-3 text-sm text-white outline-none transition focus:border-white/20"
+            className="w-full rounded-xl border border-card-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition focus:border-foreground/20"
           >
             {PERSONAS.map((p) => (
               <option key={p.id} value={p.id}>{p.label}</option>
             ))}
           </select>
-          <p className="mt-2 text-[13px] leading-5 text-white/35">
+          <p className="mt-2 text-[13px] leading-5 text-foreground/48">
             {PERSONAS.find((p) => p.id === state.selectedPersona)?.description}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.015] p-5 transition-colors hover:border-white/[0.12]">
-          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/90">
-            <Sparkles className="h-4 w-4 text-white/40" />
+        <div className="rounded-2xl border border-card-border bg-gradient-to-b from-card-bg to-surface p-5 transition-colors hover:border-foreground/20">
+          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground/90">
+            <Sparkles className="h-4 w-4 text-foreground/45" />
             Провайдер анализа
           </label>
           <ProviderSelect
@@ -848,9 +848,9 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
           />
         </div>
 
-        <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.015] p-5 transition-colors hover:border-white/[0.12]">
-          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/90">
-            <Wand2 className="h-4 w-4 text-white/40" />
+        <div className="rounded-2xl border border-card-border bg-gradient-to-b from-card-bg to-surface p-5 transition-colors hover:border-foreground/20">
+          <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground/90">
+            <Wand2 className="h-4 w-4 text-foreground/45" />
             Транскрибация
           </label>
           <ProviderSelect
@@ -905,24 +905,24 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
         />
       </div>
 
-      <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-5">
+      <div className="rounded-2xl border border-card-border bg-surface p-5">
         <div className="mb-3 flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-white/50">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-card-border bg-surface text-foreground/52">
             <FileCheck className="h-4 w-4" />
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-white/90">Payload</h4>
-            <p className="text-[13px] text-white/35">Что уйдёт на бэкенд</p>
+            <h4 className="text-sm font-semibold text-foreground/90">Payload</h4>
+            <p className="text-[13px] text-foreground/48">Что уйдёт на бэкенд</p>
           </div>
         </div>
         <div className="space-y-1.5">
           {reviewPayload.map((item) => (
             <div
               key={item.key}
-              className="flex flex-col gap-0.5 rounded-lg border border-white/[0.05] bg-white/[0.02] px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-0.5 rounded-lg border border-card-border bg-card-bg px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
             >
-              <code className="text-xs text-white/35 font-mono">{item.key}</code>
-              <span className="text-sm text-white/80">{item.value}</span>
+              <code className="text-xs text-foreground/48 font-mono">{item.key}</code>
+              <span className="text-sm text-foreground/80">{item.value}</span>
             </div>
           ))}
         </div>
@@ -952,7 +952,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
   return (
     <section id="upload-hub" className="relative z-10 mb-32 w-full px-4 py-16 sm:px-6">
       <div className="mx-auto max-w-3xl">
-        <div className="overflow-hidden rounded-[2rem] border border-white/[0.08] bg-black/50 shadow-2xl backdrop-blur-3xl">
+        <div className="overflow-hidden rounded-[2rem] border border-card-border bg-card-bg shadow-2xl backdrop-blur-3xl">
           <div className="p-6 sm:p-8 lg:p-10">
 
             {/* ─── Step indicator row ─── */}
@@ -965,11 +965,11 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
             {/* ─── Step header ─── */}
             <div className="mt-6 mb-8">
               <div className="flex items-center gap-3 mb-3">
-                <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-mono uppercase tracking-[0.18em] text-white/30">
+                <span className="rounded-full border border-card-border bg-surface px-2.5 py-0.5 text-[11px] font-mono uppercase tracking-[0.18em] text-foreground/42">
                   {currentStepIndex + 1}/{STEPS.length}
                 </span>
                 {currentStep.optional && (
-                  <span className="rounded-full border border-white/[0.06] bg-white/[0.03] px-2.5 py-0.5 text-[10px] uppercase tracking-[0.15em] text-white/20">
+                  <span className="rounded-full border border-card-border bg-surface px-2.5 py-0.5 text-[10px] uppercase tracking-[0.15em] text-foreground/35">
                     optional
                   </span>
                 )}
@@ -979,7 +979,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="text-2xl font-semibold tracking-tight text-white sm:text-3xl"
+                className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
               >
                 {currentStep.title}
               </motion.h2>
@@ -988,7 +988,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.05 }}
-                className="mt-2 text-[15px] leading-6 text-white/40"
+                className="mt-2 text-[15px] leading-6 text-foreground/45"
               >
                 {currentStep.description}
               </motion.p>
