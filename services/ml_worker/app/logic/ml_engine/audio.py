@@ -7,6 +7,7 @@ from typing import Dict
 import librosa
 import numpy as np
 
+from app.logic.ml_engine.config import get_db_weights
 from app.logic.ml_engine.scoring import get_score_label
 
 logger = logging.getLogger(__name__)
@@ -98,19 +99,30 @@ def analyze_audio(audio_path: str) -> Dict:
         y, sr = librosa.load(audio_path, sr=None)
 
         rms = librosa.feature.rms(y=y)[0]
-        mean_rms = np.mean(rms)
+        audio_config = get_db_weights("ml_worker_audio") or {}
+        rms_very_quiet = audio_config.get("rms_very_quiet", 0.01)
+        rms_quiet = audio_config.get("rms_quiet", 0.03)
+        rms_loud = audio_config.get("rms_loud", 0.15)
+        
+        vol_label_very_quiet = audio_config.get("vol_label_very_quiet", "Очень тихо")
+        vol_label_quiet = audio_config.get("vol_label_quiet", "Тиховато")
+        vol_label_loud = audio_config.get("vol_label_loud", "Громко")
+        vol_label_normal = audio_config.get("vol_label_normal", "Нормально")
+        
+        volume_score_divisor = audio_config.get("volume_score_divisor", 0.06)
+        tone_score_divisor = audio_config.get("tone_score_divisor", 35.0)
 
         # TODO: Remove hardcode values from methods code.
-        if mean_rms < 0.01:
-            vol_label = "Очень тихо"
-        elif mean_rms < 0.03:
-            vol_label = "Тиховато"
-        elif mean_rms > 0.15:
-            vol_label = "Громко"
+        if mean_rms < rms_very_quiet:
+            vol_label = vol_label_very_quiet
+        elif mean_rms < rms_quiet:
+            vol_label = vol_label_quiet
+        elif mean_rms > rms_loud:
+            vol_label = vol_label_loud
         else:
-            vol_label = "Нормально"
+            vol_label = vol_label_normal
 
-        volume_score_val = min((mean_rms / 0.06) * 100, 100)
+        volume_score_val = min((mean_rms / volume_score_divisor) * 100, 100)
 
         f0, _, _ = librosa.pyin(
             y,
@@ -121,7 +133,7 @@ def analyze_audio(audio_path: str) -> Dict:
         valid_f0 = f0[~np.isnan(f0)]
         pitch_std = np.std(valid_f0) if len(valid_f0) > 0 else 0
 
-        tone_score_val = min((pitch_std / 35) * 100, 100)
+        tone_score_val = min((pitch_std / tone_score_divisor) * 100, 100)
 
         audio_metrics = get_empty_audio_metrics()
 

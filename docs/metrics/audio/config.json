@@ -1,0 +1,11 @@
+{
+  "rms_very_quiet": 0.01,
+  "rms_quiet": 0.03,
+  "rms_loud": 0.15,
+  "vol_label_very_quiet": "Очень тихо",
+  "vol_label_quiet": "Тиховато",
+  "vol_label_loud": "Громко",
+  "vol_label_normal": "Нормально",
+  "volume_score_divisor": 0.06,
+  "tone_score_divisor": 35.0
+}

@@ -30,16 +30,16 @@ from app.logic.ml_engine.audio import (
     get_empty_audio_metrics as _get_empty_audio_metrics,
 )
 from app.logic.ml_engine.constants import (
-    BASE_FILLER_WORDS as _BASE_FILLER_WORDS,
+    BASE_FILLER_WORDS_DEFAULT as _BASE_FILLER_WORDS,
 )
 from app.logic.ml_engine.constants import (
-    MOVEMENT_THRESHOLD as _MOVEMENT_THRESHOLD,
+    MOVEMENT_THRESHOLD_DEFAULT as _MOVEMENT_THRESHOLD,
 )
 from app.logic.ml_engine.constants import (
-    TARGET_FRAME_WIDTH as _TARGET_FRAME_WIDTH,
+    TARGET_FRAME_WIDTH_DEFAULT as _TARGET_FRAME_WIDTH,
 )
 from app.logic.ml_engine.constants import (
-    VISUAL_DEVIATION as _VISUAL_DEVIATION,
+    VISUAL_DEVIATION_DEFAULT as _VISUAL_DEVIATION,
 )
 from app.logic.ml_engine.scoring import get_score_label as _get_score_label
 from app.logic.ml_engine.tempo import (
