@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from minio import Minio
+from minio.error import S3Error
 
 BUCKET_UPLOADS = "uploads"
 BUCKET_RESULTS = "results"
@@ -31,9 +32,17 @@ def get_client(
 
 
 def ensure_bucket_exists(client: Minio, bucket_name: str):
-    if not client.bucket_exists(bucket_name):
-        client.make_bucket(bucket_name)
-        print(f"Created bucket: {bucket_name}")
+    try:
+        if not client.bucket_exists(bucket_name):
+            client.make_bucket(bucket_name)
+            print(f"Created bucket: {bucket_name}")
+        else:
+            print(f"Bucket already exists: {bucket_name}")
+    except S3Error as exc:
+        if exc.code == "BucketAlreadyExists":
+            print(f"Bucket already exists (caught exception): {bucket_name}")
+        else:
+            raise
 
 
 def upload_file_to_seaweedfs(
