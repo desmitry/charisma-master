@@ -98,6 +98,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "pip"
 
       - name: Cache uv
         uses: actions/cache@v4
@@ -159,7 +160,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: swatinem/rust-cache@v2
         with:
-          shared-key: "rust-lint"
+          shared-key: "rust-account"
 
       - name: Install postgresql-client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -206,6 +207,8 @@ jobs:
             ${{ env.IMAGE_PREFIX }}-api-gateway:${{ github.sha }}
             ${{ env.IMAGE_PREFIX }}-api-gateway:latest
             ${{ env.IMAGE_PREFIX }}-api-gateway:${{ needs.release.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build and push custom certbot image
         uses: docker/build-push-action@v5
@@ -219,6 +222,8 @@ jobs:
             ${{ env.IMAGE_PREFIX }}-certbot:${{ github.sha }}
             ${{ env.IMAGE_PREFIX }}-certbot:latest
             ${{ env.IMAGE_PREFIX }}-certbot:${{ needs.release.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build and push ml-worker
         uses: docker/build-push-action@v5
@@ -232,6 +237,8 @@ jobs:
             ${{ env.IMAGE_PREFIX }}-ml-worker:${{ github.sha }}
             ${{ env.IMAGE_PREFIX }}-ml-worker:latest
             ${{ env.IMAGE_PREFIX }}-ml-worker:${{ needs.release.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       
       - name: Build and push frontend
         uses: docker/build-push-action@v5
@@ -242,6 +249,8 @@ jobs:
           tags: |
             ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
             ${{ env.IMAGE_PREFIX }}-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       
       - name: Build and push migrator
         uses: docker/build-push-action@v5
@@ -255,6 +264,8 @@ jobs:
             ${{ env.IMAGE_PREFIX }}-migrator:${{ github.sha }}
             ${{ env.IMAGE_PREFIX }}-migrator:latest
             ${{ env.IMAGE_PREFIX }}-migrator:${{ needs.release.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       
       - name: Build and push account service
         uses: docker/build-push-action@v5
@@ -268,3 +279,5 @@ jobs:
             ${{ env.IMAGE_PREFIX }}-account:${{ github.sha }}
             ${{ env.IMAGE_PREFIX }}-account:latest
             ${{ env.IMAGE_PREFIX }}-account:${{ needs.release.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
