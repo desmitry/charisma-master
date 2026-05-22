@@ -1,0 +1,14 @@
+{
+  "visual_deviation": 0.25,
+  "target_frame_width": 480,
+  "movement_threshold": 0.002,
+  "frames_with_face_threshold": 10,
+  "frames_with_pose_threshold": 10,
+  "gesture_score_multiplier": 3500,
+  "gesture_score_min": 15,
+  "gesture_score_max": 85,
+  "gesture_advice_min": "Вы почти неподвижны (или мы не видим рук). Добавьте энергии!",
+  "gesture_advice_max": "Очень много движений, попробуйте контролировать жесты.",
+  "gesture_advice_normal": "Отличная, естественная жестикуляция.",
+  "gesture_advice_fail": "Анализ не удался (мало данных)"
+}

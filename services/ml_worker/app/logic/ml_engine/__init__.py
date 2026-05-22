@@ -30,16 +30,16 @@ from app.logic.ml_engine.audio import (
     get_empty_audio_metrics as _get_empty_audio_metrics,
 )
 from app.logic.ml_engine.constants import (
-    BASE_FILLER_WORDS as _BASE_FILLER_WORDS,
+    BASE_FILLER_WORDS_DEFAULT as _BASE_FILLER_WORDS,
 )
 from app.logic.ml_engine.constants import (
-    MOVEMENT_THRESHOLD as _MOVEMENT_THRESHOLD,
+    MOVEMENT_THRESHOLD_DEFAULT as _MOVEMENT_THRESHOLD,
 )
 from app.logic.ml_engine.constants import (
-    TARGET_FRAME_WIDTH as _TARGET_FRAME_WIDTH,
+    TARGET_FRAME_WIDTH_DEFAULT as _TARGET_FRAME_WIDTH,
 )
 from app.logic.ml_engine.constants import (
-    VISUAL_DEVIATION as _VISUAL_DEVIATION,
+    VISUAL_DEVIATION_DEFAULT as _VISUAL_DEVIATION,
 )
 from app.logic.ml_engine.scoring import get_score_label as _get_score_label
 from app.logic.ml_engine.tempo import (
@@ -189,40 +189,32 @@ class MLEngine(metaclass=_MLEngineMeta):
     @staticmethod
     def get_long_pauses(
         transcript: List[TranscriptSegment],
-        threshold: float = 2.0,
     ) -> List[PauseInterval]:
         """Detect long pauses between transcript segments.
 
         Args:
             transcript (List[TranscriptSegment]):
                 List of transcribed segments to analyze.
-            threshold (float, optional):
-                Minimum pause duration in seconds to be considered long.
-                Defaults to 2.0.
 
         Returns:
             List[PauseInterval]: List of detected pause intervals.
         """
-        return _get_long_pauses(transcript, threshold)
+        return _get_long_pauses(transcript)
 
     @staticmethod
     def calculate_tempo(
         transcript: List[TranscriptSegment],
-        window_sec=5.0,
     ) -> List[TempoPoint]:
         """Calculate speech tempo (words per minute) over time.
 
         Args:
             transcript (List[TranscriptSegment]):
                 List of transcribed segments to analyze.
-            window_sec (float, optional):
-                Time window in seconds for tempo calculation.
-                Defaults to 5.0.
 
         Returns:
             List[TempoPoint]: List of tempo points with time, WPM, and zone.
         """
-        return _calculate_tempo(transcript, window_sec)
+        return _calculate_tempo(transcript)
 
     @staticmethod
     def get_score_label(score: float) -> str:

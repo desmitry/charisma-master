@@ -7,43 +7,16 @@ from typing import Dict
 import cv2
 import mediapipe as mp
 import numpy as np
-import psycopg2
 
-from app.config import settings
+from app.logic.ml_engine.config import get_db_weights
 from app.logic.ml_engine.constants import (
-    MOVEMENT_THRESHOLD,
-    TARGET_FRAME_WIDTH,
-    VISUAL_DEVIATION,
+    MOVEMENT_THRESHOLD_DEFAULT,
+    TARGET_FRAME_WIDTH_DEFAULT,
+    VISUAL_DEVIATION_DEFAULT,
 )
 from app.logic.ml_engine.scoring import get_score_label
 
 logger = logging.getLogger(__name__)
-
-
-def get_gaze_config_from_db(weight_id: str) -> dict:
-    db_url = settings.database_url
-
-    try:
-        conn = psycopg2.connect(db_url)
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT config FROM algorithm_weights WHERE id = %s",
-                (weight_id,),
-            )
-            row = cur.fetchone()
-            if row:
-                return row[0]
-            else:
-                logger.warning(
-                    f"Gaze config '{weight_id}' not found. Using fallback."
-                )
-                return None
-    except Exception as e:
-        logger.error(f"Error fetching gaze config from DB: {e}")
-        return None
-    finally:
-        if "conn" in locals() and conn:
-            conn.close()
 
 
 def get_head_pose_v2(face_landmarks, img_w, img_h, lms_cfg):
@@ -116,7 +89,40 @@ def analyze_video(  # noqa: C901
     file_size = os.path.getsize(video_path)
     logger.debug(f"File size: {file_size / (1024 * 1024):.2f} MB")
 
-    gaze_config = get_gaze_config_from_db("advanced_pnp_iris")
+    gaze_config = get_db_weights("advanced_pnp_iris")
+    video_config = get_db_weights("ml_worker_video") or {}
+
+    visual_deviation = video_config.get(
+        "visual_deviation", VISUAL_DEVIATION_DEFAULT
+    )
+    target_frame_width = video_config.get(
+        "target_frame_width", TARGET_FRAME_WIDTH_DEFAULT
+    )
+    movement_threshold = video_config.get(
+        "movement_threshold", MOVEMENT_THRESHOLD_DEFAULT
+    )
+    frames_face_threshold = video_config.get("frames_with_face_threshold", 10)
+    frames_pose_threshold = video_config.get("frames_with_pose_threshold", 10)
+    gesture_score_multiplier = video_config.get(
+        "gesture_score_multiplier", 3500
+    )
+    gesture_score_min_threshold = video_config.get("gesture_score_min", 15)
+    gesture_score_max_threshold = video_config.get("gesture_score_max", 85)
+
+    gesture_advice_min = video_config.get(
+        "gesture_advice_min",
+        "Вы почти неподвижны (или мы не видим рук). Добавьте энергии!",
+    )
+    gesture_advice_max = video_config.get(
+        "gesture_advice_max",
+        "Очень много движений, попробуйте контролировать жесты.",
+    )
+    gesture_advice_normal = video_config.get(
+        "gesture_advice_normal", "Отличная, естественная жестикуляция."
+    )
+    gesture_advice_fail = video_config.get(
+        "gesture_advice_fail", "Анализ не удался (мало данных)"
+    )
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -162,7 +168,7 @@ def analyze_video(  # noqa: C901
                     continue
 
                 try:
-                    scale_mp = TARGET_FRAME_WIDTH / width
+                    scale_mp = target_frame_width / width
                     small_frame = cv2.resize(
                         frame, (0, 0), fx=scale_mp, fy=scale_mp
                     )
@@ -230,7 +236,7 @@ def analyze_video(  # noqa: C901
                                 deviation = (
                                     abs(nose_x - face_center) / face_width
                                 )
-                                if deviation < VISUAL_DEVIATION:
+                                if deviation < visual_deviation:
                                     looking_at_camera_frames += 1
 
                     if results.pose_landmarks:
@@ -254,7 +260,7 @@ def analyze_video(  # noqa: C901
 
                             delta = d_left + d_right
 
-                            if delta > MOVEMENT_THRESHOLD:
+                            if delta > movement_threshold:
                                 movement_accum += delta
 
                         prev_wrist = {"left": lw, "right": rw}
@@ -307,28 +313,23 @@ def analyze_video(  # noqa: C901
     logger.info(f"Accumulated Movement: {movement_accum}")
     logger.info(f"Frames looking at camera: {looking_at_camera_frames}")
 
-    # TODO: Remove hardcode values from methods code.
     gaze_score = 0
-    if frames_with_face > 10:
+    if frames_with_face > frames_face_threshold:
         gaze_score = (looking_at_camera_frames / frames_with_face) * 100
 
     gesture_score = 0
-    gesture_advice = "Анализ не удался (мало данных)"
+    gesture_advice = gesture_advice_fail
 
-    if frames_with_pose > 10:
+    if frames_with_pose > frames_pose_threshold:
         avg_move = movement_accum / frames_with_pose
-        gesture_score = min(avg_move * 3500, 100)
+        gesture_score = min(avg_move * gesture_score_multiplier, 100)
 
-        if gesture_score < 15:
-            gesture_advice = (
-                "Вы почти неподвижны (или мы не видим рук). Добавьте энергии!"
-            )
-        elif gesture_score > 85:
-            gesture_advice = (
-                "Очень много движений, попробуйте контролировать жесты."
-            )
+        if gesture_score < gesture_score_min_threshold:
+            gesture_advice = gesture_advice_min
+        elif gesture_score > gesture_score_max_threshold:
+            gesture_advice = gesture_advice_max
         else:
-            gesture_advice = "Отличная, естественная жестикуляция."
+            gesture_advice = gesture_advice_normal
 
     video_metrics = get_empty_video_metrics()
 

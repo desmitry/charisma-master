@@ -1,0 +1,13 @@
+{
+  "label_excellent": "Великолепно!",
+  "label_great": "Отлично!",
+  "label_good": "Хорошо",
+  "label_ok": "Нормально",
+  "label_poor": "Слабо",
+  "label_default": "Требует внимания",
+  "threshold_excellent": 90,
+  "threshold_great": 80,
+  "threshold_good": 70,
+  "threshold_ok": 55,
+  "threshold_poor": 40
+}
