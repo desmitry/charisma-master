@@ -20,6 +20,7 @@ type Props = {
 };
 
 type DashboardTab = "overview" | "ai-report" | "criteria-report";
+type DashboardTabConfig = { id: DashboardTab; label: string };
 
 // ─── animations ──────────────────────────────────────────────────────────────
 const fadeUp: any = {
@@ -50,10 +51,10 @@ function ScoreRing({ value, max, size = 56 }: { value: number; max: number; size
   const circ = 2 * Math.PI * r;
   const pct = max > 0 ? value / max : 0;
   const dash = circ * (1 - pct);
-  const color = pct >= 0.7 ? "#a3a3a3" : pct >= 0.4 ? "#737373" : "#404040";
+  const color = pct >= 0.7 ? "var(--ring-strong)" : pct >= 0.4 ? "var(--ring-medium)" : "var(--ring-soft)";
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ rotate: "-90deg" }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={4} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--ring-track-soft)" strokeWidth={4} />
       <circle
         cx={size / 2} cy={size / 2} r={r} fill="none"
         stroke={color} strokeWidth={4} strokeLinecap="round"
@@ -85,14 +86,14 @@ function Accordion({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <motion.div variants={fadeUp} className={cn("rounded-2xl border overflow-hidden flex flex-col", className, accent ?? "border-white/[0.07] bg-[#0f0f0f]")}>
+    <motion.div variants={fadeUp} className={cn("rounded-2xl border overflow-hidden flex flex-col shadow-[0_12px_34px_var(--shadow-color)]", className, accent ?? "border-card-border bg-card-bg")}>
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left"
       >
         <div className="flex items-center gap-3 min-w-0">
           {icon && <span className="flex-shrink-0 opacity-50">{icon}</span>}
-          <span className="text-[13px] font-medium text-white/80 truncate">{title}</span>
+          <span className="text-[13px] font-medium text-foreground/80 truncate">{title}</span>
           {badge && <span className="flex-shrink-0">{badge}</span>}
         </div>
         <ChevronIcon open={open} />
@@ -119,7 +120,7 @@ function ChevronIcon({ open }: { open: boolean }) {
   return (
     <svg
       width="16" height="16" viewBox="0 0 16 16" fill="none"
-      className={cn("flex-shrink-0 text-white/30 transition-transform duration-300", open ? "rotate-180" : "rotate-0")}
+      className={cn("flex-shrink-0 text-foreground/30 transition-transform duration-300", open ? "rotate-180" : "rotate-0")}
     >
       <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -127,20 +128,26 @@ function ChevronIcon({ open }: { open: boolean }) {
 }
 
 // ─── Tab nav ─────────────────────────────────────────────────────────────────
-const tabConfig: { id: DashboardTab; label: string }[] = [
-  { id: "overview", label: "Обзор" },
-  { id: "ai-report", label: "ИИ-отчёт" },
-  { id: "criteria-report", label: "Критерии" },
-];
+function getAvailableTabs(
+  needVideoAnalysis: boolean,
+): DashboardTabConfig[] {
+  return [
+    ...(needVideoAnalysis
+      ? [{ id: "overview" as const, label: "Обзор" }]
+      : []),
+    { id: "ai-report" as const, label: "ИИ-отчёт" },
+    { id: "criteria-report" as const, label: "Критерии" },
+  ];
+}
 
 // ─── Stat pill ────────────────────────────────────────────────────────────────
 function StatPill({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/30">{label}</span>
+      <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-foreground/30">{label}</span>
       <div className="flex items-baseline gap-1.5">
-        <span className="text-2xl font-semibold tracking-tight text-white">{value}</span>
-        {sub && <span className="text-xs text-white/40">{sub}</span>}
+        <span className="text-2xl font-semibold tracking-tight text-foreground">{value}</span>
+        {sub && <span className="text-xs text-foreground/40">{sub}</span>}
       </div>
     </div>
   );
@@ -150,9 +157,9 @@ function StatPill({ label, value, sub }: { label: string; value: string | number
 function ConfidenceBar({ score, max = 100 }: { score: number; max?: number }) {
   const pct = Math.min(100, (score / max) * 100);
   return (
-    <div className="h-1 w-full rounded-full bg-white/[0.06] overflow-hidden">
+    <div className="h-1 w-full rounded-full bg-foreground/[0.06] overflow-hidden">
       <div
-        className="h-full rounded-full bg-white/40"
+        className="h-full rounded-full bg-foreground/40"
         style={{ width: `${pct}%`, transition: "width 1s cubic-bezier(0.4,0,0.2,1)" }}
       />
     </div>
@@ -165,11 +172,17 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   const [currentTime, setCurrentTime] = useState(0);
   const [videoSrc, setVideoSrc] = useState(() => result.video_path ? resolveVideoUrl(result.video_path) : "");
   const [videoError, setVideoError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
+  const [activeTab, setActiveTab] = useState<DashboardTab>(() =>
+    result.user_need_video_analysis ? "overview" : "ai-report",
+  );
 
   const hasVideo = !!result.video_path;
   const needVideoAnalysis = result.user_need_video_analysis;
   const needTranscript = result.user_need_text_from_video;
+  const availableTabs = useMemo(
+    () => getAvailableTabs(needVideoAnalysis),
+    [needVideoAnalysis],
+  );
 
   const speechReport = result.speech_report;
   const evaluationReport = result.evaluation_criteria_report;
@@ -290,17 +303,17 @@ export function AnalysisDashboard({ result, onBack }: Props) {
   const hasRightCol = needTranscript || needVideoAnalysis || evaluationReport.criteria.length > 0;
 
   return (
-    <div className="relative min-h-screen bg-[#080808] text-white w-full selection:bg-white/10" style={{ overscrollBehavior: "none" }}>
+    <div className="relative min-h-screen bg-background text-foreground w-full selection:bg-foreground/10" style={{ overscrollBehavior: "none" }}>
       {/* ── header ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#080808]/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-card-border bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between px-5 py-3.5 gap-4">
           <div className="flex items-center gap-4 min-w-0">
             <div className="flex flex-col gap-1 min-w-0">
-              <h1 className="text-[14px] font-semibold text-white/90 truncate">Разбор выступления</h1>
+              <h1 className="text-[14px] font-semibold text-foreground/90 truncate">Разбор выступления</h1>
               {metadataChips.length > 0 && (
                 <div className="hidden sm:flex items-center gap-1.5 flex-wrap">
                   {metadataChips.map((c) => (
-                    <span key={c.label} className="text-[10px] font-mono text-white/30 px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.06]">
+                    <span key={c.label} className="text-[10px] font-mono text-foreground/45 px-2 py-0.5 rounded bg-surface border border-card-border">
                       {c.label}: {c.value}
                     </span>
                   ))}
@@ -313,7 +326,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             {onBack && (
               <button
                 onClick={onBack}
-                className="text-xs text-white/40 hover:text-white/80 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.03]"
+                className="text-xs font-medium text-foreground/60 hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-card-border bg-card-bg hover:border-foreground/20 hover:bg-surface-hover"
               >
                 Назад
               </button>
@@ -322,24 +335,24 @@ export function AnalysisDashboard({ result, onBack }: Props) {
         </div>
 
         {/* tab bar */}
-        <div className="border-t border-white/[0.04] mx-auto max-w-[1280px] px-5">
+        <div className="border-t border-card-border/70 mx-auto max-w-[1280px] px-5">
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
-            {tabConfig.map((tab) => (
+            {availableTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
                   "relative px-4 py-2.5 text-sm transition-colors",
                   activeTab === tab.id
-                    ? "text-white"
-                    : "text-white/40 hover:text-white/70"
+                    ? "text-foreground"
+                    : "text-foreground/48 hover:text-foreground/75"
                 )}
               >
                 {tab.label}
                 {activeTab === tab.id && (
                   <motion.div
                     layoutId="tab-underline"
-                    className="absolute bottom-0 left-0 right-0 h-px bg-white/70"
+                    className="absolute bottom-0 left-0 right-0 h-px bg-foreground/75"
                     transition={{ type: "spring", stiffness: 380, damping: 32 }}
                   />
                 )}
@@ -358,7 +371,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
               {/* video + rings */}
               <motion.div variants={fadeUp} className={cn("grid gap-4", hasVideo ? "grid-cols-1 lg:grid-cols-[1fr_300px]" : "grid-cols-1")}>
                 {hasVideo && (
-                  <div className="rounded-2xl border border-white/[0.06] bg-black overflow-hidden aspect-video flex items-center justify-center">
+                  <div className="rounded-2xl border border-card-border bg-card-bg overflow-hidden aspect-video flex items-center justify-center shadow-[0_18px_50px_var(--shadow-color)]">
                     <VideoPlayer
                       ref={playerRef}
                       src={videoSrc}
@@ -383,7 +396,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                   "grid-cols-2 sm:grid-cols-4"
                 )}>
                   {statPills.map((pill) => (
-                    <div key={pill.label} className="rounded-2xl border border-white/[0.06] bg-[#0f0f0f] p-3.5 sm:px-5 sm:py-4">
+                    <div key={pill.label} className="rounded-2xl border border-card-border bg-card-bg p-3.5 shadow-[0_12px_34px_var(--shadow-color)] sm:px-5 sm:py-4">
                       <StatPill label={pill.label} value={pill.value} sub={pill.sub} />
                     </div>
                   ))}
@@ -402,17 +415,17 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                         defaultOpen
                         icon={<IconBolt className="w-4 h-4" />}
                         badge={
-                          hasVideo ? <span className="text-[10px] font-mono text-white/25 ml-1">нажмите на слово для перемотки</span> : undefined
+                          hasVideo ? <span className="text-[10px] font-mono text-foreground/25 ml-1">нажмите на слово для перемотки</span> : undefined
                         }
                       >
                         <div className="max-h-[360px] overflow-y-auto transcript-scroll -mx-1 px-1">
                           {groupedTranscript.map((group, gi) => (
                             <div key={gi} className="mb-5 last:mb-0">
-                              <div className="text-[10px] font-mono text-white/20 mb-2 flex items-center gap-2">
+                              <div className="text-[10px] font-mono text-foreground/20 mb-2 flex items-center gap-2">
                                 <span>{group.label}</span>
-                                <div className="flex-1 h-px bg-white/[0.05]" />
+                                <div className="flex-1 h-px bg-foreground/[0.05]" />
                               </div>
-                              <div className="text-[14px] leading-[1.9] text-white/65">
+                              <div className="text-[14px] leading-[1.9] text-foreground/65">
                                 {group.items.map((item, ii) => {
                                   if (item.type === "pause") {
                                     const isActive = currentTime + 0.02 >= item.pause.start && currentTime < item.pause.end - 0.02;
@@ -422,7 +435,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                                         onClick={() => { if (!playerRef.current) return; playerRef.current.seek(item.pause.start); playerRef.current.play(); setCurrentTime(item.pause.start); }}
                                         className={cn(
                                           "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono cursor-pointer mx-1 transition-colors",
-                                          isActive ? "bg-white/10 text-white/80" : "bg-white/[0.04] text-white/30 hover:bg-white/[0.08] hover:text-white/60"
+                                          isActive ? "bg-foreground/10 text-foreground/80" : "bg-foreground/[0.04] text-foreground/30 hover:bg-foreground/[0.08] hover:text-foreground/60"
                                         )}
                                       >
                                         {item.pause.duration.toFixed(1)}s
@@ -439,9 +452,9 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                                       className={cn(
                                         "cursor-pointer rounded-sm px-0.5 transition-colors",
                                         item.word.is_filler
-                                          ? "text-white/40 underline underline-offset-2 decoration-white/20 hover:text-white/70"
-                                          : "hover:text-white",
-                                        isActive && "bg-white/10 text-white"
+                                          ? "text-foreground/40 underline underline-offset-2 decoration-foreground/20 hover:text-foreground/70"
+                                          : "hover:text-foreground",
+                                        isActive && "bg-foreground/10 text-foreground"
                                       )}
                                     >
                                       {display}{" "}
@@ -459,7 +472,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                         title="Слова-паразиты"
                         defaultOpen={fillerWordsList.length > 0}
                         badge={
-                          <span className="text-[10px] font-mono text-white/30 border border-white/[0.08] px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] font-mono text-foreground/30 border border-foreground/[0.08] px-2 py-0.5 rounded-full">
                             {result.fillers_summary.count} · {(result.fillers_summary.ratio * 100).toFixed(1)}%
                           </span>
                         }
@@ -467,14 +480,14 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                         {fillerWordsList.length > 0 ? (
                           <div className="flex flex-wrap gap-2">
                             {fillerWordsList.map(([word, count]) => (
-                              <span key={word} className="inline-flex items-center gap-2 rounded-full bg-white/[0.05] border border-white/[0.08] px-3 py-1 text-xs text-white/70">
+                              <span key={word} className="inline-flex items-center gap-2 rounded-full bg-foreground/[0.05] border border-foreground/[0.08] px-3 py-1 text-xs text-foreground/70">
                                 {word}
-                                <span className="text-[10px] font-mono text-white/30">{count}×</span>
+                                <span className="text-[10px] font-mono text-foreground/30">{count}×</span>
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-white/40">Слова-паразиты не обнаружены</p>
+                          <p className="text-sm text-foreground/40">Слова-паразиты не обнаружены</p>
                         )}
                       </Accordion>
 
@@ -501,33 +514,33 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                             {/* total */}
                             <div className="mb-3 flex items-center justify-between">
                               <div>
-                                <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-white/30">Итог</div>
+                                <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-foreground/30">Итог</div>
                                 <div className="mt-1 flex items-baseline gap-2">
-                                  <span className="text-3xl font-semibold text-white">{Math.round(confidence.total)}</span>
-                                  <span className="text-sm text-white/40">{confidence.total_label}</span>
+                                  <span className="text-3xl font-semibold text-foreground">{Math.round(confidence.total)}</span>
+                                  <span className="text-sm text-foreground/40">{confidence.total_label}</span>
                                 </div>
                               </div>
                               <div className="relative">
                                 <ScoreRing value={Math.round(confidence.total)} max={100} size={64} />
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                  <span className="text-xs font-mono text-white/50">{Math.round(confidence.total)}</span>
+                                  <span className="text-xs font-mono text-foreground/50">{Math.round(confidence.total)}</span>
                                 </div>
                               </div>
                             </div>
 
                             {/* individual components */}
                             {confidenceDetails.map((item) => (
-                              <div key={item.key} className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                              <div key={item.key} className="rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] px-4 py-3">
                                 <div className="flex items-center justify-between gap-3 mb-2">
-                                  <span className="text-[11px] font-mono uppercase tracking-[0.15em] text-white/35">{item.key}</span>
-                                  <span className="text-sm font-medium text-white/80">{Math.round(item.score)}<span className="text-white/25 text-xs">/100</span></span>
+                                  <span className="text-[11px] font-mono uppercase tracking-[0.15em] text-foreground/35">{item.key}</span>
+                                  <span className="text-sm font-medium text-foreground/80">{Math.round(item.score)}<span className="text-foreground/25 text-xs">/100</span></span>
                                 </div>
                                 <ConfidenceBar score={item.score} />
                                 {item.label && (
-                                  <p className="mt-2 text-[12px] leading-relaxed text-white/50">{item.label}</p>
+                                  <p className="mt-2 text-[12px] leading-relaxed text-foreground/50">{item.label}</p>
                                 )}
                                 {item.extra && item.extra !== item.label && (
-                                  <p className="mt-1 text-[11px] leading-relaxed text-white/35">{item.extra}</p>
+                                  <p className="mt-1 text-[11px] leading-relaxed text-foreground/35">{item.extra}</p>
                                 )}
                               </div>
                             ))}
@@ -547,19 +560,19 @@ export function AnalysisDashboard({ result, onBack }: Props) {
 
               {/* summary card */}
               {speechReport.summary && (
-                <motion.div variants={fadeUp} className="rounded-2xl border border-white/[0.07] bg-[#0f0f0f] p-6">
-                  <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30 mb-3">Краткое резюме</div>
-                  <p className="text-[15px] leading-[1.8] text-white/75 whitespace-pre-line">{speechReport.summary}</p>
+                <motion.div variants={fadeUp} className="rounded-2xl border border-foreground/[0.07] bg-card-bg p-6">
+                  <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-foreground/30 mb-3">Краткое резюме</div>
+                  <p className="text-[15px] leading-[1.8] text-foreground/75 whitespace-pre-line">{speechReport.summary}</p>
                 </motion.div>
               )}
 
               {/* filler words from AI */}
               {needTranscript && speechReport.dynamic_fillers.length > 0 && (
-                <motion.div variants={fadeUp} className="rounded-2xl border border-white/[0.07] bg-[#0f0f0f] p-5">
-                  <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30 mb-3">Слова-паразиты, замеченные ИИ</div>
+                <motion.div variants={fadeUp} className="rounded-2xl border border-foreground/[0.07] bg-card-bg p-5">
+                  <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-foreground/30 mb-3">Слова-паразиты, замеченные ИИ</div>
                   <div className="flex flex-wrap gap-2">
                     {speechReport.dynamic_fillers.map((word, i) => (
-                      <span key={`${word}-${i}`} className="inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white/65">
+                      <span key={`${word}-${i}`} className="inline-flex items-center rounded-full border border-foreground/[0.08] bg-foreground/[0.04] px-3 py-1 text-sm text-foreground/65">
                         {word}
                       </span>
                     ))}
@@ -572,7 +585,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                 .filter((c) => c.text && c.title !== "Краткое резюме")
                 .map((card) => (
                   <Accordion key={card.title} title={card.title} icon={card.icon} defaultOpen={false}>
-                    <div className="text-[13.5px] leading-[1.85] text-white/65 whitespace-pre-line">
+                    <div className="text-[13.5px] leading-[1.85] text-foreground/65 whitespace-pre-line">
                       {card.text}
                     </div>
                   </Accordion>
@@ -584,22 +597,22 @@ export function AnalysisDashboard({ result, onBack }: Props) {
             <motion.div key="criteria-report" variants={stagger} initial="hidden" animate="show" exit={{ opacity: 0 }} className="flex flex-col gap-4">
 
               {/* score summary */}
-              <motion.div variants={fadeUp} className="rounded-2xl border border-white/[0.07] bg-[#0f0f0f] p-6">
-                <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/30 mb-5">Итоговый результат</div>
+              <motion.div variants={fadeUp} className="rounded-2xl border border-foreground/[0.07] bg-card-bg p-6">
+                <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-foreground/30 mb-5">Итоговый результат</div>
                 <div className="grid grid-cols-3 gap-6">
                   <div>
-                    <div className="text-[10px] font-mono text-white/25 mb-1">Баллы</div>
-                    <div className="text-3xl font-semibold text-white">{evaluationReport.total_score}<span className="text-lg text-white/30">/{evaluationReport.max_score}</span></div>
+                    <div className="text-[10px] font-mono text-foreground/25 mb-1">Баллы</div>
+                    <div className="text-3xl font-semibold text-foreground">{evaluationReport.total_score}<span className="text-lg text-foreground/30">/{evaluationReport.max_score}</span></div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-mono text-white/25 mb-1">Процент</div>
-                    <div className="text-3xl font-semibold text-white">{criteriaPercent}<span className="text-lg text-white/30">%</span></div>
+                    <div className="text-[10px] font-mono text-foreground/25 mb-1">Процент</div>
+                    <div className="text-3xl font-semibold text-foreground">{criteriaPercent}<span className="text-lg text-foreground/30">%</span></div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-mono text-white/25 mb-2">Выполнение</div>
-                    <div className="h-2 w-full rounded-full bg-white/[0.06] overflow-hidden mt-3">
+                    <div className="text-[10px] font-mono text-foreground/25 mb-2">Выполнение</div>
+                    <div className="h-2 w-full rounded-full bg-foreground/[0.06] overflow-hidden mt-3">
                       <div
-                        className="h-full rounded-full bg-white/50 transition-all duration-1000"
+                        className="h-full rounded-full bg-foreground/50 transition-all duration-1000"
                         style={{ width: `${criteriaPercent}%` }}
                       />
                     </div>
@@ -618,32 +631,32 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                         key={`${crit.name}-${i}`}
                         title={crit.name}
                         badge={
-                          <span className="ml-auto text-[11px] font-mono text-white/40 flex-shrink-0">
-                            {val}<span className="text-white/20">/{crit.max_value}</span>
-                            <span className="ml-2 text-white/25">· {pct}%</span>
+                          <span className="ml-auto text-[11px] font-mono text-foreground/40 flex-shrink-0">
+                            {val}<span className="text-foreground/20">/{crit.max_value}</span>
+                            <span className="ml-2 text-foreground/25">· {pct}%</span>
                           </span>
                         }
                       >
                         <div className="flex flex-col gap-3">
                           {/* progress */}
-                          <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                          <div className="h-1.5 w-full rounded-full bg-foreground/[0.06] overflow-hidden">
                             <div
                               className={cn(
                                 "h-full rounded-full transition-all duration-1000",
-                                pct >= 70 ? "bg-white/60" : pct >= 40 ? "bg-white/35" : "bg-white/15"
+                                pct >= 70 ? "bg-foreground/60" : pct >= 40 ? "bg-foreground/35" : "bg-foreground/15"
                               )}
                               style={{ width: `${pct}%` }}
                             />
                           </div>
 
                           {crit.description && (
-                            <p className="text-[13px] leading-relaxed text-white/50">{crit.description}</p>
+                            <p className="text-[13px] leading-relaxed text-foreground/50">{crit.description}</p>
                           )}
 
                           {crit.feedback && (
-                            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
-                              <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/25 mb-1.5">Совет</div>
-                              <p className="text-[13px] leading-relaxed text-white/55">{crit.feedback}</p>
+                            <div className="rounded-xl border border-foreground/[0.06] bg-foreground/[0.02] px-4 py-3">
+                              <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-foreground/25 mb-1.5">Совет</div>
+                              <p className="text-[13px] leading-relaxed text-foreground/55">{crit.feedback}</p>
                             </div>
                           )}
                         </div>
@@ -652,7 +665,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
                   })}
                 </div>
               ) : (
-                <motion.div variants={fadeUp} className="rounded-2xl border border-white/[0.07] bg-[#0f0f0f] p-6 text-sm text-white/40">
+                <motion.div variants={fadeUp} className="rounded-2xl border border-foreground/[0.07] bg-card-bg p-6 text-sm text-foreground/40">
                   Список критериев пуст.
                 </motion.div>
               )}
@@ -670,11 +683,11 @@ const globalStyles = (
   <style jsx global>{`
     .transcript-scroll {
       scrollbar-width: thin;
-      scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+      scrollbar-color: var(--surface-hover) transparent;
     }
     .transcript-scroll::-webkit-scrollbar { width: 3px; }
     .transcript-scroll::-webkit-scrollbar-track { background: transparent; }
-    .transcript-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 4px; }
-    .transcript-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.15); }
+    .transcript-scroll::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 4px; }
+    .transcript-scroll::-webkit-scrollbar-thumb:hover { background: var(--muted); }
   `}</style>
 );

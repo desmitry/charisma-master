@@ -207,7 +207,7 @@ export function AuthPanel() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
           transition={{ type: "spring", stiffness: 400, damping: 28 }}
-          className="group inline-flex h-10 items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.06] px-4 text-sm font-medium text-white/80 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-colors duration-200 hover:border-white/20 hover:bg-white/[0.1] hover:text-white focus:outline-none"
+          className="group inline-flex h-10 items-center gap-2 rounded-full border border-card-border bg-card-bg px-4 text-sm font-medium text-foreground/75 shadow-[0_8px_32px_var(--shadow-color)] backdrop-blur-xl transition-colors duration-200 hover:border-foreground/20 hover:bg-surface-hover hover:text-foreground focus:outline-none"
         >
           <motion.span
             className="flex items-center"
@@ -215,8 +215,8 @@ export function AuthPanel() {
             animate={{ rotate: 0 }}
           >
             {session
-              ? <UserRound className="h-3.5 w-3.5 text-white/60 group-hover:text-white transition-colors duration-200" />
-              : <LogIn className="h-3.5 w-3.5 text-white/60 group-hover:text-white transition-colors duration-200" />
+              ? <UserRound className="h-3.5 w-3.5 text-foreground/60 group-hover:text-foreground transition-colors duration-200" />
+              : <LogIn className="h-3.5 w-3.5 text-foreground/60 group-hover:text-foreground transition-colors duration-200" />
             }
           </motion.span>
           <span className="max-w-[10rem] truncate">{session?.email || "Войти"}</span>

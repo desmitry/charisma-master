@@ -62,21 +62,21 @@ function StepIndicator({
         variants={{
           inactive: {
             scale: 1,
-            backgroundColor: "rgba(255,255,255,0.04)",
-            color: "rgba(255,255,255,0.3)",
-            borderColor: "rgba(255,255,255,0.06)",
+            backgroundColor: "var(--surface)",
+            color: "var(--muted)",
+            borderColor: "var(--card-border)",
           },
           active: {
             scale: 1,
-            backgroundColor: "rgba(255,255,255,0.12)",
-            color: "#ffffff",
-            borderColor: "rgba(255,255,255,0.3)",
+            backgroundColor: "var(--foreground)",
+            color: "var(--background)",
+            borderColor: "var(--foreground)",
           },
           complete: {
             scale: 1,
-            backgroundColor: "rgba(255,255,255,0.08)",
-            color: "#ffffff",
-            borderColor: "rgba(255,255,255,0.12)",
+            backgroundColor: "var(--surface-hover)",
+            color: "var(--foreground)",
+            borderColor: "var(--glass-border)",
           },
         }}
         transition={{ duration: 0.35, ease: "easeOut" }}
@@ -103,8 +103,8 @@ function StepConnector({ isComplete }: { isComplete: boolean }) {
         initial={false}
         animate={
           isComplete
-            ? { width: "100%", backgroundColor: "rgba(255,255,255,0.22)" }
-            : { width: "0%", backgroundColor: "rgba(255,255,255,0)" }
+            ? { width: "100%", backgroundColor: "var(--foreground)" }
+            : { width: "0%", backgroundColor: "transparent" }
         }
         transition={{ duration: 0.5, ease: "easeInOut" }}
       />
