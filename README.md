@@ -317,7 +317,28 @@ cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
 Существует два вспомогательных скрипта, которые упрощают работу с инфраструктурой:
 
 - **`scripts/load_weight_json.py`** – загружает конфигурацию весов алгоритма в PostgreSQL. Принимает путь к JSON‑файлу и идентификатор конфигурации. Таблица `algorithm_weights` будет создана автоматически, если её ещё нет.
-- **`scripts/upload_demo_to_seaweedfs.py`** – загружает демонстрационное видео и JSON‑результат анализа в SeaweedFS под именами `demo.mp4` и `demo.json` соответственно.
+
+  При первом запуске (или для обновления) загрузите базовые коэффициенты из `docs/metrics/`:
+
+  ```bash
+  python scripts/load_weight_json.py docs/metrics/gaze/config.json advanced_pnp_iris
+  python scripts/load_weight_json.py docs/metrics/audio/config.json ml_worker_audio
+  python scripts/load_weight_json.py docs/metrics/scoring/config.json ml_worker_scoring
+  python scripts/load_weight_json.py docs/metrics/tempo/config.json ml_worker_tempo
+  python scripts/load_weight_json.py docs/metrics/video/config.json ml_worker_video
+  ```
+
+  Для выгрузки всех весов из таблицы используйте флаг `--dump`:
+
+  ```bash
+  python scripts/load_weight_json.py --dump
+  ```
+
+- **`scripts/upload_demo_to_seaweedfs.py`** – загружает демонстрационное видео и JSON‑результат анализа в SeaweedFS под именами `demo.mp4` и `demo.json` соответственно. Используйте при первом запуске (или для обновления демо):
+
+  ```bash
+  python scripts/upload_demo_to_seaweedfs.py demo.mp4 demo.json
+  ```
 
 ## API эндпоинты
 

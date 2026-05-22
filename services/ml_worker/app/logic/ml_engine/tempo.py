@@ -10,19 +10,17 @@ from charisma_schemas import (
     TranscriptWord,
 )
 
+from app.logic.ml_engine.config import get_db_weights
+
 
 def get_long_pauses(
     transcript: List[TranscriptSegment],
-    threshold: float = 2.0,
 ) -> List[PauseInterval]:
     """Detect long pauses between transcript segments.
 
     Args:
         transcript (List[TranscriptSegment]):
             List of transcribed segments to analyze.
-        threshold (float, optional):
-            Minimum pause duration in seconds to be considered long.
-            Defaults to 2.0.
 
     Returns:
         List[PauseInterval]: List of detected pause intervals.
@@ -30,11 +28,14 @@ def get_long_pauses(
     pauses = []
     if not transcript:
         return pauses
+    config = get_db_weights("ml_worker_tempo") or {}
+    actual_threshold = config.get("pause_threshold", 2.0)
+
     for i in range(1, len(transcript)):
         prev_end = transcript[i - 1].end
         curr_start = transcript[i].start
         diff = curr_start - prev_end
-        if diff >= threshold:
+        if diff >= actual_threshold:
             pauses.append(
                 PauseInterval(
                     start=prev_end, end=curr_start, duration=round(diff, 2)
@@ -45,16 +46,12 @@ def get_long_pauses(
 
 def calculate_tempo(
     transcript: List[TranscriptSegment],
-    window_sec=5.0,
 ) -> List[TempoPoint]:
     """Calculate speech tempo (words per minute) over time.
 
     Args:
         transcript (List[TranscriptSegment]):
             List of transcribed segments to analyze.
-        window_sec (float, optional):
-            Time window in seconds for tempo calculation.
-            Defaults to 5.0.
 
     Returns:
         List[TempoPoint]: List of tempo points with time, WPM, and zone.
@@ -82,16 +79,24 @@ def calculate_tempo(
         return []
     duration = words[-1].end
     points = []
+
+    config = get_db_weights("ml_worker_tempo") or {}
+    actual_window_sec = config.get("wpm_window_sec", 5.0)
+    wpm_low_red = config.get("wpm_low_red", 80)
+    wpm_high_red = config.get("wpm_high_red", 160)
+    wpm_low_yellow = config.get("wpm_low_yellow", 100)
+    wpm_high_yellow = config.get("wpm_high_yellow", 140)
+
     for t in np.arange(0, duration, 1.0):
-        t_start, t_end = t, t + window_sec
+        t_start, t_end = t, t + actual_window_sec
         count = sum(1 for w in words if w.start >= t_start and w.end < t_end)
-        wpm = (count / window_sec) * 60
+        wpm = (count / actual_window_sec) * 60
 
         # TODO: Move zone values to TempoColorEnum.
         zone = "green"
-        if wpm < 80 or wpm > 160:
+        if wpm < wpm_low_red or wpm > wpm_high_red:
             zone = "red"
-        elif wpm > 140 or wpm < 100:
+        elif wpm > wpm_high_yellow or wpm < wpm_low_yellow:
             zone = "yellow"
         points.append(
             TempoPoint(

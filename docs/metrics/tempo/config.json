@@ -1,0 +1,8 @@
+{
+  "pause_threshold": 2.0,
+  "wpm_window_sec": 5.0,
+  "wpm_low_red": 80,
+  "wpm_high_red": 160,
+  "wpm_low_yellow": 100,
+  "wpm_high_yellow": 140
+}
