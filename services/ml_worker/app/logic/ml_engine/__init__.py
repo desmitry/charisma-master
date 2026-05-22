@@ -189,40 +189,32 @@ class MLEngine(metaclass=_MLEngineMeta):
     @staticmethod
     def get_long_pauses(
         transcript: List[TranscriptSegment],
-        threshold: float = 2.0,
     ) -> List[PauseInterval]:
         """Detect long pauses between transcript segments.
 
         Args:
             transcript (List[TranscriptSegment]):
                 List of transcribed segments to analyze.
-            threshold (float, optional):
-                Minimum pause duration in seconds to be considered long.
-                Defaults to 2.0.
 
         Returns:
             List[PauseInterval]: List of detected pause intervals.
         """
-        return _get_long_pauses(transcript, threshold)
+        return _get_long_pauses(transcript)
 
     @staticmethod
     def calculate_tempo(
         transcript: List[TranscriptSegment],
-        window_sec=5.0,
     ) -> List[TempoPoint]:
         """Calculate speech tempo (words per minute) over time.
 
         Args:
             transcript (List[TranscriptSegment]):
                 List of transcribed segments to analyze.
-            window_sec (float, optional):
-                Time window in seconds for tempo calculation.
-                Defaults to 5.0.
 
         Returns:
             List[TempoPoint]: List of tempo points with time, WPM, and zone.
         """
-        return _calculate_tempo(transcript, window_sec)
+        return _calculate_tempo(transcript)
 
     @staticmethod
     def get_score_label(score: float) -> str:

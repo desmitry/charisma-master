@@ -186,7 +186,6 @@ def process_video_pipeline(  # noqa: C901
             )
             long_pauses = MLEngine.get_long_pauses(
                 transcript_segments,
-                threshold=2.0,
             )
             full_text = " ".join([s.text for s in transcript_segments])
         except subprocess.CalledProcessError as e:

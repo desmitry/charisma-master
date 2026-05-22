@@ -1,11 +1,13 @@
 """Database configuration fetcher for ML Engine."""
 
 import logging
+
 import psycopg2
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
 
 def get_db_weights(weight_id: str) -> dict:
     """Fetch algorithm weights from the database by ID.
@@ -29,11 +31,14 @@ def get_db_weights(weight_id: str) -> dict:
                 return row[0]
             else:
                 logger.warning(
-                    f"Algorithm weights '{weight_id}' not found. Using fallback."
+                    f"Algorithm weights '{weight_id}' not found."
+                    " Using fallback."
                 )
                 return None
     except Exception as e:
-        logger.error(f"Error fetching algorithm weights '{weight_id}' from DB: {e}")
+        logger.error(
+            f"Error fetching algorithm weights '{weight_id}' from DB: {e}"
+        )
         return None
     finally:
         if "conn" in locals() and conn:

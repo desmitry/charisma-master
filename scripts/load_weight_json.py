@@ -100,7 +100,10 @@ def main():
         return
 
     if not args.json_path or not args.weight_id:
-        parser.error("Необходимо указать json_path и weight_id для загрузки, или использовать --dump")
+        parser.error(
+            "Необходимо указать json_path и weight_id для загрузки, или"
+            " использовать --dump"
+        )
 
     json_path = Path(args.json_path)
 
@@ -135,6 +138,7 @@ def main():
 if __name__ == "__main__":
     if sys.platform == "win32":
         import io
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
     main()

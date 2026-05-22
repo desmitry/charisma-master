@@ -87,7 +87,7 @@ class TestGetLongPauses:
             TranscriptSegment(start=5.0, end=6.0, text="two", words=[]),
         ]
         pauses = ml_engine_module.MLEngine.get_long_pauses(
-            segments, threshold=2.0
+            segments,
         )
         assert len(pauses) == 1
         assert pauses[0].start == 1.0
@@ -100,7 +100,7 @@ class TestGetLongPauses:
             TranscriptSegment(start=1.5, end=2.0, text="two", words=[]),
         ]
         pauses = ml_engine_module.MLEngine.get_long_pauses(
-            segments, threshold=2.0
+            segments,
         )
         assert pauses == []
 

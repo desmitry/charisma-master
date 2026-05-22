@@ -98,17 +98,19 @@ def analyze_audio(audio_path: str) -> Dict:
     try:
         y, sr = librosa.load(audio_path, sr=None)
 
-        rms = librosa.feature.rms(y=y)[0]
+        mean_rms = float(np.mean(librosa.feature.rms(y=y)[0]))
         audio_config = get_db_weights("ml_worker_audio") or {}
         rms_very_quiet = audio_config.get("rms_very_quiet", 0.01)
         rms_quiet = audio_config.get("rms_quiet", 0.03)
         rms_loud = audio_config.get("rms_loud", 0.15)
-        
-        vol_label_very_quiet = audio_config.get("vol_label_very_quiet", "Очень тихо")
+
+        vol_label_very_quiet = audio_config.get(
+            "vol_label_very_quiet", "Очень тихо"
+        )
         vol_label_quiet = audio_config.get("vol_label_quiet", "Тиховато")
         vol_label_loud = audio_config.get("vol_label_loud", "Громко")
         vol_label_normal = audio_config.get("vol_label_normal", "Нормально")
-        
+
         volume_score_divisor = audio_config.get("volume_score_divisor", 0.06)
         tone_score_divisor = audio_config.get("tone_score_divisor", 35.0)
 

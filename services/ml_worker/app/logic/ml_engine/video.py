@@ -92,19 +92,37 @@ def analyze_video(  # noqa: C901
     gaze_config = get_db_weights("advanced_pnp_iris")
     video_config = get_db_weights("ml_worker_video") or {}
 
-    visual_deviation = video_config.get("visual_deviation", VISUAL_DEVIATION_DEFAULT)
-    target_frame_width = video_config.get("target_frame_width", TARGET_FRAME_WIDTH_DEFAULT)
-    movement_threshold = video_config.get("movement_threshold", MOVEMENT_THRESHOLD_DEFAULT)
+    visual_deviation = video_config.get(
+        "visual_deviation", VISUAL_DEVIATION_DEFAULT
+    )
+    target_frame_width = video_config.get(
+        "target_frame_width", TARGET_FRAME_WIDTH_DEFAULT
+    )
+    movement_threshold = video_config.get(
+        "movement_threshold", MOVEMENT_THRESHOLD_DEFAULT
+    )
     frames_face_threshold = video_config.get("frames_with_face_threshold", 10)
     frames_pose_threshold = video_config.get("frames_with_pose_threshold", 10)
-    gesture_score_multiplier = video_config.get("gesture_score_multiplier", 3500)
+    gesture_score_multiplier = video_config.get(
+        "gesture_score_multiplier", 3500
+    )
     gesture_score_min_threshold = video_config.get("gesture_score_min", 15)
     gesture_score_max_threshold = video_config.get("gesture_score_max", 85)
-    
-    gesture_advice_min = video_config.get("gesture_advice_min", "Вы почти неподвижны (или мы не видим рук). Добавьте энергии!")
-    gesture_advice_max = video_config.get("gesture_advice_max", "Очень много движений, попробуйте контролировать жесты.")
-    gesture_advice_normal = video_config.get("gesture_advice_normal", "Отличная, естественная жестикуляция.")
-    gesture_advice_fail = video_config.get("gesture_advice_fail", "Анализ не удался (мало данных)")
+
+    gesture_advice_min = video_config.get(
+        "gesture_advice_min",
+        "Вы почти неподвижны (или мы не видим рук). Добавьте энергии!",
+    )
+    gesture_advice_max = video_config.get(
+        "gesture_advice_max",
+        "Очень много движений, попробуйте контролировать жесты.",
+    )
+    gesture_advice_normal = video_config.get(
+        "gesture_advice_normal", "Отличная, естественная жестикуляция."
+    )
+    gesture_advice_fail = video_config.get(
+        "gesture_advice_fail", "Анализ не удался (мало данных)"
+    )
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():

@@ -9,22 +9,18 @@ from charisma_schemas import (
     TranscriptSegment,
     TranscriptWord,
 )
-from app.logic.ml_engine.config import get_db_weights
 
+from app.logic.ml_engine.config import get_db_weights
 
 
 def get_long_pauses(
     transcript: List[TranscriptSegment],
-    threshold: float = 2.0,
 ) -> List[PauseInterval]:
     """Detect long pauses between transcript segments.
 
     Args:
         transcript (List[TranscriptSegment]):
             List of transcribed segments to analyze.
-        threshold (float, optional):
-            Minimum pause duration in seconds to be considered long.
-            Defaults to 2.0.
 
     Returns:
         List[PauseInterval]: List of detected pause intervals.
@@ -33,7 +29,7 @@ def get_long_pauses(
     if not transcript:
         return pauses
     config = get_db_weights("ml_worker_tempo") or {}
-    actual_threshold = config.get("pause_threshold", threshold)
+    actual_threshold = config.get("pause_threshold", 2.0)
 
     for i in range(1, len(transcript)):
         prev_end = transcript[i - 1].end
@@ -50,16 +46,12 @@ def get_long_pauses(
 
 def calculate_tempo(
     transcript: List[TranscriptSegment],
-    window_sec=5.0,
 ) -> List[TempoPoint]:
     """Calculate speech tempo (words per minute) over time.
 
     Args:
         transcript (List[TranscriptSegment]):
             List of transcribed segments to analyze.
-        window_sec (float, optional):
-            Time window in seconds for tempo calculation.
-            Defaults to 5.0.
 
     Returns:
         List[TempoPoint]: List of tempo points with time, WPM, and zone.
@@ -87,9 +79,9 @@ def calculate_tempo(
         return []
     duration = words[-1].end
     points = []
-    
+
     config = get_db_weights("ml_worker_tempo") or {}
-    actual_window_sec = config.get("wpm_window_sec", window_sec)
+    actual_window_sec = config.get("wpm_window_sec", 5.0)
     wpm_low_red = config.get("wpm_low_red", 80)
     wpm_high_red = config.get("wpm_high_red", 160)
     wpm_low_yellow = config.get("wpm_low_yellow", 100)
