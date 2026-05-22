@@ -96,13 +96,13 @@ function WpmTooltip() {
       onMouseEnter={handleEnter}
       onMouseLeave={() => setVisible(false)}
     >
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="cursor-pointer text-white/30 hover:text-white/60 transition-colors flex-shrink-0">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="cursor-pointer text-foreground/30 hover:text-foreground/60 transition-colors flex-shrink-0">
         <circle cx="7" cy="7" r="6.5" stroke="currentColor" />
         <text x="7" y="10.5" textAnchor="middle" fontSize="8" fill="currentColor" fontWeight="600">i</text>
       </svg>
       {visible && (
         <span
-          className="absolute top-1/2 -translate-y-1/2 z-50 whitespace-nowrap rounded-lg bg-[#2a2a2e] border border-white/10 text-[11px] text-white/70 px-3 py-1.5 shadow-xl"
+          className="absolute top-1/2 -translate-y-1/2 z-50 whitespace-nowrap rounded-lg bg-card-bg border border-foreground/10 text-[11px] text-foreground/70 px-3 py-1.5 shadow-xl"
           style={{ pointerEvents: "none", ...(pos.left ? { right: "20px" } : { left: "20px" }) }}
         >
           Оптимальный темп обычно находится около 130 WPM
@@ -131,11 +131,11 @@ export function ActivityRingsCard({ result, needVideoAnalysis = true, needTransc
   if (needVideoAnalysis) {
     rings.push({
       progress: scoreProgress,
-      color: "rgba(255,255,255,0.92)",
-      trackColor: "rgba(255,255,255,0.07)",
+      color: "var(--ring-strong)",
+      trackColor: "var(--ring-track)",
       delay: 0,
       icon: (
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--ring-icon)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="20 6 9 17 4 12" />
         </svg>
       ),
@@ -145,22 +145,22 @@ export function ActivityRingsCard({ result, needVideoAnalysis = true, needTransc
   if (needTranscript) {
     rings.push({
       progress: purityProgress,
-      color: "rgba(255,255,255,0.65)",
-      trackColor: "rgba(255,255,255,0.06)",
+      color: "var(--ring-medium)",
+      trackColor: "var(--ring-track)",
       delay: rings.length * 150,
       icon: (
-        <svg width="8" height="8" viewBox="0 0 24 24" fill="#000" stroke="none">
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="var(--ring-icon)" stroke="none">
           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
         </svg>
       ),
     });
     rings.push({
       progress: wpmProgress,
-      color: "rgba(255,255,255,0.40)",
-      trackColor: "rgba(255,255,255,0.05)",
+      color: "var(--ring-soft)",
+      trackColor: "var(--ring-track-soft)",
       delay: rings.length * 150,
       icon: (
-        <svg width="8" height="8" viewBox="0 0 24 24" fill="#000" stroke="none">
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="var(--ring-icon)" stroke="none">
           <polygon points="5,3 19,12 5,21" />
         </svg>
       ),
@@ -176,9 +176,9 @@ export function ActivityRingsCard({ result, needVideoAnalysis = true, needTransc
   const radii = rings.map((_, i) => cx - sw / 2 - 2 - i * (sw + gap));
 
   return (
-    <div className="rounded-[24px] bg-[#111] border border-white/[0.06] text-white flex flex-col w-full sm:min-w-[300px] lg:max-w-[340px] mx-auto lg:mx-0">
+    <div className="rounded-[24px] bg-card-bg border border-card-border shadow-[0_18px_50px_var(--shadow-color)] text-foreground flex flex-col w-full sm:min-w-[300px] lg:max-w-[340px] mx-auto lg:mx-0">
       <div className="px-6 pt-5 pb-0">
-        <p className="text-[11px] font-mono text-white/35 uppercase tracking-[0.18em]">Общая статистика</p>
+        <p className="text-[11px] font-mono text-foreground/35 uppercase tracking-[0.18em]">Общая статистика</p>
       </div>
       <div className="flex flex-col items-center justify-center pt-8 pb-5 px-5">
         <div className="relative">
@@ -201,7 +201,7 @@ export function ActivityRingsCard({ result, needVideoAnalysis = true, needTransc
 
           <div className="absolute inset-0 flex flex-col items-center justify-center select-none pointer-events-none">
             <motion.span
-              className="text-[32px] font-bold tracking-tight text-white leading-none"
+              className="text-[32px] font-bold tracking-tight text-foreground leading-none"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ ease: "circOut", duration: 1, delay: 0.2 }}
@@ -210,7 +210,7 @@ export function ActivityRingsCard({ result, needVideoAnalysis = true, needTransc
             </motion.span>
           </div>
         </div>
-        <span className="mt-3 text-[11px] font-mono uppercase tracking-[0.2em] text-white/45">
+        <span className="mt-3 text-[11px] font-mono uppercase tracking-[0.2em] text-foreground/45">
           {result.confidence_index.total_label}
         </span>
       </div>
@@ -218,31 +218,31 @@ export function ActivityRingsCard({ result, needVideoAnalysis = true, needTransc
       <div className="flex flex-col px-6 pb-6 gap-5">
         {needVideoAnalysis && (
           <div className="flex flex-col">
-            <span className="text-[11px] font-mono text-white/35 uppercase tracking-widest">Итоговая оценка</span>
+            <span className="text-[11px] font-mono text-foreground/35 uppercase tracking-widest">Итоговая оценка</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-[24px] font-bold tracking-tight leading-none text-white">{score}</span>
-              <span className="text-[12px] text-white/40">{result.confidence_index.total_label}</span>
+              <span className="text-[24px] font-bold tracking-tight leading-none text-foreground">{score}</span>
+              <span className="text-[12px] text-foreground/40">{result.confidence_index.total_label}</span>
             </div>
           </div>
         )}
 
         {needTranscript && (
           <div className="flex flex-col">
-            <span className="text-[11px] font-mono text-white/35 uppercase tracking-widest">Слова-паразиты</span>
+            <span className="text-[11px] font-mono text-foreground/35 uppercase tracking-widest">Слова-паразиты</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-[24px] font-bold tracking-tight leading-none text-white">{result.fillers_summary.count}</span>
-              <span className="text-[12px] text-white/40">{fillerRatio.toFixed(1)}%</span>
+              <span className="text-[24px] font-bold tracking-tight leading-none text-foreground">{result.fillers_summary.count}</span>
+              <span className="text-[12px] text-foreground/40">{fillerRatio.toFixed(1)}%</span>
             </div>
           </div>
         )}
 
         {needTranscript && (
           <div className="flex flex-col">
-            <span className="text-[11px] font-mono text-white/35 uppercase tracking-widest">Темп речи</span>
+            <span className="text-[11px] font-mono text-foreground/35 uppercase tracking-widest">Темп речи</span>
             <div className="flex items-center gap-2 mt-1">
               <div className="flex items-baseline gap-1.5">
-                <span className="text-[24px] font-bold tracking-tight leading-none text-white">{avgWpm}</span>
-                <span className="text-[13px] font-semibold text-white/40">WPM</span>
+                <span className="text-[24px] font-bold tracking-tight leading-none text-foreground">{avgWpm}</span>
+                <span className="text-[13px] font-semibold text-foreground/40">WPM</span>
               </div>
               <WpmTooltip />
             </div>

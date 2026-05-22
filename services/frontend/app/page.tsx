@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import { Hero } from "@/components/landing/hero";
 import { Leva } from "leva";
 import { ProcessingOverlay } from "@/components/upload/processing-overlay";
@@ -15,10 +16,12 @@ import { FeaturesSection } from "@/components/landing/features-section";
 import { UploadHub } from "@/components/upload/upload-hub";
 import { useVideoAnalysis } from "@/hooks/use-video-analysis";
 import { AuthPanel } from "@/components/auth/auth-panel";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
-const AURORA_DESKTOP_COLORS = ["#ffffff", "#000000", "#ffffff"];
-const AURORA_MOBILE_COLORS = ["#ffffff", "#000000", "#ffffff"];
-const COLORBENDS_COLORS = ["#ffffff", "#000000"];
+const AURORA_DARK = ["#ffffff", "#000000", "#ffffff"];
+const AURORA_LIGHT = ["#000000", "#1a1a1a", "#000000"];
+const COLORBENDS_DARK = ["#ffffff", "#000000"];
+const COLORBENDS_LIGHT = ["#17130f", "#b78300", "#efe1c4"];
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -33,6 +36,7 @@ function useIsMobile() {
 
 export default function Home() {
   const isMobile = useIsMobile();
+  const [themeMounted, setThemeMounted] = useState(false);
   const videoAnalysis = useVideoAnalysis();
   const { state, actions } = videoAnalysis;
   const {
@@ -49,6 +53,16 @@ export default function Home() {
     isMockMode,
   } = state;
 
+  const { resolvedTheme } = useTheme();
+  const isDark = themeMounted ? resolvedTheme !== "light" : true;
+
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
+
+  const auroraColors = isDark ? AURORA_DARK : AURORA_LIGHT;
+  const colorBendsColors = isDark ? COLORBENDS_DARK : COLORBENDS_LIGHT;
+
   const showLanding = stage === "landing";
   const showProcessing = stage === "processing";
   const shouldShowGL =
@@ -56,7 +70,12 @@ export default function Home() {
 
   return (
     <>
-      <AuthPanel />
+      {stage !== "result" && <AuthPanel />}
+
+      {/* Theme toggle — fixed top-left */}
+      <div className="fixed top-4 left-4 z-50 sm:top-6 sm:left-6">
+        <ThemeToggle />
+      </div>
 
       {showLanding && <SmoothScroll />}
 
@@ -65,9 +84,15 @@ export default function Home() {
         <>
           {/* Desktop Aurora */}
           {!isMobile && (
-            <div className="pointer-events-none fixed inset-0 -z-20 w-full h-full bg-black overflow-hidden opacity-40">
+            <div
+              className="pointer-events-none fixed inset-0 -z-20 w-full h-full overflow-hidden transition-colors duration-500"
+              style={{
+                background: "var(--page-aurora-bg)",
+                opacity: "var(--page-aurora-opacity)",
+              }}
+            >
               <Aurora
-                colorStops={AURORA_DESKTOP_COLORS}
+                colorStops={auroraColors}
                 blend={1.0}
                 amplitude={1.0}
                 speed={1.0}
@@ -87,11 +112,14 @@ export default function Home() {
               "linear-gradient(to bottom, black 40%, transparent 90%)",
           }}
         >
-          <div className="absolute inset-0 bg-[#020202]">
+          <div
+            className="absolute inset-0 transition-colors duration-500"
+            style={{ background: "var(--page-bends-bg)" }}
+          >
             <ColorBends
               rotation={0}
               speed={0.2}
-              colors={COLORBENDS_COLORS}
+              colors={colorBendsColors}
               transparent
               autoRotate={0.45}
               scale={1.1}
@@ -131,7 +159,7 @@ export default function Home() {
                     }}
                   >
                     <Aurora
-                      colorStops={AURORA_MOBILE_COLORS}
+                      colorStops={auroraColors}
                       blend={0.8}
                       amplitude={1.5}
                       speed={1.0}
@@ -151,7 +179,7 @@ export default function Home() {
                     }}
                   >
                     <Aurora
-                      colorStops={AURORA_MOBILE_COLORS}
+                      colorStops={auroraColors}
                       blend={0.8}
                       amplitude={1.5}
                       speed={0.8}

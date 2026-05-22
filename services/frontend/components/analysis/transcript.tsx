@@ -92,11 +92,11 @@ export function Transcript({
       {groupedItems.map((group, gIdx) => (
         <div
           key={`group-${gIdx}-${group.segmentStart}`}
-          className="rounded-xl border border-white/10 bg-[#0f1016] p-3 sm:p-4 text-sm leading-[1.35] text-white/80 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
+          className="rounded-xl border border-foreground/10 bg-card-bg p-3 sm:p-4 text-sm leading-[1.35] text-foreground/80 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
         >
-          <div className="flex items-center gap-2 text-[10px] sm:text-[11px] uppercase tracking-[0.28em] text-white/45">
+          <div className="flex items-center gap-2 text-[10px] sm:text-[11px] uppercase tracking-[0.28em] text-foreground/45">
             <span className="shrink-0">{group.label}</span>
-            <div className="h-px flex-1 bg-white/10 min-w-0" />
+            <div className="h-px flex-1 bg-foreground/10 min-w-0" />
           </div>
           <div className="mt-1.5 text-[13px] sm:text-[14px] leading-[1.5] sm:leading-[1.4] break-words overflow-wrap-anywhere">
             {group.items.map((item, idx) => {
@@ -121,7 +121,7 @@ export function Transcript({
                         "hover:border-rose-400 hover:bg-rose-500/20"
                       )}
                     />
-                    <span className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] sm:text-[10px] text-rose-300 bg-black/80 px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-none">
+                    <span className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] sm:text-[10px] text-rose-300 bg-background/80 px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-none">
                       {item.pause.duration.toFixed(1)}с
                     </span>
                   </span>
@@ -140,8 +140,8 @@ export function Transcript({
                     "cursor-pointer rounded px-[2px] py-[1px] transition-all duration-150 inline",
                     item.word.is_filler
                       ? "text-rose-300 bg-rose-500/18 hover:bg-rose-500/28"
-                      : "text-white/75 hover:bg-white/10",
-                    isActive && "bg-white/15 text-white shadow-[0_8px_30px_rgba(255,255,255,0.08)]",
+                      : "text-foreground/75 hover:bg-foreground/10",
+                    isActive && "bg-foreground/15 text-foreground shadow-[0_8px_30px_rgba(255,255,255,0.08)]",
                     "hover:-translate-y-[1px]"
                   )}
                 >

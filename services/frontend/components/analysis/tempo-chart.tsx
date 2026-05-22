@@ -3,14 +3,14 @@
 import { useMemo, useState, useEffect } from "react";
 import { TempoPoint } from "@/types/analysis";
 import {
-  BarChart,
-  Bar,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-  Cell,
 } from "recharts";
 
 type Props = {
@@ -24,40 +24,27 @@ const formatTime = (seconds: number) => {
   return `${m}:${s.toString().padStart(2, "0")}`;
 };
 
-const zoneMeta: Record<string, { label: string; chip: string; color: string }> = {
+const zoneMeta: Record<string, { label: string; color: string }> = {
   green: {
     label: "Оптимально",
-    chip: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
-    color: "#34d399",
+    color: "var(--chart-green)",
   },
   yellow: {
     label: "Есть отклонение",
-    chip: "bg-amber-500/10 text-amber-300 border-amber-500/20",
-    color: "#f59e0b",
+    color: "var(--chart-yellow)",
   },
   red: {
     label: "Нужна корректировка",
-    chip: "bg-rose-500/10 text-rose-300 border-rose-500/20",
-    color: "#f43f5e",
+    color: "var(--chart-red)",
   },
 };
 
 const fallbackZone = {
   label: "Без оценки",
-  chip: "bg-white/5 text-white/70 border-white/10",
-  color: "rgba(255,255,255,0.7)",
+  color: "var(--muted-strong)",
 };
 
 const getZoneMeta = (zone?: string) => zoneMeta[zone || ""] || fallbackZone;
-
-const getTempoMeaning = (wpm: number) => {
-  if (wpm === 0) return "Пауза или почти нет речи";
-  if (wpm < 80) return "Слишком медленный темп";
-  if (wpm < 100) return "Немного медленно";
-  if (wpm <= 140) return "Комфортный темп для восприятия";
-  if (wpm <= 160) return "Немного быстро";
-  return "Слишком быстрый темп";
-};
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
@@ -65,15 +52,13 @@ const CustomTooltip = ({ active, payload }: any) => {
     const zone = getZoneMeta(point.zone);
 
     return (
-      <div className="max-w-[260px] rounded-lg bg-black/95 border border-white/10 px-3 py-2 text-xs shadow-lg">
-        <div className="font-medium tabular-nums text-white">
-          {formatTime(point.time)} · {Math.round(point.wpm)} слов/мин
+      <div className="max-w-[220px] rounded-xl border border-card-border bg-card-bg/95 px-3 py-2 text-xs shadow-sm backdrop-blur-xl">
+        <div className="font-medium tabular-nums text-foreground">
+          {Math.round(point.wpm)} слов/мин
         </div>
-        <div className="mt-1" style={{ color: zone.color }}>
+        <div className="mt-1 text-[11px] text-foreground/45">{formatTime(point.time)}</div>
+        <div className="mt-1 text-[11px]" style={{ color: zone.color }}>
           {zone.label}
-        </div>
-        <div className="mt-1 text-white/60">
-          {getTempoMeaning(point.wpm)}
         </div>
       </div>
     );
@@ -92,6 +77,7 @@ export function TempoChart({ data, currentTime }: Props) {
 
   const stats = useMemo(() => {
     const wpmValues = data.map((point) => point.wpm);
+
     return {
       min: Math.min(...wpmValues),
       max: Math.max(...wpmValues),
@@ -100,24 +86,40 @@ export function TempoChart({ data, currentTime }: Props) {
   }, [data]);
 
   const yRange = useMemo(() => {
-    const range = stats.max - stats.min || 50;
-    const pad = range * 0.1;
-    return [Math.max(0, Math.floor(stats.min - pad)), Math.ceil(stats.max + pad)];
+    const range = stats.max - stats.min || 40;
+    const pad = Math.max(12, range * 0.18);
+    const lower = Math.max(0, Math.floor(stats.min - pad));
+    const upper = Math.ceil(stats.max + pad);
+    return [lower, upper];
   }, [stats]);
 
   return (
-    <div className="relative w-full flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-white">Темп речи</span>
-        <span className="text-xs text-white/50">
-          В среднем {Math.round(stats.avg)} слов/мин
-        </span>
+    <div className="relative flex w-full flex-col gap-3">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <div className="text-sm font-medium text-foreground">Темп речи</div>
+          <div className="mt-1 text-[13px] text-foreground/45">
+            В среднем {Math.round(stats.avg)} слов/мин
+          </div>
+        </div>
       </div>
 
-      <div className="h-[180px] w-full min-h-0">
+      <div
+        className="h-[220px] w-full min-h-0 overflow-hidden rounded-[20px] border border-foreground/[0.06] px-2 py-3 md:px-3"
+        style={{
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--foreground) 2.5%, transparent), color-mix(in srgb, var(--foreground) 0.5%, transparent))",
+        }}
+      >
         {mounted && (
-          <ResponsiveContainer width="100%" height={160} minWidth={1} minHeight={1}>
-            <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barCategoryGap={1}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+            <LineChart accessibilityLayer data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+              <CartesianGrid
+                vertical={false}
+                stroke="var(--chart-grid)"
+                strokeDasharray="3 6"
+              />
+
               <XAxis
                 dataKey="time"
                 type="number"
@@ -125,38 +127,62 @@ export function TempoChart({ data, currentTime }: Props) {
                 tickFormatter={formatTime}
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }}
-                minTickGap={30}
+                tick={{ fill: "var(--chart-axis)", fontSize: 10 }}
+                tickMargin={10}
+                minTickGap={36}
               />
+
               <YAxis
                 domain={yRange}
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }}
-                width={40}
+                tick={{ fill: "var(--chart-axis)", fontSize: 10 }}
+                width={34}
+                tickCount={4}
               />
+
               <Tooltip
                 content={<CustomTooltip />}
-                cursor={{ fill: "rgba(255,255,255,0.05)" }}
+                cursor={{ stroke: "var(--chart-reference)", strokeDasharray: "3 6" }}
                 isAnimationActive
               />
+
+              <ReferenceLine
+                y={stats.avg}
+                stroke="var(--chart-reference)"
+                strokeDasharray="4 6"
+                strokeOpacity={0.45}
+              />
+
               {currentTime !== undefined && currentTime >= 0 && (
                 <ReferenceLine
                   x={currentTime > 0 ? currentTime : 0}
-                  stroke="rgba(255,255,255,0.4)"
-                  strokeDasharray="3 3"
+                  stroke="var(--chart-reference)"
+                  strokeDasharray="3 6"
+                  strokeOpacity={0.55}
                 />
               )}
-              <Bar dataKey="wpm" radius={[4, 4, 0, 0]} isAnimationActive animationDuration={500}>
-                {data.map((point) => (
-                  <Cell key={`${point.time}-${point.wpm}`} fill={getZoneMeta(point.zone).color} />
-                ))}
-              </Bar>
-            </BarChart>
+
+              <Line
+                type="monotone"
+                dataKey="wpm"
+                stroke="var(--foreground)"
+                strokeOpacity={0.88}
+                strokeWidth={2}
+                activeDot={{
+                  r: 3.5,
+                  strokeWidth: 2,
+                  stroke: "var(--background)",
+                  fill: "var(--foreground)",
+                }}
+                dot={false}
+                isAnimationActive
+                animationDuration={500}
+              />
+            </LineChart>
           </ResponsiveContainer>
         )}
       </div>
-
     </div>
   );
 }

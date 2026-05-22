@@ -35,12 +35,12 @@ function MiniBar({
   return (
     <div>
       <div className="flex justify-between text-[11px] mb-1">
-        <span className="text-white/40">{label}</span>
-        <span className="text-white/70 tabular-nums">{Math.round(animValue)}</span>
+        <span className="text-foreground/40">{label}</span>
+        <span className="text-foreground/70 tabular-nums">{Math.round(animValue)}</span>
       </div>
-      <div className="h-1 rounded-full bg-white/5 overflow-hidden">
+      <div className="h-1 rounded-full bg-foreground/5 overflow-hidden">
         <div
-          className="h-full rounded-full bg-white/30 transition-all duration-100"
+          className="h-full rounded-full bg-foreground/35 transition-all duration-100"
           style={{ width: `${Math.min(100, Math.max(0, animValue))}%` }}
         />
       </div>
@@ -80,14 +80,14 @@ export function AnimatedConfidenceGauge({
   const offset = circumference * (1 - animValue / 100);
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black/40 backdrop-blur-2xl p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] transition-all duration-500 hover:border-white/20">
-      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+    <div className="relative overflow-hidden rounded-3xl border border-foreground/10 bg-background/40 backdrop-blur-2xl p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] transition-all duration-500 hover:border-foreground/20">
+      <div className="absolute inset-0 bg-gradient-to-br from-foreground/5 to-transparent pointer-events-none" />
       <div className="relative z-10">
-        <h3 className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-5">Детали уверенности</h3>
+        <h3 className="text-[10px] font-semibold text-foreground/40 uppercase tracking-widest mb-5">Детали уверенности</h3>
         <div className="flex items-center gap-5">
           <div className="relative h-20 w-20 flex-shrink-0 drop-shadow-[0_0_15px_rgba(255,199,0,0.3)]">
             <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r={radius} stroke="rgba(255,255,255,0.06)" strokeWidth="6" fill="none" />
+              <circle cx="50" cy="50" r={radius} stroke="var(--ring-track-soft)" strokeWidth="6" fill="none" />
               <circle
                 cx="50"
                 cy="50"

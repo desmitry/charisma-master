@@ -276,7 +276,7 @@ async def process(
     persona: PersonaRoles = Form(PersonaRoles.speech_review_specialist),
     analyze_provider: AnalyzeProvider = Form(AnalyzeProvider.gigachat),
     transcribe_provider: TranscribeProvider = Form(
-        TranscribeProvider.sber_gigachat
+        TranscribeProvider.whisper_local
     ),
 ):
     """Process user speech video for analysis."""

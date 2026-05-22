@@ -24,10 +24,10 @@ export function SummaryBlocks({ data }: { data: AnalysisResult }) {
       {cards.map((card) => (
         <div
           key={card.title}
-          className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-[0_15px_60px_rgba(0,0,0,0.35)]"
+          className="rounded-3xl border border-foreground/10 bg-foreground/5 p-5 shadow-[0_15px_60px_rgba(0,0,0,0.35)]"
         >
-          <p className="text-xs uppercase tracking-[0.2em] text-white/60">{card.title}</p>
-          <p className={`mt-2 text-sm leading-6 text-white/80 ${card.accent ?? ""}`}>{card.text}</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-foreground/60">{card.title}</p>
+          <p className={`mt-2 text-sm leading-6 text-foreground/80 ${card.accent ?? ""}`}>{card.text}</p>
         </div>
       ))}
     </div>

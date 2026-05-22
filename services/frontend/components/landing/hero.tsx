@@ -20,7 +20,7 @@ export function Hero() {
       <div className="pointer-events-none relative z-10 flex flex-col items-center justify-center px-4 text-center sm:px-6">
 
         <h1
-          className="relative text-[3rem] font-medium tracking-tighter text-white sm:text-6xl md:text-7xl lg:text-8xl"
+          className="relative text-[3rem] font-medium tracking-tighter text-foreground sm:text-6xl md:text-7xl lg:text-8xl"
           style={{ lineHeight: 1.1 }}
         >
           <motion.span
@@ -37,7 +37,7 @@ export function Hero() {
             transition={{ duration: 1, delay: 0.4 }}
             className="block h-auto"
           >
-            <span className="bg-gradient-to-br from-white via-white/90 to-white/30 bg-clip-text text-transparent drop-shadow-sm">
+            <span className="bg-gradient-to-br from-foreground via-foreground/90 to-foreground/30 bg-clip-text text-transparent drop-shadow-sm">
               ИИ-анализ выступлений.
             </span>
           </motion.span>
@@ -47,7 +47,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.6 }}
-          className="relative mt-8 font-light text-white/50 sm:text-xl max-w-2xl leading-relaxed"
+          className="relative mt-8 font-light text-foreground/50 sm:text-xl max-w-2xl leading-relaxed"
         >
           Превратите страх публичных выступлений в свою главную силу.{" "}
           <br className="hidden sm:block" />
@@ -65,11 +65,11 @@ export function Hero() {
             href="https://github.com/desmitry/charisma-master"
             target="_blank"
             rel="noreferrer"
-            className="group relative inline-flex h-12 items-center gap-3 overflow-hidden rounded-full border border-white/12 bg-white/6 px-5 text-sm font-medium text-white/92 shadow-[0_10px_30px_rgba(0,0,0,0.3)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            className="group relative inline-flex h-12 items-center gap-3 overflow-hidden rounded-full border border-foreground/12 bg-foreground/6 px-5 text-sm font-medium text-foreground/92 shadow-[0_10px_30px_rgba(0,0,0,0.15)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/25 hover:bg-foreground/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/40"
             aria-label="Открыть GitHub-репозиторий Charisma Master"
           >
-            <span className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),transparent_55%)] opacity-70 transition-opacity duration-300 group-hover:opacity-100" />
-            <span className="relative flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/10 transition-colors duration-300 group-hover:bg-white/14">
+            <span className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(128,128,128,0.12),transparent_55%)] opacity-70 transition-opacity duration-300 group-hover:opacity-100" />
+            <span className="relative flex h-8 w-8 items-center justify-center rounded-full border border-foreground/10 bg-foreground/10 transition-colors duration-300 group-hover:bg-foreground/14">
               <Github size={17} strokeWidth={2.1} />
             </span>
             <span className="relative">Наш GitHub</span>
@@ -84,3 +84,4 @@ export function Hero() {
     </section>
   );
 }
+

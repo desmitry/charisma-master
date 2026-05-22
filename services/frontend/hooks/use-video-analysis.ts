@@ -31,7 +31,7 @@ export function useVideoAnalysis() {
 
   const [selectedPersona, setSelectedPersona] = useState<string>("speech_review_specialist");
   const [selectedAnalyzeProvider, setSelectedAnalyzeProvider] = useState<string>("gigachat");
-  const [selectedTranscribeProvider, setSelectedTranscribeProvider] = useState<string>("sber_gigachat");
+  const [selectedTranscribeProvider, setSelectedTranscribeProvider] = useState<string>("whisper_local");
 
   const [fastRequestsCount, setFastRequestsCount] = useState<number>(3);
   const [statusText, setStatusText] = useState("Готовим обработку...");
@@ -317,7 +317,7 @@ export function useVideoAnalysis() {
       setEvaluationCriteriaFile(null);
       setSelectedPersona("speech_review_specialist");
       setSelectedAnalyzeProvider("gigachat");
-      setSelectedTranscribeProvider("sber_gigachat");
+      setSelectedTranscribeProvider("whisper_local");
       setResult(null);
       setError(null);
       setProgress(0.15);
