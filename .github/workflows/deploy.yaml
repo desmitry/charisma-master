@@ -52,8 +52,8 @@ jobs:
             export FRONTEND_IMAGE=${{ env.IMAGE_PREFIX }}-frontend:${{ github.event.workflow_run.head_sha }}
             export MIGRATOR_IMAGE=${{ env.IMAGE_PREFIX }}-migrator:${{ github.event.workflow_run.head_sha }}
 
-            docker compose pull api-gateway ml-worker account frontend migrator
-            docker compose up --no-build --wait
+            docker compose pull api_gateway ml_worker account frontend migrator
+            docker compose up account account-health api_gateway frontend migrator ml_worker nats postgres redis seaweedfs-s3 --no-build --wait
 
             if docker compose ps --format "{{.Status}}" | grep -q unhealthy; then echo "Unhealthy container detected"; exit 1; fi
         env:
