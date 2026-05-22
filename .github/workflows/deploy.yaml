@@ -36,7 +36,6 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          secrets: GITHUB_TOKEN
           envs: GITHUB_TOKEN
           debug: true
           script: |
@@ -57,3 +56,5 @@ jobs:
             docker compose up --no-build --wait
 
             if docker compose ps --format "{{.Status}}" | grep -q unhealthy; then echo "Unhealthy container detected"; exit 1; fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
