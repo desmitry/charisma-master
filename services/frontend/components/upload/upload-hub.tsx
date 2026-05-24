@@ -167,7 +167,7 @@ function FileField({
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-3 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.06] px-4 py-3"
         >
-          <FileCheck className="h-4 w-4 shrink-0 text-emerald-300/70" />
+          <FileCheck className="h-4 w-4 shrink-0 text-emerald-500/70" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-foreground/90">{file.name}</p>
             <p className="text-xs text-foreground/45">{Math.max(1, Math.round(file.size / 1024))} КБ</p>
@@ -504,27 +504,6 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
   };
 
   /* ─── Review payload ─── */
-	const isDevelopment = process.env.NODE_ENV === "development";
-
-	const reviewPayload = isDevelopment
-		? [
-    state.inputMode === "speech_text" && state.speechTextFile
-      ? { key: "user_speech_text_file", value: state.speechTextFile.name }
-      : null,
-    state.speechVideoFile ? { key: "user_speech_video_file", value: state.speechVideoFile.name } : null,
-    state.speechVideoUrl ? { key: "user_speech_video_url", value: state.speechVideoUrl } : null,
-    { key: "user_need_text_from_video", value: String(state.inputMode === "speech_video" ? state.needTextFromVideo : false) },
-    { key: "user_need_video_analysis", value: String(state.needVideoAnalysis) },
-    state.presentationFile ? { key: "user_presentation_file", value: state.presentationFile.name } : null,
-    state.criteriaMode === "custom" && state.evaluationCriteriaFile
-      ? { key: "evaluation_criteria_file", value: state.evaluationCriteriaFile.name }
-      : null,
-    state.criteriaMode === "preset" ? { key: "evaluation_criteria_id", value: state.selectedEvaluationPreset } : null,
-    { key: "persona", value: state.selectedPersona },
-    { key: "analyze_provider", value: state.selectedAnalyzeProvider },
-    { key: "transcribe_provider", value: state.selectedTranscribeProvider },
-  ].filter((item): item is { key: string; value: string } => Boolean(item))
-		: [];
 
   /* ═══ STEP RENDERERS ═══ */
 
@@ -594,7 +573,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                 className="w-full rounded-xl border border-card-border bg-surface px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-foreground/35 focus:border-foreground/20 focus:bg-surface-hover"
               />
               {state.speechVideoUrl && !state.isValidRuTubeUrl && (
-                <p className="mt-2 text-xs text-amber-300/70">Ссылка не похожа на корректную ссылку RuTube.</p>
+                <p className="mt-2 text-xs text-amber-600/90">Ссылка не похожа на корректную ссылку RuTube.</p>
               )}
             </div>
 
@@ -604,7 +583,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex items-center gap-3 rounded-xl border border-sky-400/15 bg-sky-400/[0.05] px-4 py-3"
               >
-                <Mic className="h-4 w-4 shrink-0 text-sky-300/60" />
+                <Mic className="h-4 w-4 shrink-0 text-sky-500/70" />
                   <p className="text-[13px] leading-5 text-sky-500/85">
                   Транскрибация включена — текст будет извлечён из видео.
                 </p>
@@ -668,12 +647,12 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
             <motion.div key="va" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="space-y-4">
               {state.hasSpeechVideo ? (
                 <div className="flex items-center gap-3 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.05] px-4 py-3">
-                  <Check className="h-4 w-4 shrink-0 text-emerald-300/60" />
-                  <p className="text-[13px] leading-5 text-emerald-100/70">Видео уже добавлено. Можно заменить ниже.</p>
+                  <Check className="h-4 w-4 shrink-0 text-emerald-500/70" />
+                  <p className="text-[13px] leading-5 text-emerald-700/80">Видео уже добавлено. Можно заменить ниже.</p>
                 </div>
               ) : (
                 <div className="flex items-center gap-3 rounded-xl border border-amber-400/15 bg-amber-400/[0.05] px-4 py-3">
-                  <Video className="h-4 w-4 shrink-0 text-amber-300/60" />
+                  <Video className="h-4 w-4 shrink-0 text-amber-500/70" />
                   <p className="text-[13px] leading-5 text-amber-500/85">Видео не добавлено. Загрузите файл или ссылку.</p>
                 </div>
               )}
@@ -711,7 +690,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
               {uploadedTextNotVideo && state.hasSpeechVideo && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 rounded-xl border border-violet-400/15 bg-violet-400/[0.05] px-4 py-3">
-                    <Wand2 className="h-4 w-4 shrink-0 text-violet-300/60" />
+                    <Wand2 className="h-4 w-4 shrink-0 text-violet-500/70" />
                     <p className="text-[13px] leading-5 text-violet-500/85">
                       Хотите также извлечь текст из видео?
                     </p>
@@ -905,29 +884,6 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
         />
       </div>
 
-      <div className="rounded-2xl border border-card-border bg-surface p-5">
-        <div className="mb-3 flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-card-border bg-surface text-foreground/52">
-            <FileCheck className="h-4 w-4" />
-          </div>
-          <div>
-            <h4 className="text-sm font-semibold text-foreground/90">Payload</h4>
-            <p className="text-[13px] text-foreground/48">Что уйдёт на бэкенд</p>
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          {reviewPayload.map((item) => (
-            <div
-              key={item.key}
-              className="flex flex-col gap-0.5 rounded-lg border border-card-border bg-card-bg px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <code className="text-xs text-foreground/48 font-mono">{item.key}</code>
-              <span className="text-sm text-foreground/80">{item.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       <NavFooter>
         <BackButton onClick={goBack} label="Назад к настройке" />
         <PrimaryButton onClick={actions.handleAnalyze} label="Подтвердить и отправить" />
@@ -1001,7 +957,7 @@ export function UploadHub({ videoAnalysis }: UploadHubProps) {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mb-6 rounded-xl border border-rose-400/15 bg-rose-400/[0.06] px-4 py-3 text-sm text-rose-100/80"
+                  className="mb-6 rounded-xl border px-4 py-3 text-sm font-medium [border-color:var(--error-border)] [background:var(--error-bg)] [color:var(--error-text)]"
                 >
                   {state.error}
                 </motion.div>

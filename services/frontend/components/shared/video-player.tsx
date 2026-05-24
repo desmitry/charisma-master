@@ -395,8 +395,8 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
               <path d="M12 8v4M12 16h.01" strokeLinecap="round" />
             </svg>
           </div>
-          <h3 className="mb-1 text-sm font-medium text-white">Ошибка воспроизведения</h3>
-          <p className="max-w-xs text-xs text-white/60">{displayError}</p>
+          <h3 className="mb-1 text-sm font-medium text-foreground">Ошибка воспроизведения</h3>
+          <p className="max-w-xs text-xs text-foreground/60">{displayError}</p>
         </div>
       );
     }
@@ -405,7 +405,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       return (
         <div
           className={cn(
-            "flex flex-col items-center justify-center rounded-xl border border-white/10 bg-white/5 p-6 text-center",
+            "flex flex-col items-center justify-center rounded-xl border border-card-border bg-surface p-6 text-center",
             compact ? "min-h-[180px]" : "min-h-[240px]",
             className
           )}
@@ -417,12 +417,12 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
             fill="none"
             stroke="currentColor"
             strokeWidth="1.5"
-            className="mb-3 text-white/30"
+            className="mb-3 text-foreground/30"
           >
             <rect x="2" y="4" width="20" height="16" rx="2" />
             <path d="M10 9l5 3-5 3V9z" />
           </svg>
-          <p className="text-sm text-white/40">Видео недоступно</p>
+          <p className="text-sm text-foreground/40">Видео недоступно</p>
         </div>
       );
     }
@@ -431,7 +431,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       <div
         ref={containerRef}
         className={cn(
-          "group relative rounded-xl overflow-hidden border border-white/10 bg-black shadow-lg flex-shrink-0",
+          "group relative rounded-xl overflow-hidden border border-card-border bg-black shadow-lg flex-shrink-0",
           fullWidth ? "w-full max-w-none" : compact ? "max-w-sm" : "max-w-md",
           className
         )}

@@ -41,13 +41,13 @@ export function ComingSoonNotification({ isOpen, onClose, title = "Coming soon..
         <div className="fixed top-0 left-0 right-0 z-[10000] flex justify-center pointer-events-none px-4 pt-4">
           <Transition show={isOpen}>
             <div
-              className="pointer-events-auto flex items-center gap-3 rounded-lg border border-white/15 bg-black/90 backdrop-blur-xl px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] max-w-md w-full data-[closed]:opacity-0 data-[closed]:scale-95 data-[closed]:-translate-y-[120%]"
+              className="pointer-events-auto flex items-center gap-3 rounded-lg border border-card-border bg-card-bg backdrop-blur-xl px-4 py-3 shadow-[0_8px_32px_var(--shadow-color)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] max-w-md w-full data-[closed]:opacity-0 data-[closed]:scale-95 data-[closed]:-translate-y-[120%]"
               onClick={(e) => {
                 e.stopPropagation();
                 onClose();
               }}
             >
-              <div className="flex items-center justify-center bg-white/10 p-1.5 rounded flex-shrink-0">
+              <div className="flex items-center justify-center bg-surface p-1.5 rounded flex-shrink-0">
                 {icon || (
                   <svg
                     width="16"
@@ -58,7 +58,7 @@ export function ComingSoonNotification({ isOpen, onClose, title = "Coming soon..
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="text-white/90"
+                    className="text-foreground/90"
                   >
                     <circle cx="12" cy="12" r="10" />
                     <path d="M12 6v6l4 2" />
@@ -66,8 +66,8 @@ export function ComingSoonNotification({ isOpen, onClose, title = "Coming soon..
                 )}
               </div>
               <div className="flex flex-col gap-1 min-w-0 flex-1">
-                <span className="text-sm font-medium text-white">{title}</span>
-                <span className="text-xs text-white/50 break-words leading-relaxed">{message}</span>
+                <span className="text-sm font-medium text-foreground">{title}</span>
+                <span className="text-xs text-foreground/50 break-words leading-relaxed">{message}</span>
               </div>
             </div>
           </Transition>

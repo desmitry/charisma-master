@@ -32,6 +32,22 @@
   --ring-track: rgba(255, 255, 255, 0.07);
   --ring-track-soft: rgba(255, 255, 255, 0.05);
   --ring-icon: #000000;
+  --filler-text: #fda4af;
+  --filler-bg: rgba(244, 63, 94, 0.18);
+  --filler-bg-hover: rgba(244, 63, 94, 0.28);
+  --filler-border: rgba(244, 63, 94, 0.3);
+  --error-text: #fda4af;
+  --error-bg: rgba(244, 63, 94, 0.08);
+  --error-border: rgba(244, 63, 94, 0.2);
+  --accent-amber: #fde68a;
+  --accent-rose: #fda4af;
+  --accent-emerald: #6ee7b7;
+  --accent-sky: #7dd3fc;
+  --accent-cyan: #67e8f9;
+  --safari-bar: #2a2a2e;
+  --safari-bar-inner: #1e1e22;
+  --safari-icon: #666666;
+  --safari-url-text: #888888;
 }
 
 [data-theme="light"] {
@@ -65,6 +81,22 @@
   --ring-track: rgba(61, 48, 33, 0.18);
   --ring-track-soft: rgba(61, 48, 33, 0.12);
   --ring-icon: #fffaf0;
+  --filler-text: #be123c;
+  --filler-bg: rgba(225, 29, 72, 0.15);
+  --filler-bg-hover: rgba(225, 29, 72, 0.25);
+  --filler-border: rgba(225, 29, 72, 0.4);
+  --error-text: #9f1239;
+  --error-bg: rgba(225, 29, 72, 0.08);
+  --error-border: rgba(225, 29, 72, 0.25);
+  --accent-amber: #92400e;
+  --accent-rose: #9f1239;
+  --accent-emerald: #065f46;
+  --accent-sky: #0369a1;
+  --accent-cyan: #155e75;
+  --safari-bar: #e8e4dc;
+  --safari-bar-inner: #f5f1ea;
+  --safari-icon: #999999;
+  --safari-url-text: #777777;
 }
 
 @utility container {

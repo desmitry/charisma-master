@@ -273,7 +273,7 @@ export function AnalysisDashboard({ result, onBack }: Props) {
       ? [{ title: "Анализ конкурентов", text: speechReport.competition_analysis, icon: <FileText className="w-4 h-4 text-cyan-400" /> }]
       : []),
     ...(speechReport.useful_links && speechReport.useful_links.length > 0
-      ? [{ title: "Полезные ссылки", text: Array.isArray(speechReport.useful_links) ? speechReport.useful_links.join(", ") : String(speechReport.useful_links).trim(), icon: <LinkIcon className="w-4 h-4 text-zinc-400" /> }]
+      ? [{ title: "Полезные ссылки", text: Array.isArray(speechReport.useful_links) ? speechReport.useful_links.join(", ") : String(speechReport.useful_links).trim(), icon: <LinkIcon className="w-4 h-4 text-foreground/50" /> }]
       : []),
   ];
 

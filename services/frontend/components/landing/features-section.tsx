@@ -2,8 +2,18 @@
 
 import { Safari } from "@/components/ui/safari-browser";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 export function FeaturesSection({ onStartDemo }: { onStartDemo?: () => void }) {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  const isDark = !mounted || resolvedTheme === "dark";
+  const macviewSrc = isDark ? "/macview-black.png" : "/macview-white.png";
+
   return (
     <section className="relative z-10 w-full pt-20 pb-12 sm:pt-36 sm:pb-20 px-0">
       <div className="mx-auto w-full max-w-[100vw]">
@@ -24,8 +34,8 @@ export function FeaturesSection({ onStartDemo }: { onStartDemo?: () => void }) {
               {/* Safari SVG frame */}
               <Safari
                 url="charisma-master"
-                src="/macview.png"
-                className="w-full h-auto drop-shadow-[0_40px_100px_rgba(0,0,0,0.7)]"
+                src={macviewSrc}
+                className="w-full h-auto drop-shadow-[0_40px_100px_var(--shadow-color)]"
               />
 
 
@@ -33,10 +43,10 @@ export function FeaturesSection({ onStartDemo }: { onStartDemo?: () => void }) {
               {/* Bottom CTA overlay */}
               <div className="absolute bottom-[6%] sm:bottom-[10%] left-0 right-0 flex flex-col items-center gap-5 sm:gap-8 px-4">
                 <div className="flex flex-col items-center gap-2">
-                  <p className="text-[10px] sm:text-xs font-semibold tracking-[0.2em] text-white/50 uppercase">
+                  <p className="text-[10px] sm:text-xs font-semibold tracking-[0.2em] text-foreground/50 uppercase">
                     Инструмент для уверенной речи
                   </p>
-                  <h3 className="text-center text-2xl sm:text-4xl md:text-5xl font-medium tracking-tight text-white/95">
+                  <h3 className="text-center text-2xl sm:text-4xl md:text-5xl font-medium tracking-tight text-foreground/95">
                     Посмотри, как это будет выглядеть
                   </h3>
                 </div>
@@ -54,11 +64,11 @@ export function FeaturesSection({ onStartDemo }: { onStartDemo?: () => void }) {
 
 function DemoButton({ onClick }: { onClick?: () => void }) {
   return (
-    <button onClick={onClick} className="bg-slate-800 no-underline group cursor-pointer relative shadow-3xl shadow-zinc-900 rounded-full p-px text-xs font-semibold leading-6 text-white inline-block">
+    <button onClick={onClick} className="bg-surface no-underline group cursor-pointer relative shadow-3xl shadow-zinc-900 rounded-full p-px text-xs font-semibold leading-6 text-foreground inline-block">
       <span className="absolute inset-0 overflow-hidden rounded-full">
         <span className="absolute inset-0 rounded-full bg-[image:radial-gradient(75%_100%_at_50%_0%,rgba(56,189,248,0.6)_0%,rgba(56,189,248,0)_75%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
       </span>
-      <div className="relative flex space-x-3 items-center z-10 rounded-full bg-zinc-950 py-1 px-10 ring-1 ring-white/10 transition-colors group-hover:bg-zinc-900">
+      <div className="relative flex space-x-3 items-center z-10 rounded-full bg-card-bg py-1 px-10 ring-1 ring-card-border transition-colors group-hover:bg-surface-hover">
         <span className="text-base sm:text-lg tracking-tight">
           Демо версия
         </span>

@@ -103,8 +103,8 @@ function StepConnector({ isComplete }: { isComplete: boolean }) {
         initial={false}
         animate={
           isComplete
-            ? { width: "100%", backgroundColor: "var(--foreground)" }
-            : { width: "0%", backgroundColor: "transparent" }
+            ? { width: "100%", backgroundColor: "var(--foreground)", opacity: 1 }
+            : { width: "0%", backgroundColor: "var(--foreground)", opacity: 0 }
         }
         transition={{ duration: 0.5, ease: "easeInOut" }}
       />
