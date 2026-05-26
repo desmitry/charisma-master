@@ -235,7 +235,7 @@ export function AuthPanel() {
               animate="visible"
               exit="exit"
               onClick={() => setIsOpen(false)}
-              className="absolute inset-0 bg-foreground/50"
+              className="absolute inset-0 [background:var(--modal-backdrop)]"
             />
 
             {/* Panel */}
@@ -244,7 +244,7 @@ export function AuthPanel() {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-card-border bg-card-bg backdrop-blur-xl shadow-[0_32px_80px_var(--shadow-color)]"
+              className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-card-border [background:var(--modal-bg)] backdrop-blur-xl shadow-[0_32px_80px_var(--shadow-color)]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />

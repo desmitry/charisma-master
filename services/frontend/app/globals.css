@@ -48,6 +48,8 @@
   --safari-bar-inner: #1e1e22;
   --safari-icon: #666666;
   --safari-url-text: #888888;
+  --modal-backdrop: rgba(0, 0, 0, 0.7);
+  --modal-bg: rgba(18, 18, 22, 0.92);
 }
 
 [data-theme="light"] {
@@ -97,6 +99,8 @@
   --safari-bar-inner: #f5f1ea;
   --safari-icon: #999999;
   --safari-url-text: #777777;
+  --modal-backdrop: rgba(0, 0, 0, 0.4);
+  --modal-bg: rgba(255, 252, 244, 0.92);
 }
 
 @utility container {
