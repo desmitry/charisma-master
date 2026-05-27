@@ -191,7 +191,7 @@ export function PdfExportDropdown({ result }: PdfExportDropdownProps) {
 
       <PopoverPanel
         transition
-        className="absolute right-0 top-full mt-2 w-[260px] rounded-xl border border-card-border bg-card-bg backdrop-blur-xl shadow-2xl overflow-hidden transition duration-200 ease-out data-[closed]:scale-95 data-[closed]:opacity-0"
+        className="absolute right-0 top-full mt-2 w-[260px] rounded-xl border border-card-border [background:var(--modal-bg)] backdrop-blur-2xl shadow-[0_16px_48px_var(--shadow-color)] overflow-hidden transition duration-200 ease-out data-[closed]:scale-95 data-[closed]:opacity-0"
       >
         {({ close }) => (
           <>

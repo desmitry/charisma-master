@@ -40,8 +40,8 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black text-white">
-        <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-white/70">
+      <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
+        <div className="rounded-3xl border border-card-border bg-card-bg px-6 py-4 text-sm text-foreground/70">
           Загружаем результаты...
         </div>
       </div>
@@ -51,8 +51,8 @@ export default function DashboardPage() {
   if (error || !analysis) {
     return (
       <>
-        <div className="flex min-h-screen items-center justify-center bg-black text-white">
-          <div className="rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-white/70">
+        <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
+          <div className="rounded-3xl border border-card-border bg-card-bg px-6 py-4 text-sm text-foreground/70">
             {error ?? "Анализ не найден"}
           </div>
         </div>

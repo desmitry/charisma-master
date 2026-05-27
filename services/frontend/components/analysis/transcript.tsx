@@ -121,7 +121,7 @@ export function Transcript({
                         "hover:border-rose-400 hover:bg-rose-500/20"
                       )}
                     />
-                    <span className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] sm:text-[10px] text-rose-300 bg-background/80 px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-none">
+                    <span className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] sm:text-[10px] [color:var(--filler-text)] bg-background/80 px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-none">
                       {item.pause.duration.toFixed(1)}с
                     </span>
                   </span>
@@ -139,9 +139,9 @@ export function Transcript({
                   className={cn(
                     "cursor-pointer rounded px-[2px] py-[1px] transition-all duration-150 inline",
                     item.word.is_filler
-                      ? "text-rose-300 bg-rose-500/18 hover:bg-rose-500/28"
+                      ? "font-medium border [color:var(--filler-text)] [background:var(--filler-bg)] [border-color:var(--filler-border)] hover:[background:var(--filler-bg-hover)]"
                       : "text-foreground/75 hover:bg-foreground/10",
-                    isActive && "bg-foreground/15 text-foreground shadow-[0_8px_30px_rgba(255,255,255,0.08)]",
+                    isActive && "bg-foreground/15 text-foreground shadow-[0_8px_30px_var(--shadow-color)]",
                     "hover:-translate-y-[1px]"
                   )}
                 >

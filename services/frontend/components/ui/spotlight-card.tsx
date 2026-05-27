@@ -6,7 +6,7 @@ import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 export function SpotlightCard({
   children,
   className = "",
-  spotlightColor = "rgba(255, 255, 255, 0.1)",
+  spotlightColor = "var(--glass-border)",
   spotlightSize = 400,
 }: {
   children: React.ReactNode;

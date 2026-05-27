@@ -235,7 +235,7 @@ export function AuthPanel() {
               animate="visible"
               exit="exit"
               onClick={() => setIsOpen(false)}
-              className="absolute inset-0 bg-black/70"
+              className="absolute inset-0 [background:var(--modal-backdrop)]"
             />
 
             {/* Panel */}
@@ -244,11 +244,10 @@ export function AuthPanel() {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/[0.09] bg-[#0d0d0d] shadow-[0_32px_80px_rgba(0,0,0,0.7)]"
+              className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-card-border [background:var(--modal-bg)] backdrop-blur-xl shadow-[0_32px_80px_var(--shadow-color)]"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Subtle top glow line */}
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />
 
               <div className="p-6">
                 {/* Header */}
@@ -258,7 +257,7 @@ export function AuthPanel() {
                     initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.12, ease: "easeOut" }}
-                    className="text-base font-semibold tracking-tight text-white"
+                    className="text-base font-semibold tracking-tight text-foreground"
                   >
                     {session ? "Аккаунт" : (mode === "login" ? "Вход" : "Регистрация")}
                   </motion.h2>
@@ -269,7 +268,7 @@ export function AuthPanel() {
                     whileHover={{ scale: 1.06 }}
                     whileTap={{ scale: 0.94 }}
                     transition={{ duration: 0.1 }}
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-white/40 transition-colors duration-150 hover:border-white/15 hover:bg-white/[0.08] hover:text-white/70 focus:outline-none"
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-card-border bg-surface text-foreground/40 transition-colors duration-150 hover:border-foreground/15 hover:bg-surface-hover hover:text-foreground/70 focus:outline-none"
                   >
                     <X className="h-3.5 w-3.5" />
                   </motion.button>
@@ -286,11 +285,11 @@ export function AuthPanel() {
                       className="space-y-4"
                     >
                       {/* User card */}
-                      <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
-                        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/35">
+                      <div className="rounded-xl border border-card-border bg-surface p-4">
+                        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-foreground/35">
                           Текущий пользователь
                         </p>
-                        <p className="mt-1.5 truncate text-sm font-medium text-white">{session.email}</p>
+                        <p className="mt-1.5 truncate text-sm font-medium text-foreground">{session.email}</p>
                         <div className="mt-3 flex flex-wrap gap-1.5">
                           {[
                             { label: "Access", value: !!session.accessToken },
@@ -301,10 +300,10 @@ export function AuthPanel() {
                               className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${
                                 value
                                   ? "border-emerald-500/20 bg-emerald-500/[0.08] text-emerald-400"
-                                  : "border-white/10 bg-white/[0.04] text-white/40"
+                                  : "border-card-border bg-surface text-foreground/40"
                               }`}
                             >
-                              <span className={`h-1.5 w-1.5 rounded-full ${value ? "bg-emerald-400" : "bg-white/30"}`} />
+                              <span className={`h-1.5 w-1.5 rounded-full ${value ? "bg-emerald-400" : "bg-foreground/30"}`} />
                               {label}: {value ? "есть" : "нет"}
                             </span>
                           ))}
@@ -337,9 +336,9 @@ export function AuthPanel() {
                       exit="exit"
                     >
                       {/* Mode toggle */}
-                      <div className="relative mb-5 flex rounded-xl border border-white/[0.07] bg-white/[0.03] p-1">
+                      <div className="relative mb-5 flex rounded-xl border border-card-border bg-surface p-1">
                         <motion.div
-                          className="absolute inset-y-1 left-1 right-[calc(50%+2px)] rounded-[9px] bg-white"
+                          className="absolute inset-y-1 left-1 right-[calc(50%+2px)] rounded-[9px] bg-foreground"
                           animate={{ x: mode === "login" ? 0 : "calc(100% + 4px)" }}
                           transition={{ type: "tween", duration: 0.15, ease: "easeOut" }}
                         />
@@ -349,7 +348,7 @@ export function AuthPanel() {
                             type="button"
                             onClick={() => handleModeChange(m)}
                             className={`relative z-10 flex-1 rounded-[9px] py-2 text-xs font-semibold transition-colors duration-200 ${
-                              mode === m ? "text-black" : "text-white/45 hover:text-white/70"
+                              mode === m ? "text-background" : "text-foreground/45 hover:text-foreground/70"
                             }`}
                           >
                             {m === "login" ? "Вход" : "Регистрация"}
@@ -442,8 +441,8 @@ export function AuthPanel() {
                       transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                       className={`mt-4 overflow-hidden rounded-xl border px-3.5 py-2.5 text-xs leading-relaxed ${
                         errorMessage
-                          ? "border-red-500/20 bg-red-500/[0.08] text-red-300"
-                          : "border-emerald-500/20 bg-emerald-500/[0.08] text-emerald-300"
+                          ? "border-red-500/20 bg-red-500/[0.08] text-red-600"
+                          : "border-emerald-500/20 bg-emerald-500/[0.08] text-emerald-600"
                       }`}
                     >
                       {errorMessage || statusMessage}
@@ -470,7 +469,7 @@ function AuthInput({ label, hasError, ...props }: AuthInputProps) {
   const [focused, setFocused] = useState(false);
   return (
     <label className="block">
-      <span className={`mb-1.5 block text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-150 ${hasError ? "text-red-400/70" : "text-white/35"}`}>
+      <span className={`mb-1.5 block text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-150 ${hasError ? "text-red-400/70" : "text-foreground/35"}`}>
         {label}
       </span>
       <div
@@ -479,7 +478,7 @@ function AuthInput({ label, hasError, ...props }: AuthInputProps) {
           boxShadow: hasError
             ? "0 0 0 2px rgba(239,68,68,0.25)"
             : focused
-            ? "0 0 0 2px rgba(255,255,255,0.12)"
+            ? "0 0 0 2px var(--glass-border)"
             : "none",
           transition: "box-shadow 0.15s",
         }}
@@ -488,10 +487,10 @@ function AuthInput({ label, hasError, ...props }: AuthInputProps) {
           {...props}
           onFocus={(e) => { setFocused(true); props.onFocus?.(e); }}
           onBlur={(e) => { setFocused(false); props.onBlur?.(e); }}
-          className={`h-10 w-full rounded-xl border px-3.5 text-sm text-white outline-none transition-colors duration-150 placeholder:text-white/20 ${
+          className={`h-10 w-full rounded-xl border px-3.5 text-sm text-foreground outline-none transition-colors duration-150 placeholder:text-foreground/20 ${
             hasError
               ? "border-red-500/40 bg-red-500/[0.05] hover:border-red-500/50"
-              : "border-white/[0.09] bg-white/[0.03] hover:border-white/15 focus:border-white/20"
+              : "border-card-border bg-surface hover:border-foreground/15 focus:border-foreground/20"
           }`}
         />
       </div>
@@ -511,7 +510,7 @@ function PrimaryButton({ icon, fullWidth, children, disabled, type = "button", c
       type={type}
       {...props}
       disabled={disabled}
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-white text-xs font-semibold text-black shadow-[0_4px_20px_rgba(255,255,255,0.12)] transition-opacity duration-200 active:scale-[0.975] hover:opacity-90 disabled:pointer-events-none disabled:opacity-40 ${fullWidth ? "w-full" : ""} ${className}`}
+      className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-foreground text-xs font-semibold text-background shadow-[0_4px_20px_var(--shadow-color)] transition-opacity duration-200 active:scale-[0.975] hover:opacity-90 disabled:pointer-events-none disabled:opacity-40 ${fullWidth ? "w-full" : ""} ${className}`}
     >
       {icon}
       {children}
@@ -525,7 +524,7 @@ function GhostButton({ icon, children, disabled, className = "", ...props }: But
       type="button"
       {...props}
       disabled={disabled}
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.04] text-xs font-medium text-white/60 transition-colors duration-150 hover:border-white/15 hover:bg-white/[0.07] hover:text-white active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40 ${className}`}
+      className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-card-border bg-surface text-xs font-medium text-foreground/60 transition-colors duration-150 hover:border-foreground/15 hover:bg-surface-hover hover:text-foreground active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40 ${className}`}
     >
       {icon}
       {children}

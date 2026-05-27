@@ -5,18 +5,14 @@ import { createPortal } from "react-dom";
 
 const SURVEY_URL = "https://forms.yandex.ru/cloud/69e625b590fa7b095e68ddbc";
 
-console.log("инициализирован хотя бы модуль");
-
 export default function SurveyButton() {
   const [visible, setVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    console.log("получена кнопка");
     const t = setTimeout(() => {
       setVisible(true);
-      console.log("кнопка отображена");
     }, 800);
     return () => clearTimeout(t);
   }, []);
@@ -42,14 +38,14 @@ export default function SurveyButton() {
           .hw-text {
             font-family: 'Caveat', cursive;
             font-size: 38px;
-            fill: #ffffff;
+            fill: var(--foreground);
           }
 
           .brush-main {
             fill: none;
             stroke-linecap: round;
             stroke-linejoin: round;
-            stroke: #ffffff;
+            stroke: var(--foreground);
             stroke-width: 4px;
             filter: url(#brush-texture);
           }
@@ -57,7 +53,7 @@ export default function SurveyButton() {
             fill: none;
             stroke-linecap: round;
             stroke-linejoin: round;
-            stroke: #ffffff;
+            stroke: var(--foreground);
             stroke-width: 2.5px;
             opacity: 0.5;
             filter: url(#brush-texture);
@@ -66,14 +62,14 @@ export default function SurveyButton() {
             fill: none;
             stroke-linecap: round;
             stroke-linejoin: round;
-            stroke: #ffffff;
+            stroke: var(--foreground);
             stroke-width: 1.5px;
             opacity: 0.3;
             filter: url(#brush-texture);
           }
 
-          .brush-underline       { stroke: #ffffff; stroke-width: 3.5px; fill: none; stroke-linecap: round; filter: url(#brush-texture); }
-          .brush-underline-light { stroke: #ffffff; stroke-width: 1.5px; fill: none; stroke-linecap: round; opacity: 0.5; filter: url(#brush-texture); }
+          .brush-underline       { stroke: var(--foreground); stroke-width: 3.5px; fill: none; stroke-linecap: round; filter: url(#brush-texture); }
+          .brush-underline-light { stroke: var(--foreground); stroke-width: 1.5px; fill: none; stroke-linecap: round; opacity: 0.5; filter: url(#brush-texture); }
 
           .hw-underline {
             stroke-dasharray: 200;
@@ -174,33 +170,14 @@ export default function SurveyButton() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Пройти опрос"
-            className="group flex items-center justify-center w-14 h-14 rounded-full cursor-pointer"
-            style={{
-              background: "rgba(255,255,255,0.07)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              backdropFilter: "blur(12px)",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
-              transition: "background 0.2s ease, box-shadow 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background =
-                "rgba(255,255,255,0.13)";
-              (e.currentTarget as HTMLElement).style.boxShadow =
-                "0 0 0 1px rgba(255,255,255,0.25), 0 8px 32px rgba(0,0,0,0.6)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background =
-                "rgba(255,255,255,0.07)";
-              (e.currentTarget as HTMLElement).style.boxShadow =
-                "0 4px 24px rgba(0,0,0,0.5)";
-            }}
+            className="group flex items-center justify-center w-14 h-14 rounded-full cursor-pointer border border-card-border bg-card-bg backdrop-blur-xl shadow-[0_4px_24px_var(--shadow-color)] transition-all duration-200 hover:bg-surface-hover hover:shadow-[0_8px_32px_var(--shadow-color)]"
           >
             <svg
               width="22"
               height="22"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="rgba(255,255,255,0.85)"
+              className="stroke-foreground/85"
               strokeWidth="1.6"
               strokeLinecap="round"
               strokeLinejoin="round"

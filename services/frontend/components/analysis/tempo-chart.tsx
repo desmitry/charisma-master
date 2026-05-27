@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { TempoPoint } from "@/types/analysis";
 import {
   CartesianGrid,
@@ -68,9 +68,11 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 export function TempoChart({ data, currentTime }: Props) {
   const [mounted, setMounted] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => setMounted(true), 350);
+    return () => clearTimeout(timer);
   }, []);
 
   if (!data?.length) return null;
@@ -105,6 +107,7 @@ export function TempoChart({ data, currentTime }: Props) {
       </div>
 
       <div
+        ref={containerRef}
         className="h-[220px] w-full min-h-0 overflow-hidden rounded-[20px] border border-foreground/[0.06] px-2 py-3 md:px-3"
         style={{
           background:
