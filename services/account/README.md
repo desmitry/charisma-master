@@ -98,6 +98,7 @@
 ### Пермишены
 
 #### Пользовательские (доступны `user`)
+
 - `user.profile.view.own` - просмотр своего профиля
 - `user.profile.update.own` - редактирование своего профиля
 - `user.analysis.create` - создание задачи анализа
@@ -105,6 +106,7 @@
 - `user.analysis.delete.own` - удаление своих результатов
 
 #### Модераторские (доступны `moderator`)
+
 - `user.profile.view.any` - просмотр профилей любых пользователей
 - `user.analysis.view.any` - просмотр анализов любых пользователей
 - `content.prompts.manage` - управление промптами (CRUD)
@@ -112,6 +114,7 @@
 - `content.algorithm_weights.view` - просмотр весов алгоритмов
 
 #### Административные (доступны `admin`)
+
 - `user.account.delete.any` - удаление/бан пользователей
 - `user.analysis.delete.any` - удаление анализов любых пользователей
 - `content.algorithm_weights.manage` - редактирование весов алгоритмов

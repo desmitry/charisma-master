@@ -38,6 +38,12 @@ repos:
         language: system
         pass_filenames: false
         types: [rust]
+      - id: mdformat
+        name: mdformat
+        entry: mdformat --check
+        language: system
+        types: [markdown]
+
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.0
     hooks:
