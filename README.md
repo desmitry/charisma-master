@@ -4,15 +4,18 @@
 
 **[Charisma Master](https://charisma-master.ru)** - это сервис для AI-анализа выступлений. Платформа позволяет тренировать свои ораторские навыки на основе обратной связи, которую предоставляет искусственный интеллект. Полностью бесплатное решение с поддержкой русского языка.
 
-![alt](media/head.png)
+<p align="center">
+  <img src="media/head_black_theme.png" alt="Тёмная тема сервиса Charisma Master" width="45%">
+  <img src="media/head_white_theme.png" alt="Светлая тема сервиса Charisma Master" width="45%">
+</p>
 
-**Сервис анализирует выступающего**: ищет специфичные  слова-паразиты, следит за жестикуляцией спикера, скоростью, громкостью и тональностью его речи, а также взглядом выступающего, чтобы на основе взвешенных метрик выставить ему общую оценку за выступление. 
+**Сервис анализирует выступающего**: ищет специфичные слова-паразиты, следит за жестикуляцией спикера, скоростью, громкостью и тональностью его речи, а также взглядом выступающего, чтобы на основе взвешенных метрик выставить ему общую оценку за выступление. 
 
 Благодаря **транскрибации речи и субтитрам с привязкой по времени**, пользователь с легкостью может перемотать видео выступления на нужный ему момент. Все слова-паразиты и длительные паузы в плеере с субтитрами подсвечены красным. 
 
-![alt](media/demo1.png)
+![Плеер с субтитрами](media/demo1.png)
 
-![alt](media/demo2.png)
+![Пример рекомендаций и анализа ИИ](media/demo2.png)
 
 **Киллер-фичей** сервиса является его ориентированность на потребности студентов. Платформа может анализировать все основные виды артефактов, которые возникают у студентов при подготовке к выступлению:
 1. Текст речи
@@ -21,17 +24,16 @@
 
 **ИИ** дает персонализированные рекомендации, предлагает советы по улучшению речи и презентации, иногда подкрепляет советы ссылками из нашей базы знаний на бесплатные ресурсы для тренировки. **Агентная система** сама найдет дополнительную информацию (например, о конкурентах вашего проекта) в интернете.
 
-![alt](media/demo3.png)
+![Пример оценки по критериям от ИИ](media/demo3.png)
 
 Студент, который готовится к защите проекта или диплома, может загрузить документ, содержащий **критерии оценивания**. Нейросеть сама вычленит из текста основную информацию по критериям, выберет те, которые она способна оценить и предоставит пользователю итоговую оценку согласно регламенту его вуза.
 
-![alt text](media/demo4.png)
+![Шаг с выбором критериев оценивания для анализа](media/demo4.png)
 
 ## Архитектура
 
 [![Build Status](https://github.com/desmitry/charisma-master/actions/workflows/build.yaml/badge.svg)](https://github.com/desmitry/charisma-master/actions/workflows/build.yaml)
 [![Deploy Status](https://github.com/desmitry/charisma-master/actions/workflows/deploy.yaml/badge.svg)](https://github.com/desmitry/charisma-master/actions/workflows/deploy.yaml)
-
 
 Микросервисная архитектура, для управления проектом используется uv workspaces. Проект представляет собой монорепозиторий. Состоит из Python и Rust микросервисов, общих пакетов (Python и Rust), а также фронтенда на NodeJS. Взаимодействие между сервисами происходит через NATS.
 
@@ -92,16 +94,21 @@
 - **ml_worker** – в `competition_research.py` применяется `langchain_community.utilities` для поиска и анализа открытых источников.
 - **Цепочки (Chains)** – используются для построения последовательных запросов к LLM (OpenAI, GigaChat) и последующей пост‑обработки результатов.
 
-Это позвляет совершенствовать агентную систему в сервисе для предоставления более релевантного анализа.
+Это позволяет совершенствовать агентную систему в сервисе для предоставления более релевантного анализа.
 
 ## Структура проекта
 
 ```
 charisma-master/
-├── .github/                     # GitHub Actions, GitHub Templates
+├── .github/                     # GitHub Actions, шаблоны
+├── .pre-commit-config.yaml      # Pre-commit хуки
+├── k8s/                         # Kubernetes-конфигурация (base + overlays)
 ├── scripts/                     # Вспомогательные скрипты
+├── tests/                       # Тесты
+├── media/                       # Изображения для README
 ├── docker-compose.yaml          # Основная конфигурация Docker Compose
 ├── docker-compose.gpu.yaml      # Оверлей для использования GPU
+├── docker-compose.override.yaml # Локальный оверлей Docker Compose
 ├── .dockerignore                # Исключения для сборки
 ├── pyproject.toml               # Корневой uv‑workspace
 ├── uv.lock                      # Lock для uv-пакетов
@@ -111,17 +118,17 @@ charisma-master/
 │   ├── proto/                   # Protobuf схемы (NATS сообщения)
 │   └── rust_common/             # Общие Rust‑утилиты
 ├── services/                    # Микросервисы проекта
-│   ├── api_gateway/             # FastAPI‑бэкенд, маршрутизация задач, взаимодействие с SeaweedFS
-│   ├── ml_worker/               # Celery‑воркер, обработка медиа, LLM‑анализ, интеграция LangChain
+│   ├── api_gateway/             # FastAPI‑бэкенд
+│   ├── ml_worker/               # Celery‑воркер, LLM‑анализ
 │   ├── migrator/                # Сервис миграции БД (sqlx + seed)
 │   ├── account/                 # Сервис управления аккаунтами (NATS + sqlx)
-│   ├── nginx/                   # Конфигурация Nginx + кастомный Certbot Image
-│   └── frontend/                # Next.js фронтенд (React и Tailwind CSS)
-├── docs/                        # Документация, промпты и пресеты
+│   ├── nginx/                   # Конфигурация Nginx + Certbot
+│   └── frontend/                # Next.js фронтенд
+├── docs/                        # Промпты и пресеты
 │   ├── prompts/                 # Промпты для LLM
-│   │   └── personas/            # Специфические промпты для ролей
-│   └── presets/                 # Готовые пресеты оценивания
-└── example.docker.env                  # Пример Docker Compose env-файла
+│   │   └── personas/            # Промпты для ролей
+│   └── presets/                 # Пресеты оценивания
+└── example.docker.env           # Пример Docker Compose env-файла
 ```
 
 ## Требования
@@ -176,6 +183,44 @@ Nginx терминирует TLS, проксирует трафик на fronten
 
 ```bash
 docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml up -d
+```
+
+## Kubernetes
+
+Проект также включает конфигурацию для развёртывания в Kubernetes в директории `k8s/`:
+
+```
+k8s/
+├── base/                           # Базовые манифесты
+│   ├── namespace.yaml              # Namespace проекта
+│   ├── configmap.yaml              # Общий ConfigMap
+│   ├── secret.yaml                 # Secret (заполнить своими данными)
+│   ├── ingress.yaml                # Ingress для внешнего доступа
+│   ├── kustomization.yaml
+│   ├── postgres/                   # Postgres (PVC, deployment, service)
+│   ├── redis/                      # Redis (deployment, service)
+│   ├── migrator/                   # Миграция БД (job + RBAC)
+│   ├── api-gateway/                # API Gateway (deployment, service)
+│   ├── ml-worker/                  # ML Worker (deployment)
+│   └── frontend/                   # Frontend (deployment, service)
+└── overlays/prod/                  # Продакшен-оверлей
+    ├── kustomization.yaml
+    └── patches/                    # Патчи для продакшена
+        ├── api-gateway.yaml
+        ├── frontend.yaml
+        └── ml-worker.yaml
+```
+
+Для развёртывания в кластере:
+
+```bash
+kubectl apply -k k8s/base
+```
+
+Для продакшен-окружения:
+
+```bash
+kubectl apply -k k8s/overlays/prod
 ```
 
 ## Локальная разработка
@@ -314,7 +359,9 @@ cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
 
 ## Скрипты
 
-Существует два вспомогательных скрипта, которые упрощают работу с инфраструктурой:
+В проекте есть несколько вспомогательных скриптов:
+
+- **`scripts/compile_proto.py`** – компилирует Protobuf-схемы из `packages/proto/` в Rust-код для сервисов `account` и `migrator`. Запускается автоматически при сборке Docker-образов, но может понадобиться при локальной разработке.
 
 - **`scripts/load_weight_json.py`** – загружает конфигурацию весов алгоритма в PostgreSQL. Принимает путь к JSON‑файлу и идентификатор конфигурации. Таблица `algorithm_weights` будет создана автоматически, если её ещё нет.
 
@@ -323,6 +370,7 @@ cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
   ```bash
   python scripts/load_weight_json.py docs/metrics/gaze/config.json advanced_pnp_iris
   python scripts/load_weight_json.py docs/metrics/audio/config.json ml_worker_audio
+  python scripts/load_weight_json.py docs/metrics/fillers/config.json ml_worker_fillers
   python scripts/load_weight_json.py docs/metrics/scoring/config.json ml_worker_scoring
   python scripts/load_weight_json.py docs/metrics/tempo/config.json ml_worker_tempo
   python scripts/load_weight_json.py docs/metrics/video/config.json ml_worker_video
@@ -351,6 +399,7 @@ cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
 | GET | `/api/v1/auth/me` | Bearer | Информация о текущем пользователе (роли, права) |
 | POST | `/api/v1/process` | Bearer | Отправить видео на анализ. Возвращает `task_id`. **429** при превышении дневного лимита |
 | GET | `/api/v1/tasks/{task_id}/status` | Bearer | Опросить прогресс задачи |
+| GET | `/api/v1/tasks/{task_id}/wait` | Bearer | Дождаться завершения задачи (long-polling) |
 | GET | `/api/v1/analysis/{task_id}` | Bearer | Получить итоговый анализ (только свой, если не модератор) |
 | GET | `/media/{task_id}.mp4` | Bearer | Стриминг видео с поддержкой Range-запросов |
 | GET | `/health` | Нет | Проверка работоспособности |
