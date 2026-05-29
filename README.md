@@ -87,15 +87,6 @@
 7. Фронтенд опрашивает эндпоинт статуса задачи, затем получает итоговый анализ через API Gateway.
 8. Воспроизведение видео идёт через API Gateway как StreamingResponse с поддержкой HTTP Range.
 
-## LangChain в проекте
-
-Проект активно использует **LangChain** и **LangChain‑Community** для работы с LLM‑моделями и поиска информации:
-
-- **ml_worker** – в `competition_research.py` применяется `langchain_community.utilities` для поиска и анализа открытых источников.
-- **Цепочки (Chains)** – используются для построения последовательных запросов к LLM (OpenAI, GigaChat) и последующей пост‑обработки результатов.
-
-Это позволяет совершенствовать агентную систему в сервисе для предоставления более релевантного анализа.
-
 ## Структура проекта
 
 ```
@@ -185,44 +176,6 @@ Nginx терминирует TLS, проксирует трафик на fronten
 docker compose -f docker-compose.yaml -f docker-compose.gpu.yaml up -d
 ```
 
-## Kubernetes
-
-Проект также включает конфигурацию для развёртывания в Kubernetes в директории `k8s/`:
-
-```
-k8s/
-├── base/                           # Базовые манифесты
-│   ├── namespace.yaml              # Namespace проекта
-│   ├── configmap.yaml              # Общий ConfigMap
-│   ├── secret.yaml                 # Secret (заполнить своими данными)
-│   ├── ingress.yaml                # Ingress для внешнего доступа
-│   ├── kustomization.yaml
-│   ├── postgres/                   # Postgres (PVC, deployment, service)
-│   ├── redis/                      # Redis (deployment, service)
-│   ├── migrator/                   # Миграция БД (job + RBAC)
-│   ├── api-gateway/                # API Gateway (deployment, service)
-│   ├── ml-worker/                  # ML Worker (deployment)
-│   └── frontend/                   # Frontend (deployment, service)
-└── overlays/prod/                  # Продакшен-оверлей
-    ├── kustomization.yaml
-    └── patches/                    # Патчи для продакшена
-        ├── api-gateway.yaml
-        ├── frontend.yaml
-        └── ml-worker.yaml
-```
-
-Для развёртывания в кластере:
-
-```bash
-kubectl apply -k k8s/base
-```
-
-Для продакшен-окружения:
-
-```bash
-kubectl apply -k k8s/overlays/prod
-```
-
 ## Локальная разработка
 
 ### Бэкенд
@@ -299,71 +252,19 @@ cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
 | `FRONTEND_IMAGE` | `ghcr.io/desmitry/charisma-master-frontend:latest` | Образ Frontend |
 | `CELERY_LOG_LEVEL` | `info` | Уровень логирования Celery (`debug`, `info`, `warning`, `error`, `critical`) |
 
-### API Gateway
+Подробные таблицы переменных для каждого сервиса вынесены в их собственные README:
 
-| Переменная | По умолчанию | Описание |
-|------------|--------------|----------|
-| `SERVICE_HOST` | `0.0.0.0` | Хост для запуска uvicorn |
-| `SERVICE_PORT` | `8000` | Порт для запуска uvicorn |
-| `ORIGIN_URL` | `http://localhost:3000` | Разрешённый origin для CORS |
-| `MODE` | `dev`/`prod` | Режим работы (для локальной разработки или Docker) |
-| `REDIS_URL` | `redis://localhost:6379/0` | URL подключения к Redis |
-| `CELERY_BROKER_URL` | `redis://localhost:6379/0` | Redis-брокер Celery |
-| `CELERY_RESULT_BACKEND` | `redis://localhost:6379/0` | Бэкенд результатов Celery |
-| `DATABASE_URL` | `postgresql://charisma:charisma@localhost:5432/charisma` | Подключение к Postgres |
-| `SEAWEEDFS_ENDPOINT` | `localhost:8333` | Адрес S3-шлюза SeaweedFS |
-| `SEAWEEDFS_ACCESS_KEY` | "" | Ключ доступа S3 |
-| `SEAWEEDFS_SECRET_KEY` | "" | Секретный ключ S3 |
-| `NATS_URL` | `nats://nats:4222` | URL подключения к NATS |
-| `JWT_SECRET` | `dev-secret-key` | Секретный ключ для подписи JWT |
-| `JWT_ALGORITHM` | `HS256` | Алгоритм подписи JWT |
-| `ACCESS_TOKEN_EXPIRE_MINS` | `15` | Время жизни access-токена (минут) |
-| `REFRESH_TOKEN_EXPIRE_MINS` | `10080` | Время жизни refresh-токена (минут, 7 дней) |
-| `DAILY_PROCESS_LIMIT` | `3` | Максимум обработок видео в день на пользователя |
-
-### Account
-
-| Переменная | По умолчанию | Описание |
-|------------|--------------|----------|
-| `DATABASE_URL` | `postgresql://charisma:charisma@postgres:5432/charisma` | Подключение к Postgres |
-| `NATS_URL` | `nats://nats:4222` | URL подключения к NATS |
-
-### ML Worker
-
-| Переменная | По умолчанию | Описание |
-|------------|--------------|----------|
-| `REDIS_URL` | `redis://localhost:6379/0` | URL подключения к Redis |
-| `CELERY_BROKER_URL` | `redis://localhost:6379/0` | Redis-брокер Celery |
-| `CELERY_RESULT_BACKEND` | `redis://localhost:6379/0` | Бэкенд результатов Celery |
-| `DATABASE_URL` | `postgresql://charisma:charisma@localhost:5432/charisma` | Подключение к Postgres (для промптов) |
-| `SEAWEEDFS_ENDPOINT` | `localhost:8333` | Адрес S3-шлюза SeaweedFS |
-| `SEAWEEDFS_ACCESS_KEY` | "" | Ключ доступа S3 |
-| `SEAWEEDFS_SECRET_KEY` | "" | Секретный ключ S3 |
-| `WHISPER_MODEL_NAME` | `whisper-1` | Название модели Whisper |
-| `WHISPER_MODEL_TYPE` | `base` | Размер локальной модели Whisper (`tiny`, `base`, `small`, `medium`, `large`) |
-| `WHISPER_DEVICE` | `cpu` | Устройство для Whisper (`cuda` или `cpu`) |
-| `WHISPER_COMPUTE_TYPE` | `int8` | Тип вычислений (`float16`, `int8`, `default`) |
-| `OPENAI_API_BASE` | `https://api.openai.com/v1` | Базовый URL OpenAI API |
-| `OPENAI_API_KEY` | "" | API-ключ OpenAI |
-| `OPENAI_MODEL_NAME` | `gpt-4o-mini` | Модель OpenAI для анализа |
-| `GIGACHAT_CREDENTIALS` | "" | Base64-кодированные учётные данные GigaChat |
-| `GIGACHAT_SCOPE` | `GIGACHAT_API_PERS` | Область доступа GigaChat |
-| `GIGACHAT_MODEL_NAME` | `GigaChat` | Модель GigaChat для анализа |
-| `GIGACHAT_VERIFY_SSL` | `false` | Проверка SSL-сертификатов GigaChat |
-| `SBER_SALUTE_CREDENTIALS` | "" | Учётные данные Sber Salute |
-| `SBER_SPEECH_SCOPE` | `SALUTE_SPEECH_PERS` | Область доступа Sber Salute Speech |
-| `COMPETITION_SEARCH_RESULTS` | `5` | Количество результатов поиска конкурентов |
-| `COMPETITION_SOURCES_TO_ANALYZE` | `3` | Количество источников для анализа |
-| `COMPETITION_FETCH_TIMEOUT_SECONDS` | `10` | Таймаут загрузки источника (сек) |
-| `COMPETITION_SOURCE_TEXT_LIMIT` | `6000` | Лимит текста источника (символов) |
+- **API Gateway** - [`services/api_gateway/README.md`](services/api_gateway/README.md)
+- **Account** - [`services/account/README.md`](services/account/README.md)
+- **ML Worker** - [`services/ml_worker/README.md`](services/ml_worker/README.md)
 
 ## Скрипты
 
 В проекте есть несколько вспомогательных скриптов:
 
-- **`scripts/compile_proto.py`** – компилирует Protobuf-схемы из `packages/proto/` в Rust-код для сервисов `account` и `migrator`. Запускается автоматически при сборке Docker-образов, но может понадобиться при локальной разработке.
+- **`scripts/compile_proto.py`** - компилирует Protobuf-схемы из `packages/proto/` в Rust-код для сервисов `account` и `migrator`. Запускается автоматически при сборке Docker-образов, но может понадобиться при локальной разработке.
 
-- **`scripts/load_weight_json.py`** – загружает конфигурацию весов алгоритма в PostgreSQL. Принимает путь к JSON‑файлу и идентификатор конфигурации. Таблица `algorithm_weights` будет создана автоматически, если её ещё нет.
+- **`scripts/load_weight_json.py`** - загружает конфигурацию весов алгоритма в PostgreSQL. Принимает путь к JSON‑файлу и идентификатор конфигурации. Таблица `algorithm_weights` будет создана автоматически, если её ещё нет.
 
   При первом запуске (или для обновления) загрузите базовые коэффициенты из `docs/metrics/`:
 
@@ -382,134 +283,18 @@ cp services/ml_worker/example.docker.env services/ml_worker/.docker.env
   python scripts/load_weight_json.py --dump
   ```
 
-- **`scripts/upload_demo_to_seaweedfs.py`** – загружает демонстрационное видео и JSON‑результат анализа в SeaweedFS под именами `demo.mp4` и `demo.json` соответственно. Используйте при первом запуске (или для обновления демо):
+- **`scripts/upload_demo_to_seaweedfs.py`** - загружает демонстрационное видео и JSON‑результат анализа в SeaweedFS под именами `demo.mp4` и `demo.json` соответственно. Используйте при первом запуске (или для обновления демо):
 
   ```bash
   python scripts/upload_demo_to_seaweedfs.py demo.mp4 demo.json
   ```
 
-## API эндпоинты
+Детальная документация по API, схеме БД и ролям вынесена в README соответствующих сервисов:
 
-| Метод | Путь | Auth | Описание |
-|-------|------|------|----------|
-| POST | `/api/v1/auth/register` | Нет | Регистрация пользователя, принимает `email` и `password` |
-| POST | `/api/v1/auth/login` | Нет | Вход, возвращает `access_token` и `refresh_token` |
-| POST | `/api/v1/auth/refresh` | Нет | Обновление access-токена, принимает `refresh_token` |
-| POST | `/api/v1/auth/logout` | Bearer | Выход, черный список текущего токена |
-| GET | `/api/v1/auth/me` | Bearer | Информация о текущем пользователе (роли, права) |
-| POST | `/api/v1/process` | Bearer | Отправить видео на анализ. Возвращает `task_id`. **429** при превышении дневного лимита |
-| GET | `/api/v1/tasks/{task_id}/status` | Bearer | Опросить прогресс задачи |
-| GET | `/api/v1/tasks/{task_id}/wait` | Bearer | Дождаться завершения задачи (long-polling) |
-| GET | `/api/v1/analysis/{task_id}` | Bearer | Получить итоговый анализ (только свой, если не модератор) |
-| GET | `/media/{task_id}.mp4` | Bearer | Стриминг видео с поддержкой Range-запросов |
-| GET | `/health` | Нет | Проверка работоспособности |
-
-## Схема базы данных
-
-### `account.users`
-
-| Столбец | Тип | Описание |
-|---------|-----|----------|
-| `id` | UUID | Уникальный идентификатор пользователя (PK) |
-| `created_at` | TIMESTAMPTZ | Время регистрации |
-| `email` | TEXT | Email пользователя (уникальный, хранится в lowercase) |
-
-### `account.credentials`
-
-| Столбец | Тип | Описание |
-|---------|-----|----------|
-| `user_id` | UUID | Ссылка на `account.users(id)` |
-| `password_hash` | TEXT | Хеш пароля (bcrypt) |
-
-### `account.roles`
-
-| Столбец | Тип | Описание |
-|---------|-----|----------|
-| `id` | UUID | Уникальный идентификатор роли (PK) |
-| `name` | TEXT | Название роли (`user`, `moderator`, `admin`) |
-
-### `account.permissions`
-
-| Столбец | Тип | Описание |
-|---------|-----|----------|
-| `id` | UUID | Уникальный идентификатор пермишена (PK) |
-| `name` | TEXT | Название пермишена (напр. `user.profile.view.own`) |
-
-### `account.user_roles`
-
-| Столбец | Тип | Описание |
-|---------|-----|----------|
-| `user_id` | UUID | Ссылка на `account.users(id)` |
-| `role_id` | UUID | Ссылка на `account.roles(id)` |
-
-### `account.role_permissions`
-
-| Столбец | Тип | Описание |
-|---------|-----|----------|
-| `role_id` | UUID | Ссылка на `account.roles(id)` |
-| `permission_id` | UUID | Ссылка на `account.permissions(id)` |
-
-### `prompts`
-
-| Столбец | Тип | Описание |
-|---------|-----|----------|
-| `key` | TEXT | Уникальный идентификатор промпта (напр. `speech_analysis`, `persona:strict_critic`) |
-| `content` | TEXT | Текст промпта |
-| `updated_at` | TIMESTAMPTZ | Время последнего обновления |
-
-### `presets`
-
-| Столбец | Тип | Описание |
-|---------|-----|----------|
-| `id` | TEXT | Идентификатор пресета (напр. `general`, `urfu`) |
-| `name` | TEXT | Человекочитаемое название |
-| `description` | TEXT | Описание пресета |
-| `criteria` | JSONB | Массив критериев оценивания |
-| `created_at` | TIMESTAMPTZ | Время создания |
-| `updated_at` | TIMESTAMPTZ | Время последнего обновления |
-
-### `algorithm_weights`
-
-| Столбец | Тип | Описание |
-|---------|-----|----------|
-| `id` | TEXT | Уникальный идентификатор конфигурации (например, `default`, `v1`) |
-| `config` | JSONB | JSON‑конфигурация весов алгоритма |
-| `updated_at` | TIMESTAMPTZ | Время последнего обновления |
-
-## Роли и права доступа
-
-В проекте используется система ролевого доступа (RBAC) на основе таблиц `account.roles` и `account.permissions`.
-
-### Роли
-
-| Роль | Описание |
-|------|----------|
-| `user` | Обычный пользователь. Может загружать видео, получать анализ, управлять своими проектами |
-| `moderator` | Модератор. Имеет доступ к управлению контентом (промпты, пресеты) и просмотру чужих анализов |
-| `admin` | Администратор. Полный доступ ко всем функциям, включая управление пользователями и системными настройками |
-
-### Пермишены
-
-#### Пользовательские (доступны `user`)
-- `user.profile.view.own` - просмотр своего профиля
-- `user.profile.update.own` - редактирование своего профиля
-- `user.analysis.create` - создание задачи анализа
-- `user.analysis.view.own` - просмотр своих результатов
-- `user.analysis.delete.own` - удаление своих результатов
-
-#### Модераторские (доступны `moderator`)
-- `user.profile.view.any` - просмотр профилей любых пользователей
-- `user.analysis.view.any` - просмотр анализов любых пользователей
-- `content.prompts.manage` - управление промптами (CRUD)
-- `content.presets.manage` - управление пресетами (CRUD)
-- `content.algorithm_weights.view` - просмотр весов алгоритмов
-
-#### Административные (доступны `admin`)
-- `user.account.delete.any` - удаление/бан пользователей
-- `user.analysis.delete.any` - удаление анализов любых пользователей
-- `content.algorithm_weights.manage` - редактирование весов алгоритмов
-- `system.settings.view` - просмотр системных настроек
-- `system.settings.edit` - редактирование системных настроек
+- **API Gateway** - [`services/api_gateway/README.md`](services/api_gateway/README.md) (эндпоинты)
+- **Account** - [`services/account/README.md`](services/account/README.md) (схема БД, роли и права)
+- **ML Worker** - [`services/ml_worker/README.md`](services/ml_worker/README.md) (LangChain / LangGraph)
+- **Kubernetes** - [`k8s/README.md`](k8s/README.md) (конфигурация для кластера)
 
 ## SeaweedFS buckets
 
