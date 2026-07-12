@@ -2,6 +2,7 @@ services:
     postgres:
         image: postgres:17-alpine
         container_name: postgres
+        restart: unless-stopped
         environment:
             POSTGRES_USER: ${POSTGRES_USER:-charisma}
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-charisma}
@@ -42,6 +43,7 @@ services:
             timeout: 5s
             retries: 10
             start_period: 15s
+        restart: unless-stopped
 
     seaweedfs-volume:
         image: chrislusf/seaweedfs:3.78
@@ -52,6 +54,7 @@ services:
         depends_on:
             seaweedfs-master:
                 condition: service_healthy
+        restart: unless-stopped
 
     seaweedfs-filer:
         image: chrislusf/seaweedfs:3.78
@@ -67,6 +70,7 @@ services:
             interval: 5s
             timeout: 5s
             retries: 10
+        restart: unless-stopped
 
     seaweedfs-s3:
         image: chrislusf/seaweedfs:3.78
@@ -82,6 +86,7 @@ services:
             interval: 5s
             timeout: 5s
             retries: 10
+        restart: unless-stopped
 
     migrator:
         image: ${MIGRATOR_IMAGE:-ghcr.io/desmitry/charisma-master-migrator:latest}
@@ -262,6 +267,7 @@ services:
         volumes:
             - certbot_certs:/etc/letsencrypt
             - certbot_www:/var/www/certbot
+        restart: "no"
 
     certbot:
         build:
